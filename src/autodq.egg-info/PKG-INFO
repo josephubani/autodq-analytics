@@ -1,0 +1,32 @@
+Metadata-Version: 2.4
+Name: autodq
+Version: 0.1.0
+Summary: AutoDQ Analytics: Automated Data Quality, Cleaning, Visualization, and Reporting Framework
+Author: Joseph Ubani
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+Requires-Dist: pandas
+Requires-Dist: numpy
+Requires-Dist: scikit-learn
+Requires-Dist: matplotlib
+Requires-Dist: seaborn
+Requires-Dist: openpyxl
+Requires-Dist: pyyaml
+Requires-Dist: streamlit
+
+# AutoDQ Analytics
+
+AutoDQ Analytics is an automated data quality and analytics framework.
+
+It helps users:
+- Load datasets
+- Profile data
+- Diagnose data quality issues
+- Recommend cleaning steps
+- Generate visuals
+- Run simple `.adql` analytics scripts
+- Export reports
+
+## Current Stage
+
+Stage 1: Core Python package foundation.
