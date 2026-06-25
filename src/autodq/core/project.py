@@ -3,6 +3,7 @@ import pandas as pd
 
 from autodq.io.loaders import load_dataset
 from autodq.profiling.profiler import generate_profile
+from autodq.diagnosis.engine import run_diagnosis
 
 
 class AutoDQ:
@@ -13,8 +14,10 @@ class AutoDQ:
     def __init__(self, dataset_path: str, target: str | None = None):
         self.dataset_path = Path(dataset_path)
         self.target = target
+
         self.data: pd.DataFrame | None = None
         self.profile_report: dict | None = None
+        self.diagnosis_report: dict | None = None
 
     def load(self) -> pd.DataFrame:
         self.data = load_dataset(self.dataset_path)
@@ -30,6 +33,13 @@ class AutoDQ:
         )
 
         return self.profile_report
+
+    def diagnose(self) -> dict:
+        if self.data is None:
+            self.load()
+
+        self.diagnosis_report = run_diagnosis(self.data)
+        return self.diagnosis_report
 
     def show_profile(self) -> None:
         if self.profile_report is None:
@@ -54,3 +64,38 @@ class AutoDQ:
             missing = report["missing_values"][col]
             missing_pct = report["missing_percentages"][col]
             print(f"- {col} | type: {dtype} | missing: {missing} ({missing_pct}%)")
+
+    def show_diagnosis(self) -> None:
+        if self.diagnosis_report is None:
+            self.diagnose()
+
+        report = self.diagnosis_report
+
+        print("\n=== AutoDQ Data Quality Diagnosis ===")
+        print(f"Issues found: {report['issue_count']}")
+
+        if report["issue_count"] == 0:
+            print("No major data quality issues detected.")
+            return
+
+        print("\nDetected Issues:")
+        for issue in report["issues"]:
+            print(f"- [{issue['severity'].upper()}] {issue['message']}")
+
+        missing = report["missing_values"]
+
+        if missing["total_missing_values"] > 0:
+            print("\nMissing Value Details:")
+            for column, details in missing["columns_with_missing"].items():
+                print(
+                    f"- {column}: {details['missing_count']} missing "
+                    f"({details['missing_percentage']}%) | severity: {details['severity']}"
+                )
+
+        duplicates = report["duplicates"]
+
+        if duplicates["has_duplicates"]:
+            print("\nDuplicate Details:")
+            print(f"- Duplicate rows: {duplicates['duplicate_rows']}")
+            print(f"- Duplicate percentage: {duplicates['duplicate_percentage']}%")
+            print(f"- Severity: {duplicates['severity']}")
