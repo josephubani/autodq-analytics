@@ -157,7 +157,7 @@ class AutoDQ:
         if self.diagnosis_report is None:
             self.diagnose()
 
-        engine = RecommendationEngine()
+        engine = RecommendationEngine(self.knowledge_engine)
         self.recommendations = engine.recommend(self.diagnosis_report)
 
         self.session.log(

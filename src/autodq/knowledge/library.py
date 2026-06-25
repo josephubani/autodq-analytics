@@ -53,4 +53,31 @@ DEFAULT_KNOWLEDGE_RULES = {
         preferred_imputation="do_not_impute_without_context",
         notes=["Date fields should be parsed as datetime."],
     ),
+        "unit_price": KnowledgeRule(
+        name="unit_price",
+        semantic_type="currency",
+        expected_min=0,
+        allow_negative=False,
+        preferred_imputation="median",
+        preferred_outlier_strategy="review_or_winsorize",
+        notes=["Unit price is usually non-negative and may contain pricing outliers."],
+    ),
+    "region": KnowledgeRule(
+        name="region",
+        semantic_type="geographic_category",
+        preferred_imputation="mode",
+        notes=["Region is usually a categorical location field."],
+    ),
+    "gender": KnowledgeRule(
+        name="gender",
+        semantic_type="categorical",
+        preferred_imputation="mode",
+        notes=["Gender is usually a low-cardinality categorical field."],
+    ),
+    "product": KnowledgeRule(
+        name="product",
+        semantic_type="product_category",
+        preferred_imputation="mode",
+        notes=["Product is usually a categorical business field."],
+    ),
 }
