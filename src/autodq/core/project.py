@@ -1,6 +1,8 @@
 from pathlib import Path
 import pandas as pd
 
+from autodq.decision.engine import DecisionEngine
+from autodq.preview.engine import PreviewEngine
 from autodq.recommendations.engine import RecommendationEngine
 from autodq.io.loaders import load_dataset
 from autodq.profiling.profiler import generate_profile
@@ -16,6 +18,8 @@ class AutoDQ:
         self.dataset_path = Path(dataset_path)
         self.target = target
         self.recommendations = None
+        self.decision_plan = None
+        self.previews = None
 
         self.data: pd.DataFrame | None = None
         self.profile_report: dict | None = None
@@ -35,6 +39,48 @@ class AutoDQ:
         )
 
         return self.profile_report
+    
+    def decide(self):
+        if self.recommendations is None:
+            self.recommend()
+
+        engine = DecisionEngine()
+        self.decision_plan = engine.build_plan(self.recommendations)
+        return self.decision_plan
+
+    def preview(self):
+        if self.data is None:
+            self.load()
+
+        if self.decision_plan is None:
+            self.decide()
+
+        engine = PreviewEngine()
+        self.previews = engine.preview(self.data, self.decision_plan)
+        return self.previews
+
+    def show_preview(self) -> None:
+        if self.previews is None:
+            self.preview()
+
+        print("\n=== AutoDQ Cleaning Preview ===")
+
+        if not self.previews:
+            print("No previews available.")
+            return
+
+        for preview in self.previews:
+            print(f"\nAction {preview['action_id']}: {preview['issue_type']}")
+            print(f"Strategy: {preview['strategy']}")
+            print("Preview:")
+
+            details = preview["preview"]
+
+            if isinstance(details, dict):
+                for key, value in details.items():
+                    print(f"  {key}: {value}")
+            else:
+                print(details)
     
     
     def recommend(self):

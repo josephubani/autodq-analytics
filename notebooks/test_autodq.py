@@ -10,3 +10,7 @@ project.show_diagnosis()
 
 project.recommend()
 project.show_recommendations()
+
+project.decide()
+project.preview()
+project.show_preview()
