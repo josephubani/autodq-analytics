@@ -2,55 +2,71 @@ import pandas as pd
 
 from autodq.diagnosis.missingness import analyze_missing_values
 from autodq.diagnosis.duplicates import analyze_duplicates
+from autodq.models.issues import DataIssue
+from autodq.models.reports import DiagnosisReport
 
 
-def run_diagnosis(df: pd.DataFrame) -> dict:
+def run_diagnosis(df: pd.DataFrame) -> DiagnosisReport:
     """
-    Run all diagnosis checks on a DataFrame.
+    Run all diagnosis checks on a DataFrame and return a structured DiagnosisReport.
     """
 
     missing_report = analyze_missing_values(df)
     duplicate_report = analyze_duplicates(df)
 
-    issues = []
+    issues: list[DataIssue] = []
 
     if missing_report["total_missing_values"] > 0:
+        affected_columns = list(missing_report["columns_with_missing"].keys())
+
         issues.append(
-            {
-                "issue_type": "missing_values",
-                "severity": _highest_missing_severity(missing_report),
-                "message": (
+            DataIssue(
+                issue_type="missing_values",
+                severity=_highest_missing_severity(missing_report),
+                message=(
                     f"{missing_report['total_missing_values']} missing values found "
                     f"across {missing_report['columns_affected']} columns."
                 ),
-            }
+                affected_columns=affected_columns,
+                recommendation="Review affected columns and apply appropriate imputation or removal strategy.",
+                confidence=0.95,
+            )
         )
 
     if duplicate_report["has_duplicates"]:
         issues.append(
-            {
-                "issue_type": "duplicate_rows",
-                "severity": duplicate_report["severity"],
-                "message": (
+            DataIssue(
+                issue_type="duplicate_rows",
+                severity=duplicate_report["severity"],
+                message=(
                     f"{duplicate_report['duplicate_rows']} duplicate rows found "
                     f"({duplicate_report['duplicate_percentage']}% of dataset)."
                 ),
-            }
+                affected_columns=[],
+                recommendation="Remove duplicate rows unless duplicates represent valid repeated events.",
+                confidence=0.9,
+            )
         )
 
-    return {
-        "missing_values": missing_report,
-        "duplicates": duplicate_report,
-        "issue_count": len(issues),
-        "issues": issues,
-    }
+    quality_score = _calculate_basic_quality_score(
+        missing_report=missing_report,
+        duplicate_report=duplicate_report,
+    )
+
+    summary = _build_summary(issues, quality_score)
+
+    return DiagnosisReport(
+        issues=issues,
+        quality_score=quality_score,
+        summary=summary,
+        raw_details={
+            "missing_values": missing_report,
+            "duplicates": duplicate_report,
+        },
+    )
 
 
 def _highest_missing_severity(missing_report: dict) -> str:
-    """
-    Return the highest severity among columns with missing values.
-    """
-
     severity_rank = {
         "none": 0,
         "low": 1,
@@ -66,3 +82,42 @@ def _highest_missing_severity(missing_report: dict) -> str:
             highest = column_info["severity"]
 
     return highest
+
+
+def _calculate_basic_quality_score(
+    missing_report: dict,
+    duplicate_report: dict,
+) -> float:
+    """
+    Calculate an early-stage data quality score from 0 to 100.
+
+    This is a simple v0.2 scoring model.
+    Later, we will improve it with weighted issue categories.
+    """
+
+    score = 100.0
+
+    total_rows = missing_report["total_rows"]
+    total_missing = missing_report["total_missing_values"]
+    columns_affected = missing_report["columns_affected"]
+
+    if total_rows > 0:
+        missing_penalty = min(30, (total_missing / total_rows) * 10)
+        score -= missing_penalty
+
+    score -= min(20, columns_affected * 2)
+
+    if duplicate_report["has_duplicates"]:
+        score -= min(25, duplicate_report["duplicate_percentage"] * 2)
+
+    return round(max(score, 0), 2)
+
+
+def _build_summary(issues: list[DataIssue], quality_score: float) -> str:
+    if not issues:
+        return "No major data quality issues detected."
+
+    return (
+        f"{len(issues)} data quality issue(s) detected. "
+        f"Current dataset quality score is {quality_score}/100."
+    )

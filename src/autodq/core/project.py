@@ -17,7 +17,7 @@ class AutoDQ:
 
         self.data: pd.DataFrame | None = None
         self.profile_report: dict | None = None
-        self.diagnosis_report: dict | None = None
+        self.diagnosis_report = None
 
     def load(self) -> pd.DataFrame:
         self.data = load_dataset(self.dataset_path)
@@ -72,30 +72,26 @@ class AutoDQ:
         report = self.diagnosis_report
 
         print("\n=== AutoDQ Data Quality Diagnosis ===")
-        print(f"Issues found: {report['issue_count']}")
+        print(f"Quality Score: {report.quality_score}/100")
+        print(f"Issues found: {report.issue_count}")
 
-        if report["issue_count"] == 0:
-            print("No major data quality issues detected.")
+        if report.summary:
+            print(f"Summary: {report.summary}")
+
+        if not report.has_issues():
             return
 
         print("\nDetected Issues:")
-        for issue in report["issues"]:
-            print(f"- [{issue['severity'].upper()}] {issue['message']}")
 
-        missing = report["missing_values"]
+        for issue in report.issues:
+            print(f"\n- [{issue.severity.upper()}] {issue.issue_type}")
+            print(f"  Message: {issue.message}")
 
-        if missing["total_missing_values"] > 0:
-            print("\nMissing Value Details:")
-            for column, details in missing["columns_with_missing"].items():
-                print(
-                    f"- {column}: {details['missing_count']} missing "
-                    f"({details['missing_percentage']}%) | severity: {details['severity']}"
-                )
+            if issue.affected_columns:
+                print(f"  Affected Columns: {', '.join(issue.affected_columns)}")
 
-        duplicates = report["duplicates"]
+            if issue.recommendation:
+                print(f"  Recommendation: {issue.recommendation}")
 
-        if duplicates["has_duplicates"]:
-            print("\nDuplicate Details:")
-            print(f"- Duplicate rows: {duplicates['duplicate_rows']}")
-            print(f"- Duplicate percentage: {duplicates['duplicate_percentage']}%")
-            print(f"- Severity: {duplicates['severity']}")
+            if issue.confidence is not None:
+                print(f"  Confidence: {round(issue.confidence * 100, 2)}%")
