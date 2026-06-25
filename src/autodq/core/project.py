@@ -63,7 +63,11 @@ class AutoDQ:
             dtype = report["data_types"][col]
             missing = report["missing_values"][col]
             missing_pct = report["missing_percentages"][col]
-            print(f"- {col} | type: {dtype} | missing: {missing} ({missing_pct}%)")
+            semantic = report["semantic_types"].get(col, "unknown")
+            print(
+                f"- {col} | type: {dtype} | semantic: {semantic} | "
+                f"missing: {missing} ({missing_pct}%)"
+        )
 
     def show_diagnosis(self) -> None:
         if self.diagnosis_report is None:

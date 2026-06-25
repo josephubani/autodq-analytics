@@ -1,5 +1,6 @@
 import pandas as pd
-
+from autodq.semantics.inference import infer_semantic_types
+from autodq.diagnosis.outliers import analyze_outliers_iqr
 from autodq.diagnosis.missingness import analyze_missing_values
 from autodq.diagnosis.duplicates import analyze_duplicates
 from autodq.models.issues import DataIssue
@@ -47,6 +48,24 @@ def run_diagnosis(df: pd.DataFrame) -> DiagnosisReport:
                 confidence=0.9,
             )
         )
+    semantic_types = infer_semantic_types(df)
+    outlier_report = analyze_outliers_iqr(df, semantic_types=semantic_types)
+    if outlier_report["total_outlier_cells"] > 0:
+        affected_columns = list(outlier_report["columns_with_outliers"].keys())
+
+        issues.append(
+            DataIssue(
+                issue_type="outliers",
+                severity=_highest_outlier_severity(outlier_report),
+                message=(
+                    f"{outlier_report['total_outlier_cells']} outlier values found "
+                    f"across {outlier_report['columns_affected']} numeric columns."
+                ),
+                affected_columns=affected_columns,
+                recommendation="Review outlier values and consider IQR clipping, winsorization, transformation, or domain-based validation.",
+                confidence=0.85,
+            )
+        )
 
     quality_score = _calculate_basic_quality_score(
         missing_report=missing_report,
@@ -62,6 +81,8 @@ def run_diagnosis(df: pd.DataFrame) -> DiagnosisReport:
         raw_details={
             "missing_values": missing_report,
             "duplicates": duplicate_report,
+            "outliers": outlier_report,
+            "semantic_types": semantic_types,
         },
     )
 
@@ -121,3 +142,19 @@ def _build_summary(issues: list[DataIssue], quality_score: float) -> str:
         f"{len(issues)} data quality issue(s) detected. "
         f"Current dataset quality score is {quality_score}/100."
     )
+def _highest_outlier_severity(outlier_report: dict) -> str:
+    severity_rank = {
+        "none": 0,
+        "low": 1,
+        "medium": 2,
+        "high": 3,
+        "critical": 4,
+    }
+
+    highest = "none"
+
+    for column_info in outlier_report["columns_with_outliers"].values():
+        if severity_rank[column_info["severity"]] > severity_rank[highest]:
+            highest = column_info["severity"]
+
+    return highest
