@@ -13,7 +13,7 @@ from autodq.renderers.console.diagnosis import ConsoleDiagnosisRenderer
 from autodq.renderers.console.preview import ConsolePreviewRenderer
 from autodq.renderers.console.profile import ConsoleProfileRenderer
 from autodq.renderers.console.recommendations import ConsoleRecommendationRenderer
-
+from autodq.knowledge.engine import KnowledgeEngine
 
 class AutoDQ:
     """
@@ -30,8 +30,9 @@ class AutoDQ:
         self.recommendations = None
         self.decision_plan = None
         self.previews = None
-
         self.session = AutoDQSession(dataset_path=str(self.dataset_path))
+        self.knowledge_engine = KnowledgeEngine()
+        self.knowledge_rules = {}
 
     def _reset_outputs(self) -> None:
         self.profile_report = None
@@ -199,6 +200,27 @@ class AutoDQ:
         )
 
         return self.previews
+    def apply_knowledge(self):
+        if self.data is None:
+            self.load()
+
+        self.knowledge_rules = self.knowledge_engine.get_rules_for_columns(
+            list(self.data.columns)
+        )
+
+        matched_rules = {
+            column: rule.to_dict()
+            for column, rule in self.knowledge_rules.items()
+            if rule is not None
+        }
+
+        self.session.log(
+            step="knowledge",
+            message="Knowledge rules applied to dataset columns.",
+            metadata={"matched_columns": list(matched_rules.keys())},
+        )
+
+        return self.knowledge_rules
 
     def show_profile(self) -> None:
         if self.profile_report is None:
@@ -226,3 +248,36 @@ class AutoDQ:
 
     def show_session(self) -> None:
         self.session.summary()
+        
+    def show_knowledge(self) -> None:
+        if not self.knowledge_rules:
+            self.apply_knowledge()
+
+        print("\n=== AutoDQ Knowledge Layer ===")
+
+        matched = False
+
+        for column, rule in self.knowledge_rules.items():
+            if rule is None:
+                continue
+
+            matched = True
+            print(f"\n{column}")
+            print(f"  Semantic Type: {rule.semantic_type}")
+            print(f"  Preferred Imputation: {rule.preferred_imputation}")
+            print(f"  Preferred Outlier Strategy: {rule.preferred_outlier_strategy}")
+
+            if rule.expected_min is not None:
+                print(f"  Expected Min: {rule.expected_min}")
+
+            if rule.expected_max is not None:
+                print(f"  Expected Max: {rule.expected_max}")
+
+            if rule.allow_negative is not None:
+                print(f"  Allow Negative: {rule.allow_negative}")
+
+            if rule.notes:
+                print(f"  Notes: {' '.join(rule.notes)}")
+
+        if not matched:
+            print("No knowledge rules matched this dataset yet.")

@@ -5,6 +5,9 @@ project = AutoDQ("datasets/sample/sales.csv")
 
 project.set_type("Date", "datetime")
 project.set_target("Revenue")
+
+project.apply_knowledge()
+project.show_knowledge()
 project.profile()
 project.show_profile()
 
