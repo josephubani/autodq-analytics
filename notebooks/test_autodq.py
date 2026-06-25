@@ -7,3 +7,6 @@ project.show_profile()
 
 project.diagnose()
 project.show_diagnosis()
+
+project.recommend()
+project.show_recommendations()

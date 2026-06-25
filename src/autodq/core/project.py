@@ -1,6 +1,7 @@
 from pathlib import Path
 import pandas as pd
 
+from autodq.recommendations.engine import RecommendationEngine
 from autodq.io.loaders import load_dataset
 from autodq.profiling.profiler import generate_profile
 from autodq.diagnosis.engine import run_diagnosis
@@ -14,6 +15,7 @@ class AutoDQ:
     def __init__(self, dataset_path: str, target: str | None = None):
         self.dataset_path = Path(dataset_path)
         self.target = target
+        self.recommendations = None
 
         self.data: pd.DataFrame | None = None
         self.profile_report: dict | None = None
@@ -33,6 +35,41 @@ class AutoDQ:
         )
 
         return self.profile_report
+    
+    
+    def recommend(self):
+        if self.diagnosis_report is None:
+            self.diagnose()
+
+        engine = RecommendationEngine()
+        self.recommendations = engine.recommend(self.diagnosis_report)
+        return self.recommendations
+
+    def show_recommendations(self) -> None:
+        if self.recommendations is None:
+            self.recommend()
+
+        print("\n=== AutoDQ Cleaning Recommendations ===")
+
+        if not self.recommendations:
+            print("No cleaning recommendations generated.")
+            return
+
+        for index, recommendation in enumerate(self.recommendations, start=1):
+            print(f"\n{index}. {recommendation.issue_type}")
+            print(f"   Strategy: {recommendation.strategy}")
+            print(f"   Priority: {recommendation.priority}")
+            print(f"   Action: {recommendation.action}")
+            print(f"   Reason: {recommendation.reason}")
+
+            if recommendation.affected_columns:
+                print(f"   Affected Columns: {', '.join(recommendation.affected_columns)}")
+
+            if recommendation.risk:
+                print(f"   Risk: {recommendation.risk}")
+
+            if recommendation.confidence is not None:
+                print(f"   Confidence: {round(recommendation.confidence * 100, 2)}%")
 
     def diagnose(self) -> dict:
         if self.data is None:
