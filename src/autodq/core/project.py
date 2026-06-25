@@ -12,7 +12,7 @@ from autodq.renderers.console.diagnosis import ConsoleDiagnosisRenderer
 from autodq.renderers.console.preview import ConsolePreviewRenderer
 from autodq.renderers.console.profile import ConsoleProfileRenderer
 from autodq.renderers.console.recommendations import ConsoleRecommendationRenderer
-
+from autodq.core.session import AutoDQSession
 
 class AutoDQ:
     """
@@ -29,9 +29,18 @@ class AutoDQ:
         self.recommendations = None
         self.decision_plan = None
         self.previews = None
+        self.session = AutoDQSession(dataset_path=str(self.dataset_path))
+        
+    def show_session(self) -> None:
+        self.session.summary()
 
     def load(self) -> pd.DataFrame:
         self.data = load_dataset(self.dataset_path)
+        self.session.log(
+            step="load",
+            message="Dataset loaded successfully.",
+            metadata={"rows": len(self.data), "columns": len(self.data.columns)},
+        )
         return self.data
 
     def profile(self) -> dict:
@@ -42,6 +51,14 @@ class AutoDQ:
             self.data,
             dataset_path=str(self.dataset_path),
         )
+        self.session.log(
+            step="profile",
+            message="Dataset profile generated.",
+            metadata={
+                "rows": self.profile_report["rows"],
+                "columns": self.profile_report["columns"],
+            },
+        )
         return self.profile_report
 
     def diagnose(self):
@@ -49,6 +66,14 @@ class AutoDQ:
             self.load()
 
         self.diagnosis_report = run_diagnosis(self.data)
+        self.session.log(
+            step="diagnose",
+            message="Data quality diagnosis completed.",
+            metadata={
+                "issue_count": self.diagnosis_report.issue_count,
+                "quality_score": self.diagnosis_report.quality_score,
+            },
+        )
         return self.diagnosis_report
 
     def recommend(self):
@@ -57,6 +82,11 @@ class AutoDQ:
 
         engine = RecommendationEngine()
         self.recommendations = engine.recommend(self.diagnosis_report)
+        self.session.log(
+            step="recommend",
+            message="Cleaning recommendations generated.",
+            metadata={"recommendation_count": len(self.recommendations)},
+        )
         return self.recommendations
 
     def decide(self):
@@ -65,6 +95,11 @@ class AutoDQ:
 
         engine = DecisionEngine()
         self.decision_plan = engine.build_plan(self.recommendations)
+        self.session.log(
+            step="decide",
+            message="Decision plan created.",
+            metadata={"action_count": self.decision_plan.action_count},
+        )
         return self.decision_plan
 
     def preview(self):
@@ -76,6 +111,11 @@ class AutoDQ:
 
         engine = PreviewEngine()
         self.previews = engine.preview(self.data, self.decision_plan)
+        self.session.log(
+            step="decide",
+            message="Decision plan created.",
+            metadata={"action_count": self.decision_plan.action_count},
+        )
         return self.previews
 
     def show_profile(self) -> None:
