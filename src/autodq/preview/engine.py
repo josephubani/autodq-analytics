@@ -1,6 +1,7 @@
 import pandas as pd
 
 from autodq.decision.engine import DecisionPlan
+from autodq.models.preview import PreviewAction, PreviewReport
 
 
 class PreviewEngine:
@@ -8,58 +9,56 @@ class PreviewEngine:
     Generates safe previews of proposed cleaning actions without modifying data.
     """
 
-    def preview(self, df: pd.DataFrame, decision_plan: DecisionPlan) -> list[dict]:
-        previews = []
+    def preview(self, df: pd.DataFrame, decision_plan: DecisionPlan) -> PreviewReport:
+        actions = []
 
         for action in decision_plan.actions:
             if action.issue_type == "duplicate_rows":
-                previews.append(self._preview_duplicates(df, action))
+                actions.append(self._preview_duplicates(df, action))
 
             elif action.issue_type == "missing_values":
-                previews.append(self._preview_missing_values(df, action))
+                actions.append(self._preview_missing_values(df, action))
 
             elif action.issue_type == "outliers":
-                previews.append(self._preview_outliers(df, action))
+                actions.append(self._preview_outliers(df, action))
 
-        return previews
+        return PreviewReport(actions=actions)
 
-    def _preview_duplicates(self, df: pd.DataFrame, action) -> dict:
+    def _preview_duplicates(self, df: pd.DataFrame, action) -> PreviewAction:
         duplicate_count = int(df.duplicated().sum())
 
-        return {
-            "action_id": action.action_id,
-            "issue_type": action.issue_type,
-            "strategy": action.strategy,
-            "preview": {
+        return PreviewAction(
+            action_id=action.action_id,
+            issue_type=action.issue_type,
+            strategy=action.strategy,
+            details={
                 "rows_before": int(len(df)),
                 "rows_after": int(len(df) - duplicate_count),
                 "rows_removed": duplicate_count,
             },
-        }
+        )
 
-    def _preview_missing_values(self, df: pd.DataFrame, action) -> dict:
+    def _preview_missing_values(self, df: pd.DataFrame, action) -> PreviewAction:
         column_previews = {}
 
         for column in action.affected_columns:
             if column not in df.columns:
                 continue
 
-            missing_count = int(df[column].isna().sum())
-
             column_previews[column] = {
-                "missing_before": missing_count,
+                "missing_before": int(df[column].isna().sum()),
                 "suggested_action": "Column-specific imputation or removal",
                 "sample_values": df[column].head(5).astype(str).tolist(),
             }
 
-        return {
-            "action_id": action.action_id,
-            "issue_type": action.issue_type,
-            "strategy": action.strategy,
-            "preview": column_previews,
-        }
+        return PreviewAction(
+            action_id=action.action_id,
+            issue_type=action.issue_type,
+            strategy=action.strategy,
+            details=column_previews,
+        )
 
-    def _preview_outliers(self, df: pd.DataFrame, action) -> dict:
+    def _preview_outliers(self, df: pd.DataFrame, action) -> PreviewAction:
         column_previews = {}
 
         for column in action.affected_columns:
@@ -80,7 +79,6 @@ class PreviewEngine:
 
             lower = q1 - (1.5 * iqr)
             upper = q3 + (1.5 * iqr)
-
             outlier_values = series[(series < lower) | (series > upper)]
 
             column_previews[column] = {
@@ -91,9 +89,9 @@ class PreviewEngine:
                 "suggested_action": "Review, clip, winsorize, transform, or validate with domain knowledge",
             }
 
-        return {
-            "action_id": action.action_id,
-            "issue_type": action.issue_type,
-            "strategy": action.strategy,
-            "preview": column_previews,
-        }
+        return PreviewAction(
+            action_id=action.action_id,
+            issue_type=action.issue_type,
+            strategy=action.strategy,
+            details=column_previews,
+        )

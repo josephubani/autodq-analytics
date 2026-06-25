@@ -1,30 +1,28 @@
 class ConsolePreviewRenderer:
     @staticmethod
-    def render(previews: list[dict]) -> None:
+    def render(report) -> None:
         print("\n=== AutoDQ Cleaning Preview ===")
 
-        if not previews:
+        if report.action_count == 0:
             print("No previews available.")
             return
 
-        for preview in previews:
-            print(f"\nAction {preview['action_id']}: {preview['issue_type']}")
-            print(f"Strategy: {preview['strategy']}")
+        for action in report.actions:
+            print(f"\nAction {action.action_id}: {action.issue_type}")
+            print(f"Strategy: {action.strategy}")
             print("Preview:")
 
-            details = preview["preview"]
+            if action.issue_type == "duplicate_rows":
+                ConsolePreviewRenderer._render_duplicates(action.details)
 
-            if preview["issue_type"] == "duplicate_rows":
-                ConsolePreviewRenderer._render_duplicates(details)
+            elif action.issue_type == "missing_values":
+                ConsolePreviewRenderer._render_missing(action.details)
 
-            elif preview["issue_type"] == "missing_values":
-                ConsolePreviewRenderer._render_missing(details)
-
-            elif preview["issue_type"] == "outliers":
-                ConsolePreviewRenderer._render_outliers(details)
+            elif action.issue_type == "outliers":
+                ConsolePreviewRenderer._render_outliers(action.details)
 
             else:
-                print(details)
+                print(action.details)
 
     @staticmethod
     def _render_duplicates(details: dict) -> None:
