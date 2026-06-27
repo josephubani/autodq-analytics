@@ -6,17 +6,19 @@ from autodq.core.session import AutoDQSession
 from autodq.core.state import AutoDQState
 from autodq.decision.engine import DecisionEngine
 from autodq.diagnosis.engine import run_diagnosis
+from autodq.interpretation.engine import InterpretationEngine
 from autodq.io.loaders import load_dataset
 from autodq.knowledge.engine import KnowledgeEngine
 from autodq.preview.engine import PreviewEngine
 from autodq.profiling.profiler import generate_profile
 from autodq.recommendations.engine import RecommendationEngine
 from autodq.renderers.console.diagnosis import ConsoleDiagnosisRenderer
+from autodq.renderers.console.interpretation import ConsoleInterpretationRenderer
 from autodq.renderers.console.preview import ConsolePreviewRenderer
 from autodq.renderers.console.profile import ConsoleProfileRenderer
 from autodq.renderers.console.recommendations import ConsoleRecommendationRenderer
-from autodq.statistics.engine import StatisticsEngine
 from autodq.renderers.console.statistics import ConsoleStatisticsRenderer
+from autodq.statistics.engine import StatisticsEngine
 
 
 class AutoDQ:
@@ -31,8 +33,10 @@ class AutoDQ:
         )
 
         self.knowledge_engine = KnowledgeEngine()
-        self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
         self.statistics_engine = StatisticsEngine()
+        self.interpretation_engine = InterpretationEngine()
+
+        self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
 
     @property
     def dataset_path(self):
@@ -170,6 +174,44 @@ class AutoDQ:
 
         return self.state.profile_report
 
+    def statistics(self):
+        if self.state.data is None:
+            self.load()
+
+        self.state.statistics_report = self.statistics_engine.analyze(
+            self.state.data
+        )
+
+        self.session.log(
+            step="statistics",
+            message="Statistics generated.",
+            metadata={
+                "columns": len(self.state.statistics_report.descriptive)
+            },
+        )
+
+        return self.state.statistics_report
+
+    def interpret(self):
+        if self.state.statistics_report is None:
+            self.statistics()
+
+        self.state.interpretation_report = (
+            self.interpretation_engine.interpret_statistics(
+                self.state.statistics_report
+            )
+        )
+
+        self.session.log(
+            step="interpret",
+            message="Statistical interpretations generated.",
+            metadata={
+                "insights": self.state.interpretation_report.insight_count
+            },
+        )
+
+        return self.state.interpretation_report
+
     def diagnose(self):
         if self.state.data is None:
             self.load()
@@ -237,30 +279,6 @@ class AutoDQ:
         )
 
         return self.state.preview_report
-    
-    def statistics(self):
-        if self.state.data is None:
-            self.load()
-
-        self.state.statistics_report = self.statistics_engine.analyze(
-            self.state.data
-        )
-
-        self.session.log(
-            step="statistics",
-            message="Statistics generated.",
-            metadata={
-                "columns": len(self.state.statistics_report.descriptive)
-            },
-        )
-
-        return self.state.statistics_report
-
-    def show_statistics(self) -> None:
-        if self.state.statistics_report is None:
-            self.statistics()
-
-        ConsoleStatisticsRenderer.render(self.state.statistics_report)
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:
@@ -301,6 +319,20 @@ class AutoDQ:
 
         ConsoleProfileRenderer.render(self.state.profile_report)
 
+    def show_statistics(self) -> None:
+        if self.state.statistics_report is None:
+            self.statistics()
+
+        ConsoleStatisticsRenderer.render(self.state.statistics_report)
+
+    def show_interpretations(self) -> None:
+        if self.state.interpretation_report is None:
+            self.interpret()
+
+        ConsoleInterpretationRenderer.render(
+            self.state.interpretation_report
+        )
+
     def show_diagnosis(self) -> None:
         if self.state.diagnosis_report is None:
             self.diagnose()
@@ -321,5 +353,3 @@ class AutoDQ:
 
     def show_session(self) -> None:
         self.session.summary()
-        
-    

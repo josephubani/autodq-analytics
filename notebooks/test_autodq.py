@@ -15,6 +15,8 @@ project.show_profile()
 project.statistics()
 project.show_statistics()
 
+project.interpret()
+project.show_interpretations()
 
 project.diagnose()
 project.show_diagnosis()
