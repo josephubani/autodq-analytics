@@ -41,7 +41,14 @@ class HTMLExporter:
         issue_rows = self._build_issue_rows(diagnosis)
         recommendation_rows = self._build_recommendation_rows(recommendations)
         cleaning_rows = self._build_cleaning_rows(cleaning)
-        visualization_cards = self._build_visualization_cards(report.visualizations)
+
+        visualization_cards = self._build_visualization_cards(
+            report.visualizations
+        )
+
+        rendered_visualization_cards = self._build_rendered_visualization_cards(
+            report.rendered_visualizations
+        )
 
         return f"""
 <!DOCTYPE html>
@@ -286,6 +293,26 @@ body {{
     margin-top: 4px;
 }}
 
+.rendered-viz-grid {{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+}}
+
+.rendered-viz-card {{
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: var(--card);
+}}
+
+.rendered-viz-card img {{
+    width: 100%;
+    border-radius: 12px;
+    background: white;
+    margin-top: 12px;
+}}
+
 .visualization-grid {{
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -418,7 +445,11 @@ th {{
 }}
 
 @media (max-width: 900px) {{
-    .grid, .two-col, .chart-grid, .visualization-grid {{
+    .grid,
+    .two-col,
+    .chart-grid,
+    .visualization-grid,
+    .rendered-viz-grid {{
         grid-template-columns: 1fr;
     }}
 
@@ -513,6 +544,13 @@ th {{
             {self._comparison_card("Duplicate Rows", duplicate_before, duplicate_after)}
             {self._comparison_card("Rows", rows_before, rows_after)}
             {self._comparison_card("Quality Score", quality_before, quality_after)}
+        </div>
+    </div>
+
+    <div class="section card">
+        <h2 class="section-title">Rendered Visualization Assets</h2>
+        <div class="rendered-viz-grid">
+            {rendered_visualization_cards}
         </div>
     </div>
 
@@ -659,6 +697,7 @@ th {{
     def _positive_reduction(self, before, after):
         if isinstance(before, (int, float)) and isinstance(after, (int, float)):
             return max(0, before - after)
+
         return "N/A"
 
     def _metric_bar(self, label, before, after):
@@ -717,6 +756,58 @@ th {{
         </div>
         """
 
+    def _build_rendered_visualization_cards(self, rendered_visualizations):
+        if not rendered_visualizations:
+            return """
+            <div class="rendered-viz-card">
+                <div class="viz-title">No rendered chart assets</div>
+                <div class="viz-description">
+                    No chart image files were generated for this report.
+                </div>
+            </div>
+            """
+
+        cards = []
+
+        for chart in rendered_visualizations:
+            if chart.get("image_path") is None:
+                cards.append(
+                    f"""
+                    <div class="rendered-viz-card">
+                        <div class="viz-title">{chart.get("title", "Chart")}</div>
+                        <div class="viz-description">
+                            {chart.get("error", "Chart could not be rendered.")}
+                        </div>
+                    </div>
+                    """
+                )
+                continue
+
+            image_path = self._relative_chart_path(chart["image_path"])
+
+            cards.append(
+                f"""
+                <div class="rendered-viz-card">
+                    <div class="viz-title">{chart.get("title", "Chart")}</div>
+                    <div class="viz-description">{chart.get("description", "")}</div>
+                    <img src="{image_path}" alt="{chart.get("title", "Chart")}">
+                    <div class="viz-meta">
+                        Chart ID: {chart.get("chart_id")} | Type: {chart.get("chart_type")} | Stage: {chart.get("stage")}
+                    </div>
+                </div>
+                """
+            )
+
+        return "\n".join(cards)
+
+    def _relative_chart_path(self, image_path):
+        image_path = str(image_path)
+
+        if "reports/charts/" in image_path:
+            return image_path.split("reports/")[-1]
+
+        return image_path
+
     def _build_visualization_cards(self, visualization_report):
         if visualization_report is None or not visualization_report.charts:
             return """
@@ -765,6 +856,7 @@ th {{
         ]
 
         max_value = max(values) if values else 1
+
         if max_value == 0:
             max_value = 1
 
@@ -846,9 +938,14 @@ th {{
 
         for index, rec in enumerate(recommendations, start=1):
             columns = ", ".join(rec.affected_columns) if rec.affected_columns else "-"
-            confidence = f"{round(rec.confidence * 100, 2)}%" if rec.confidence is not None else "N/A"
+            confidence = (
+                f"{round(rec.confidence * 100, 2)}%"
+                if rec.confidence is not None
+                else "N/A"
+            )
 
             reason = rec.reason
+
             if len(reason) > 280:
                 reason = reason[:280] + "..."
 
@@ -874,7 +971,11 @@ th {{
         rows = []
 
         for action in cleaning.actions:
-            columns = ", ".join(action.affected_columns) if action.affected_columns else "-"
+            columns = (
+                ", ".join(action.affected_columns)
+                if action.affected_columns
+                else "-"
+            )
             status_class = "success" if action.status == "success" else "skipped"
 
             rows.append(

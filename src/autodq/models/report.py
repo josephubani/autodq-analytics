@@ -15,5 +15,6 @@ class AutoDQReport:
     cleaning: object | None
     validation: object | None
     visualizations: object | None
+    rendered_visualizations: list | None
     session: object | None
     generated_at: datetime = datetime.now()

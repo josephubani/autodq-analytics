@@ -266,6 +266,26 @@ body {
     margin-top: 4px;
 }
 
+.rendered-viz-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+}
+
+.rendered-viz-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: var(--card);
+}
+
+.rendered-viz-card img {
+    width: 100%;
+    border-radius: 12px;
+    background: white;
+    margin-top: 12px;
+}
+
 .visualization-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -398,7 +418,11 @@ th {
 }
 
 @media (max-width: 900px) {
-    .grid, .two-col, .chart-grid, .visualization-grid {
+    .grid,
+    .two-col,
+    .chart-grid,
+    .visualization-grid,
+    .rendered-viz-grid {
         grid-template-columns: 1fr;
     }
 
@@ -419,7 +443,7 @@ th {
         <div class="meta">
             <span>Dataset: datasets/sample/sales.csv</span>
             <span>Style: print</span>
-            <span>Generated: 2026-06-26 23:45:59</span>
+            <span>Generated: 2026-06-27 00:04:57</span>
         </div>
     </div>
 
@@ -625,6 +649,102 @@ th {
             <div class="metric-small">Change: +9.959999999999994</div>
         </div>
         
+        </div>
+    </div>
+
+    <div class="section card">
+        <h2 class="section-title">Rendered Visualization Assets</h2>
+        <div class="rendered-viz-grid">
+            
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Quality Score Before vs After</div>
+                    <div class="viz-description">Compares the dataset quality score before and after approved cleaning actions.</div>
+                    <img src="charts/quality_score_comparison.png" alt="Quality Score Before vs After">
+                    <div class="viz-meta">
+                        Chart ID: quality_score_comparison | Type: bar | Stage: comparison
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Missing Values by Column (before)</div>
+                    <div class="viz-description">Shows missing value counts by column.</div>
+                    <img src="charts/missing_values_before.png" alt="Missing Values by Column (before)">
+                    <div class="viz-meta">
+                        Chart ID: missing_values_before | Type: bar | Stage: before
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Missing Values by Column (after)</div>
+                    <div class="viz-description">Shows missing value counts by column.</div>
+                    <img src="charts/missing_values_after.png" alt="Missing Values by Column (after)">
+                    <div class="viz-meta">
+                        Chart ID: missing_values_after | Type: bar | Stage: after
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Data Quality Issue Breakdown</div>
+                    <div class="viz-description">Shows detected data quality issues and confidence levels.</div>
+                    <img src="charts/issue_breakdown.png" alt="Data Quality Issue Breakdown">
+                    <div class="viz-meta">
+                        Chart ID: issue_breakdown | Type: bar | Stage: before
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Cleaning Action Status</div>
+                    <div class="viz-description">Shows how many approved actions succeeded or were skipped.</div>
+                    <img src="charts/cleaning_action_status.png" alt="Cleaning Action Status">
+                    <div class="viz-meta">
+                        Chart ID: cleaning_action_status | Type: bar | Stage: after
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Missing Values Before vs After</div>
+                    <div class="viz-description">Compares missing values before and after cleaning.</div>
+                    <img src="charts/missing_values_comparison.png" alt="Missing Values Before vs After">
+                    <div class="viz-meta">
+                        Chart ID: missing_values_comparison | Type: bar | Stage: comparison
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Duplicate Rows Before vs After</div>
+                    <div class="viz-description">Compares duplicate rows before and after cleaning.</div>
+                    <img src="charts/duplicate_rows_comparison.png" alt="Duplicate Rows Before vs After">
+                    <div class="viz-meta">
+                        Chart ID: duplicate_rows_comparison | Type: bar | Stage: comparison
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Rows Before vs After</div>
+                    <div class="viz-description">Compares rows before and after cleaning.</div>
+                    <img src="charts/rows_comparison.png" alt="Rows Before vs After">
+                    <div class="viz-meta">
+                        Chart ID: rows_comparison | Type: bar | Stage: comparison
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Columns Before vs After</div>
+                    <div class="viz-description">Compares columns before and after cleaning.</div>
+                    <img src="charts/columns_comparison.png" alt="Columns Before vs After">
+                    <div class="viz-meta">
+                        Chart ID: columns_comparison | Type: bar | Stage: comparison
+                    </div>
+                </div>
+                
         </div>
     </div>
 

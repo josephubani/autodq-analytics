@@ -3,10 +3,24 @@ from pathlib import Path
 from autodq.models.report import AutoDQReport
 from autodq.reporting.html_exporter import HTMLExporter
 from autodq.reporting.json_exporter import JSONExporter
+from autodq.visualization.renderers.matplotlib_renderer import (
+    MatplotlibVisualizationRenderer,
+)
 
 
 class ReportingEngine:
-    def build_report(self, state, session):
+    def __init__(self):
+        self.visual_renderer = MatplotlibVisualizationRenderer()
+
+    def build_report(self, state, session, output_dir: str | Path = "reports"):
+        output_dir = Path(output_dir)
+        chart_dir = output_dir / "charts"
+
+        rendered_visualizations = self.visual_renderer.render_report(
+            visualization_report=state.visualization_report,
+            output_dir=chart_dir,
+        )
+
         return AutoDQReport(
             dataset=str(state.dataset_path),
             profile=state.profile_report,
@@ -19,6 +33,7 @@ class ReportingEngine:
             cleaning=state.cleaning_report,
             validation=state.validation_report,
             visualizations=state.visualization_report,
+            rendered_visualizations=rendered_visualizations,
             session=session,
         )
 

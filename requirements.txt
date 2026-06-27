@@ -8,3 +8,4 @@ pyyaml
 streamlit
 openpyxl
 xlrd
+matplotlib

@@ -367,34 +367,34 @@ class AutoDQ:
         self,
         output: str,
         style: str = "executive",
-) -> None:
-    
+    ) -> None:
+        if self.state.visualization_report is None:
+            self.visualize(chart="auto")
 
-    # Generate default visualizations if they don't exist yet
-      if self.state.visualization_report is None:
-         self.visualize()
+        output_path = Path(output)
 
-      report = self.reporting_engine.build_report(
-        self.state,
-        self.session,
-    )
+        report = self.reporting_engine.build_report(
+            self.state,
+            self.session,
+            output_dir=output_path.parent,
+        )
 
-      self.reporting_engine.export(
-        report=report,
-        output=output,
-        style=style,
-    )
+        self.reporting_engine.export(
+            report,
+            output,
+            style=style,
+        )
 
-      self.session.log(
-        step="report",
-        message="Report exported.",
-        metadata={
-            "output": output,
-            "style": style,
-        },
-    )
+        self.session.log(
+            step="report",
+            message="Report exported.",
+            metadata={
+                "output": output,
+                "style": style,
+            },
+        )
 
-      print(f"\nReport exported to {output}")
+        print(f"\nReport exported to {output}")
         
     def visualize(
         self,
