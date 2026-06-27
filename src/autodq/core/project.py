@@ -19,6 +19,8 @@ from autodq.renderers.console.profile import ConsoleProfileRenderer
 from autodq.renderers.console.recommendations import ConsoleRecommendationRenderer
 from autodq.renderers.console.statistics import ConsoleStatisticsRenderer
 from autodq.statistics.engine import StatisticsEngine
+from autodq.cleaning.engine import CleaningEngine
+from autodq.renderers.console.cleaning import ConsoleCleaningRenderer
 
 
 class AutoDQ:
@@ -37,6 +39,7 @@ class AutoDQ:
         self.interpretation_engine = InterpretationEngine()
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
+        self.cleaning_engine = CleaningEngine()
 
     @property
     def dataset_path(self):
@@ -290,6 +293,58 @@ class AutoDQ:
         )
 
         return self.state.preview_report
+    
+    
+    
+    def approve_all(self) -> None:
+        if self.state.decision_plan is None:
+            self.decide()
+
+        for action in self.state.decision_plan.actions:
+            action.status = "approved"
+
+        self.session.log(
+            step="approve",
+            message="All decision actions approved.",
+            metadata={"approved_actions": self.state.decision_plan.action_count},
+        )
+
+    def clean(self):
+        if self.state.data is None:
+            self.load()
+
+        if self.state.decision_plan is None:
+            self.decide()
+
+        cleaned_data, cleaning_report = self.cleaning_engine.clean(
+            df=self.state.data,
+            decision_plan=self.state.decision_plan,
+        )
+
+        self.state.cleaned_data = cleaned_data
+        self.state.cleaning_report = cleaning_report
+
+        self.session.log(
+            step="clean",
+            message="Approved cleaning actions executed.",
+            metadata={
+                "actions": cleaning_report.action_count,
+                "successful_actions": cleaning_report.successful_actions,
+                "rows_before": len(self.state.data),
+                "rows_after": len(self.state.cleaned_data),
+            },
+        )
+
+        return self.state.cleaned_data
+
+    def show_cleaning_report(self) -> None:
+        if self.state.cleaning_report is None:
+            print("\nNo cleaning report available. Run project.clean() first.")
+            return
+
+        ConsoleCleaningRenderer.render(self.state.cleaning_report)
+    
+    
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:

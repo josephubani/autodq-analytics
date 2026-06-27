@@ -28,4 +28,8 @@ project.decide()
 project.preview()
 project.show_preview()
 
+project.approve_all()
+project.clean()
+project.show_cleaning_report()
+
 project.show_session()
