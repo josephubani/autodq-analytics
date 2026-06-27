@@ -15,6 +15,8 @@ from autodq.renderers.console.diagnosis import ConsoleDiagnosisRenderer
 from autodq.renderers.console.preview import ConsolePreviewRenderer
 from autodq.renderers.console.profile import ConsoleProfileRenderer
 from autodq.renderers.console.recommendations import ConsoleRecommendationRenderer
+from autodq.statistics.engine import StatisticsEngine
+from autodq.renderers.console.statistics import ConsoleStatisticsRenderer
 
 
 class AutoDQ:
@@ -30,6 +32,7 @@ class AutoDQ:
 
         self.knowledge_engine = KnowledgeEngine()
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
+        self.statistics_engine = StatisticsEngine()
 
     @property
     def dataset_path(self):
@@ -234,6 +237,30 @@ class AutoDQ:
         )
 
         return self.state.preview_report
+    
+    def statistics(self):
+        if self.state.data is None:
+            self.load()
+
+        self.state.statistics_report = self.statistics_engine.analyze(
+            self.state.data
+        )
+
+        self.session.log(
+            step="statistics",
+            message="Statistics generated.",
+            metadata={
+                "columns": len(self.state.statistics_report.descriptive)
+            },
+        )
+
+        return self.state.statistics_report
+
+    def show_statistics(self) -> None:
+        if self.state.statistics_report is None:
+            self.statistics()
+
+        ConsoleStatisticsRenderer.render(self.state.statistics_report)
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:
@@ -294,3 +321,5 @@ class AutoDQ:
 
     def show_session(self) -> None:
         self.session.summary()
+        
+    
