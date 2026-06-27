@@ -35,23 +35,10 @@ project.show_cleaning_report()
 project.validate_cleaning()
 project.show_validation()
 
-project.visualize()
-project.show_visualizations()
+project.visualize( chart = "auto")
 
-project.visualize(chart="quality_score")
-project.show_visualizations()
 
-project.visualize(chart="bar", x="Region", y="Revenue")
-project.show_visualizations()
 
-project.visualize(chart="scatter", x="Quantity", y="Revenue")
-project.show_visualizations()
-
-project.visualize(chart="distribution", column="Revenue", stage="before")
-project.show_visualizations()
-
-project.visualize(chart="distribution", column="Revenue", stage="after")
-project.show_visualizations()
 
 project.generate_report("reports/autodq_executive.html", style="executive")
 project.generate_report("reports/autodq_dark.html", style="dark")
