@@ -1,14 +1,12 @@
 from pathlib import Path
 
 from autodq.models.report import AutoDQReport
-from autodq.reporting.json_exporter import JSONExporter
 from autodq.reporting.html_exporter import HTMLExporter
+from autodq.reporting.json_exporter import JSONExporter
 
 
 class ReportingEngine:
-
     def build_report(self, state, session):
-
         return AutoDQReport(
             dataset=str(state.dataset_path),
             profile=state.profile_report,
@@ -23,19 +21,15 @@ class ReportingEngine:
             session=session,
         )
 
-    def export(self, report, output: str):
-
+    def export(self, report, output: str, style: str = "executive"):
         output = Path(output)
-
         suffix = output.suffix.lower()
 
         if suffix == ".json":
             JSONExporter().export(report, output)
 
         elif suffix == ".html":
-            HTMLExporter().export(report, output)
+            HTMLExporter().export(report, output, style=style)
 
         else:
-            raise ValueError(
-                f"Unsupported report format: {suffix}"
-            )
+            raise ValueError(f"Unsupported report format: {suffix}")

@@ -35,7 +35,9 @@ project.show_cleaning_report()
 project.validate_cleaning()
 project.show_validation()
 
-project.generate_report("reports/autodq_report.html")
+project.generate_report("reports/autodq_executive.html", style="executive")
+project.generate_report("reports/autodq_dark.html", style="dark")
+project.generate_report("reports/autodq_print.html", style="print")
 
 project.show_session()
 

@@ -3,13 +3,13 @@ class HTMLExporter:
     Exports a professional executive HTML dashboard report.
     """
 
-    def export(self, report, path):
-        html = self._build_html(report)
+    def export(self, report, path, style: str = "executive"):
+        html = self._build_html(report, style=style)
 
         with open(path, "w", encoding="utf-8") as file:
             file.write(html)
 
-    def _build_html(self, report):
+    def _build_html(self, report, style: str = "executive"):
         validation = report.validation
         cleaning = report.cleaning
         diagnosis = report.diagnosis

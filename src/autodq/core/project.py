@@ -360,7 +360,7 @@ class AutoDQ:
 
         return self.state.validation_report
 
-    def generate_report(self, output: str) -> None:
+    def generate_report(self, output: str, style: str = "executive") -> None:
         report = self.reporting_engine.build_report(
             self.state,
             self.session,
@@ -369,12 +369,13 @@ class AutoDQ:
         self.reporting_engine.export(
             report,
             output,
+            style=style,
         )
 
         self.session.log(
             step="report",
             message="Report exported.",
-            metadata={"output": output},
+            metadata={"output": output, "style": style},
         )
 
         print(f"\nReport exported to {output}")
