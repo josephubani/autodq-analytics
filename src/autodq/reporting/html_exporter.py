@@ -41,6 +41,7 @@ class HTMLExporter:
         issue_rows = self._build_issue_rows(diagnosis)
         recommendation_rows = self._build_recommendation_rows(recommendations)
         cleaning_rows = self._build_cleaning_rows(cleaning)
+        visualization_cards = self._build_visualization_cards(report.visualizations)
 
         return f"""
 <!DOCTYPE html>
@@ -230,6 +231,119 @@ body {{
     background: var(--primary);
 }}
 
+.chart-grid {{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}}
+
+.chart-card {{
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: var(--card);
+}}
+
+.chart-title {{
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 12px;
+}}
+
+.mini-bars {{
+    display: flex;
+    align-items: flex-end;
+    gap: 18px;
+    height: 130px;
+    margin-top: 12px;
+}}
+
+.mini-bar-wrap {{
+    flex: 1;
+    text-align: center;
+}}
+
+.mini-bar {{
+    width: 100%;
+    min-height: 4px;
+    border-radius: 8px 8px 0 0;
+    background: var(--primary);
+}}
+
+.mini-bar.after {{
+    background: var(--success);
+}}
+
+.mini-label {{
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--muted);
+}}
+
+.mini-value {{
+    font-weight: 800;
+    margin-top: 4px;
+}}
+
+.visualization-grid {{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}}
+
+.viz-card {{
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: var(--card);
+}}
+
+.viz-title {{
+    font-weight: 800;
+    margin-bottom: 6px;
+}}
+
+.viz-description {{
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 14px;
+}}
+
+.viz-bar-row {{
+    display: grid;
+    grid-template-columns: 130px 1fr 70px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 13px;
+}}
+
+.viz-bar-label {{
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}}
+
+.viz-bar-track {{
+    height: 12px;
+    border-radius: 999px;
+    background: var(--bar-bg);
+    overflow: hidden;
+}}
+
+.viz-bar-fill {{
+    height: 100%;
+    background: var(--primary);
+    border-radius: 999px;
+}}
+
+.viz-meta {{
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 12px;
+}}
+
 table {{
     width: 100%;
     border-collapse: collapse;
@@ -304,7 +418,7 @@ th {{
 }}
 
 @media (max-width: 900px) {{
-    .grid, .two-col {{
+    .grid, .two-col, .chart-grid, .visualization-grid {{
         grid-template-columns: 1fr;
     }}
 
@@ -321,7 +435,7 @@ th {{
 
     <div class="hero">
         <h1>AutoDQ Executive Data Quality Report</h1>
-        <p>Automated profiling, diagnosis, evidence-aware recommendations, cleaning validation, and workflow summary.</p>
+        <p>Automated profiling, diagnosis, evidence-aware recommendations, cleaning validation, visualization, and workflow summary.</p>
         <div class="meta">
             <span>Dataset: {report.dataset}</span>
             <span>Style: {style}</span>
@@ -389,6 +503,23 @@ th {{
                 {self._metric_bar("Rows", rows_before, rows_after)}
                 {self._metric_bar("Quality score", quality_before, quality_after)}
             </div>
+        </div>
+    </div>
+
+    <div class="section card">
+        <h2 class="section-title">Visual Cleaning Impact</h2>
+        <div class="chart-grid">
+            {self._comparison_card("Missing Values", missing_before, missing_after)}
+            {self._comparison_card("Duplicate Rows", duplicate_before, duplicate_after)}
+            {self._comparison_card("Rows", rows_before, rows_after)}
+            {self._comparison_card("Quality Score", quality_before, quality_after)}
+        </div>
+    </div>
+
+    <div class="section card">
+        <h2 class="section-title">Visualization Engine Output</h2>
+        <div class="visualization-grid">
+            {visualization_cards}
         </div>
     </div>
 
@@ -551,6 +682,141 @@ th {{
                 <span>{after}</span>
             </div>
         </div>
+        """
+
+    def _comparison_card(self, label, before, after):
+        if not isinstance(before, (int, float)) or not isinstance(after, (int, float)):
+            return ""
+
+        max_value = max(before, after, 1)
+        before_height = round((before / max_value) * 100, 2)
+        after_height = round((after / max_value) * 100, 2)
+
+        change = after - before
+        change_label = f"{change:+}"
+
+        return f"""
+        <div class="chart-card">
+            <div class="chart-title">{label}</div>
+
+            <div class="mini-bars">
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar" style="height:{before_height}%"></div>
+                    <div class="mini-label">Before</div>
+                    <div class="mini-value">{before}</div>
+                </div>
+
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar after" style="height:{after_height}%"></div>
+                    <div class="mini-label">After</div>
+                    <div class="mini-value">{after}</div>
+                </div>
+            </div>
+
+            <div class="metric-small">Change: {change_label}</div>
+        </div>
+        """
+
+    def _build_visualization_cards(self, visualization_report):
+        if visualization_report is None or not visualization_report.charts:
+            return """
+            <div class="viz-card">
+                <div class="viz-title">No visualizations generated</div>
+                <div class="viz-description">
+                    Run project.visualize() before generating the report.
+                </div>
+            </div>
+            """
+
+        cards = []
+
+        for chart in visualization_report.charts:
+            cards.append(self._render_visualization_card(chart))
+
+        return "\n".join(cards)
+
+    def _render_visualization_card(self, chart):
+        if chart.chart_type == "bar":
+            visual = self._render_bar_visual(chart)
+        elif chart.chart_type == "scatter":
+            visual = self._render_scatter_visual(chart)
+        else:
+            visual = "<p class='viz-description'>Unsupported chart preview.</p>"
+
+        return f"""
+        <div class="viz-card">
+            <div class="viz-title">{chart.title}</div>
+            <div class="viz-description">{chart.description}</div>
+            {visual}
+            <div class="viz-meta">
+                Chart ID: {chart.chart_id} | Type: {chart.chart_type} | Stage: {chart.stage}
+            </div>
+        </div>
+        """
+
+    def _render_bar_visual(self, chart):
+        if not chart.data or chart.x is None or chart.y is None:
+            return "<p class='viz-description'>No data available.</p>"
+
+        values = [
+            row.get(chart.y, 0)
+            for row in chart.data
+            if isinstance(row.get(chart.y, 0), (int, float))
+        ]
+
+        max_value = max(values) if values else 1
+        if max_value == 0:
+            max_value = 1
+
+        rows = []
+
+        for row in chart.data[:12]:
+            label = str(row.get(chart.x, "N/A"))
+            value = row.get(chart.y, 0)
+
+            if not isinstance(value, (int, float)):
+                value = 0
+
+            width = round((value / max_value) * 100, 2)
+
+            rows.append(
+                f"""
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">{label}</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:{width}%"></div>
+                    </div>
+                    <strong>{value}</strong>
+                </div>
+                """
+            )
+
+        return "\n".join(rows)
+
+    def _render_scatter_visual(self, chart):
+        if not chart.data or chart.x is None or chart.y is None:
+            return "<p class='viz-description'>No data available.</p>"
+
+        rows = []
+
+        for row in chart.data[:8]:
+            rows.append(
+                f"""
+                <tr>
+                    <td>{row.get(chart.x, "N/A")}</td>
+                    <td>{row.get(chart.y, "N/A")}</td>
+                </tr>
+                """
+            )
+
+        return f"""
+        <table>
+            <tr>
+                <th>{chart.x}</th>
+                <th>{chart.y}</th>
+            </tr>
+            {"".join(rows)}
+        </table>
         """
 
     def _build_issue_rows(self, diagnosis):

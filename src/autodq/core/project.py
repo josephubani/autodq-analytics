@@ -24,6 +24,8 @@ from autodq.renderers.console.validation import ConsoleValidationRenderer
 from autodq.reporting.engine import ReportingEngine
 from autodq.statistics.engine import StatisticsEngine
 from autodq.validation.engine import ValidationEngine
+from autodq.visualization.engine import VisualizationEngine
+from autodq.renderers.console.visualization import ConsoleVisualizationRenderer
 
 
 class AutoDQ:
@@ -43,6 +45,7 @@ class AutoDQ:
         self.cleaning_engine = CleaningEngine()
         self.validation_engine = ValidationEngine()
         self.reporting_engine = ReportingEngine()
+        self.visualization_engine = VisualizationEngine()
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
 
@@ -360,25 +363,91 @@ class AutoDQ:
 
         return self.state.validation_report
 
-    def generate_report(self, output: str, style: str = "executive") -> None:
-        report = self.reporting_engine.build_report(
-            self.state,
-            self.session,
-        )
+    def generate_report(
+        self,
+        output: str,
+        style: str = "executive",
+) -> None:
+    
 
-        self.reporting_engine.export(
-            report,
-            output,
-            style=style,
+    # Generate default visualizations if they don't exist yet
+      if self.state.visualization_report is None:
+         self.visualize()
+
+      report = self.reporting_engine.build_report(
+        self.state,
+        self.session,
+    )
+
+      self.reporting_engine.export(
+        report=report,
+        output=output,
+        style=style,
+    )
+
+      self.session.log(
+        step="report",
+        message="Report exported.",
+        metadata={
+            "output": output,
+            "style": style,
+        },
+    )
+
+      print(f"\nReport exported to {output}")
+        
+    def visualize(
+        self,
+        chart: str | None = None,
+        x: str | None = None,
+        y: str | None = None,
+        column: str | None = None,
+        stage: str = "current",
+    ):
+        if self.state.data is None:
+            self.load()
+
+        if stage == "after":
+            if self.state.cleaned_data is None:
+                print("\nNo cleaned dataset available. Run project.clean() first.")
+                return None
+
+            active_df = self.state.cleaned_data
+
+        else:
+            active_df = self.state.data
+
+        self.state.visualization_report = self.visualization_engine.visualize(
+            df=active_df,
+            chart=chart,
+            x=x,
+            y=y,
+            column=column,
+            stage=stage,
+            cleaned_df=self.state.cleaned_data,
+            diagnosis_report=self.state.diagnosis_report,
+            cleaning_report=self.state.cleaning_report,
+            validation_report=self.state.validation_report,
         )
 
         self.session.log(
-            step="report",
-            message="Report exported.",
-            metadata={"output": output, "style": style},
+            step="visualize",
+            message="Visualization specifications generated.",
+            metadata={
+                "chart_count": self.state.visualization_report.chart_count,
+                "chart": chart or "auto",
+                "stage": stage,
+            },
         )
 
-        print(f"\nReport exported to {output}")
+        return self.state.visualization_report
+
+    def show_visualizations(self) -> None:
+        if self.state.visualization_report is None:
+            self.visualize()
+
+        if self.state.visualization_report is not None:
+            ConsoleVisualizationRenderer.render(self.state.visualization_report)
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:

@@ -18,6 +18,7 @@ class ReportingEngine:
             preview=state.preview_report,
             cleaning=state.cleaning_report,
             validation=state.validation_report,
+            visualizations=state.visualization_report,
             session=session,
         )
 

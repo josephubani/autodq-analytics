@@ -211,6 +211,119 @@ body {
     background: var(--primary);
 }
 
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.chart-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: var(--card);
+}
+
+.chart-title {
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.mini-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 18px;
+    height: 130px;
+    margin-top: 12px;
+}
+
+.mini-bar-wrap {
+    flex: 1;
+    text-align: center;
+}
+
+.mini-bar {
+    width: 100%;
+    min-height: 4px;
+    border-radius: 8px 8px 0 0;
+    background: var(--primary);
+}
+
+.mini-bar.after {
+    background: var(--success);
+}
+
+.mini-label {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.mini-value {
+    font-weight: 800;
+    margin-top: 4px;
+}
+
+.visualization-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.viz-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: var(--card);
+}
+
+.viz-title {
+    font-weight: 800;
+    margin-bottom: 6px;
+}
+
+.viz-description {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 14px;
+}
+
+.viz-bar-row {
+    display: grid;
+    grid-template-columns: 130px 1fr 70px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.viz-bar-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.viz-bar-track {
+    height: 12px;
+    border-radius: 999px;
+    background: var(--bar-bg);
+    overflow: hidden;
+}
+
+.viz-bar-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 999px;
+}
+
+.viz-meta {
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -285,7 +398,7 @@ th {
 }
 
 @media (max-width: 900px) {
-    .grid, .two-col {
+    .grid, .two-col, .chart-grid, .visualization-grid {
         grid-template-columns: 1fr;
     }
 
@@ -302,11 +415,11 @@ th {
 
     <div class="hero">
         <h1>AutoDQ Executive Data Quality Report</h1>
-        <p>Automated profiling, diagnosis, evidence-aware recommendations, cleaning validation, and workflow summary.</p>
+        <p>Automated profiling, diagnosis, evidence-aware recommendations, cleaning validation, visualization, and workflow summary.</p>
         <div class="meta">
             <span>Dataset: datasets/sample/sales.csv</span>
             <span>Style: print</span>
-            <span>Generated: 2026-06-26 22:54:14</span>
+            <span>Generated: 2026-06-26 23:36:42</span>
         </div>
     </div>
 
@@ -422,6 +535,201 @@ th {
         </div>
         
             </div>
+        </div>
+    </div>
+
+    <div class="section card">
+        <h2 class="section-title">Visual Cleaning Impact</h2>
+        <div class="chart-grid">
+            
+        <div class="chart-card">
+            <div class="chart-title">Missing Values</div>
+
+            <div class="mini-bars">
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar" style="height:100.0%"></div>
+                    <div class="mini-label">Before</div>
+                    <div class="mini-value">3</div>
+                </div>
+
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar after" style="height:0.0%"></div>
+                    <div class="mini-label">After</div>
+                    <div class="mini-value">0</div>
+                </div>
+            </div>
+
+            <div class="metric-small">Change: -3</div>
+        </div>
+        
+            
+        <div class="chart-card">
+            <div class="chart-title">Duplicate Rows</div>
+
+            <div class="mini-bars">
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar" style="height:100.0%"></div>
+                    <div class="mini-label">Before</div>
+                    <div class="mini-value">1</div>
+                </div>
+
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar after" style="height:0.0%"></div>
+                    <div class="mini-label">After</div>
+                    <div class="mini-value">0</div>
+                </div>
+            </div>
+
+            <div class="metric-small">Change: -1</div>
+        </div>
+        
+            
+        <div class="chart-card">
+            <div class="chart-title">Rows</div>
+
+            <div class="mini-bars">
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar" style="height:100.0%"></div>
+                    <div class="mini-label">Before</div>
+                    <div class="mini-value">15</div>
+                </div>
+
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar after" style="height:93.33%"></div>
+                    <div class="mini-label">After</div>
+                    <div class="mini-value">14</div>
+                </div>
+            </div>
+
+            <div class="metric-small">Change: -1</div>
+        </div>
+        
+            
+        <div class="chart-card">
+            <div class="chart-title">Quality Score</div>
+
+            <div class="mini-bars">
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar" style="height:78.66%"></div>
+                    <div class="mini-label">Before</div>
+                    <div class="mini-value">78.66</div>
+                </div>
+
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar after" style="height:100.0%"></div>
+                    <div class="mini-label">After</div>
+                    <div class="mini-value">100.0</div>
+                </div>
+            </div>
+
+            <div class="metric-small">Change: +21.340000000000003</div>
+        </div>
+        
+        </div>
+    </div>
+
+    <div class="section card">
+        <h2 class="section-title">Visualization Engine Output</h2>
+        <div class="visualization-grid">
+            
+        <div class="viz-card">
+            <div class="viz-title">Distribution of Revenue (after)</div>
+            <div class="viz-description">Shows the approximate distribution of Revenue.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">(38.05, 1245.0]</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>12</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">(1245.0, 2440.0]</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:0.0%"></div>
+                    </div>
+                    <strong>0</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">(2440.0, 3635.0]</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:8.33%"></div>
+                    </div>
+                    <strong>1</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">(3635.0, 4830.0]</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:0.0%"></div>
+                    </div>
+                    <strong>0</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">(4830.0, 6025.0]</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:0.0%"></div>
+                    </div>
+                    <strong>0</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">(6025.0, 7220.0]</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:0.0%"></div>
+                    </div>
+                    <strong>0</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">(7220.0, 8415.0]</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:0.0%"></div>
+                    </div>
+                    <strong>0</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">(8415.0, 9610.0]</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:0.0%"></div>
+                    </div>
+                    <strong>0</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">(9610.0, 10805.0]</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:0.0%"></div>
+                    </div>
+                    <strong>0</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">(10805.0, 12000.0]</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:8.33%"></div>
+                    </div>
+                    <strong>1</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: distribution_Revenue_after | Type: bar | Stage: after
+            </div>
+        </div>
+        
         </div>
     </div>
 

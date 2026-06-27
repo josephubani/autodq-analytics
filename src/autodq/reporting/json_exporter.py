@@ -43,6 +43,10 @@ class JSONExporter:
             "validation":
                 report.validation.to_dict()
                 if report.validation else None,
+                
+            "visualizations":
+                report.visualizations.to_dict()
+                if report.visualizations else None,
 
             "generated_at":
                 report.generated_at.isoformat()
