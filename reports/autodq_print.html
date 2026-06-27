@@ -2,321 +2,434 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>AutoDQ Executive Report</title>
-    <style>
-        :root {
-            --bg: #f4f7fb;
-            --card: #ffffff;
-            --text: #1f2937;
-            --muted: #6b7280;
-            --primary: #2563eb;
-            --primary-dark: #1e40af;
-            --success: #16a34a;
-            --warning: #f59e0b;
-            --danger: #dc2626;
-            --border: #e5e7eb;
-        }
+<meta charset="UTF-8">
+<title>AutoDQ Executive Report</title>
+<style>
 
-        * {
-            box-sizing: border-box;
-        }
+:root {
+    --bg: #ffffff;
+    --card: #ffffff;
+    --text: #111827;
+    --muted: #4b5563;
+    --primary: #111827;
+    --success: #15803d;
+    --hero: #ffffff;
+    --hero-text: #111827;
+    --hero-muted: #4b5563;
+    --pill: #f3f4f6;
+    --border: #d1d5db;
+    --shadow: none;
+    --radius: 6px;
+    --radius-lg: 6px;
+    --gauge-bg: #e5e7eb;
+    --bar-bg: #e5e7eb;
+    --success-soft: #dcfce7;
+    --success-text: #166534;
+    --warning-soft: #fef3c7;
+    --warning-text: #92400e;
+    --danger-soft: #fee2e2;
+    --danger-text: #991b1b;
+}
 
-        body {
-            margin: 0;
-            font-family: Arial, Helvetica, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-        }
 
-        .page {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 32px;
-        }
+* {
+    box-sizing: border-box;
+}
 
-        .hero {
-            background: linear-gradient(135deg, #1e3a8a, #2563eb);
-            color: white;
-            padding: 32px;
-            border-radius: 20px;
-            margin-bottom: 24px;
-            box-shadow: 0 10px 30px rgba(30, 64, 175, 0.25);
-        }
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
 
-        .hero h1 {
-            margin: 0;
-            font-size: 34px;
-        }
+.page {
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 32px;
+}
 
-        .hero p {
-            margin-top: 10px;
-            color: #dbeafe;
-            font-size: 16px;
-        }
+.hero {
+    background: var(--hero);
+    color: var(--hero-text);
+    padding: 34px;
+    border-radius: var(--radius-lg);
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+}
 
-        .meta {
-            margin-top: 20px;
-            display: flex;
-            gap: 16px;
-            flex-wrap: wrap;
-            font-size: 14px;
-        }
+.hero h1 {
+    margin: 0;
+    font-size: 34px;
+}
 
-        .meta span {
-            background: rgba(255,255,255,0.15);
-            padding: 8px 12px;
-            border-radius: 999px;
-        }
+.hero p {
+    margin-top: 10px;
+    color: var(--hero-muted);
+    font-size: 16px;
+}
 
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
-        }
+.meta {
+    margin-top: 20px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 14px;
+}
 
-        .card {
-            background: var(--card);
-            border-radius: 18px;
-            padding: 20px;
-            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-            border: 1px solid var(--border);
-        }
+.meta span {
+    background: var(--pill);
+    padding: 8px 12px;
+    border-radius: 999px;
+}
 
-        .card h3 {
-            margin: 0;
-            font-size: 14px;
-            color: var(--muted);
-            font-weight: 600;
-        }
+.grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
 
-        .metric {
-            margin-top: 10px;
-            font-size: 30px;
-            font-weight: 800;
-        }
+.card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
 
-        .metric-small {
-            margin-top: 8px;
-            color: var(--muted);
-            font-size: 13px;
-        }
+.card h3 {
+    margin: 0;
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 700;
+}
 
-        .section {
-            margin-bottom: 24px;
-        }
+.metric {
+    margin-top: 10px;
+    font-size: 30px;
+    font-weight: 800;
+}
 
-        .section-title {
-            font-size: 22px;
-            margin: 8px 0 14px;
-        }
+.metric-small {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 13px;
+}
 
-        .two-col {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
+.section {
+    margin-bottom: 24px;
+}
 
-        .quality-wrap {
-            display: flex;
-            align-items: center;
-            gap: 28px;
-        }
+.section-title {
+    font-size: 22px;
+    margin: 8px 0 14px;
+}
 
-        .gauge {
-            width: 170px;
-            height: 170px;
-            border-radius: 50%;
-            background:
-                conic-gradient(var(--success) 100.0%, #e5e7eb 0);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
+.two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
 
-        .gauge::before {
-            content: "";
-            width: 118px;
-            height: 118px;
-            background: white;
-            border-radius: 50%;
-            position: absolute;
-        }
+.quality-wrap {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+}
 
-        .gauge-value {
-            position: relative;
-            font-size: 32px;
-            font-weight: 800;
-            color: var(--primary-dark);
-        }
+.gauge {
+    width: 170px;
+    height: 170px;
+    border-radius: 50%;
+    background: conic-gradient(var(--success) 100.0%, var(--gauge-bg) 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
 
-        .quality-info h2 {
-            margin: 0;
-            font-size: 32px;
-        }
+.gauge::before {
+    content: "";
+    width: 118px;
+    height: 118px;
+    background: var(--card);
+    border-radius: 50%;
+    position: absolute;
+}
 
-        .quality-info p {
-            color: var(--muted);
-            margin: 8px 0;
-        }
+.gauge-value {
+    position: relative;
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--primary);
+}
 
-        .change {
-            display: inline-block;
-            margin-top: 8px;
-            color: white;
-            background: var(--success);
-            padding: 8px 12px;
-            border-radius: 999px;
-            font-weight: 700;
-        }
+.quality-info h2 {
+    margin: 0;
+    font-size: 32px;
+}
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            font-size: 14px;
-        }
+.quality-info p {
+    color: var(--muted);
+    margin: 8px 0;
+}
 
-        th, td {
-            padding: 12px;
-            border-bottom: 1px solid var(--border);
-            text-align: left;
-            vertical-align: top;
-        }
+.change {
+    display: inline-block;
+    margin-top: 8px;
+    color: white;
+    background: var(--success);
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-weight: 700;
+}
 
-        th {
-            color: var(--muted);
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: .04em;
-        }
+.before-after-bars {
+    display: grid;
+    gap: 14px;
+}
 
-        .badge {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 999px;
-            font-size: 12px;
-            font-weight: 700;
-        }
+.bar-row {
+    display: grid;
+    grid-template-columns: 150px 1fr 80px;
+    gap: 10px;
+    align-items: center;
+    font-size: 14px;
+}
 
-        .success {
-            background: #dcfce7;
-            color: #166534;
-        }
+.bar-track {
+    height: 12px;
+    border-radius: 999px;
+    background: var(--bar-bg);
+    overflow: hidden;
+}
 
-        .skipped {
-            background: #fef3c7;
-            color: #92400e;
-        }
+.bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--primary);
+}
 
-        .medium {
-            background: #fef3c7;
-            color: #92400e;
-        }
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 14px;
+}
 
-        .high {
-            background: #fee2e2;
-            color: #991b1b;
-        }
+th, td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+}
 
-        .footer {
-            color: var(--muted);
-            text-align: center;
-            margin-top: 32px;
-            font-size: 13px;
-        }
+th {
+    color: var(--muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
 
-        @media print {
-            body {
-                background: white;
-            }
+.badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
 
-            .page {
-                padding: 0;
-            }
+.success {
+    background: var(--success-soft);
+    color: var(--success-text);
+}
 
-            .card, .hero {
-                box-shadow: none;
-            }
-        }
+.skipped {
+    background: var(--warning-soft);
+    color: var(--warning-text);
+}
 
-        @media (max-width: 900px) {
-            .grid, .two-col {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+.medium {
+    background: var(--warning-soft);
+    color: var(--warning-text);
+}
+
+.high {
+    background: var(--danger-soft);
+    color: var(--danger-text);
+}
+
+.footer {
+    color: var(--muted);
+    text-align: center;
+    margin-top: 32px;
+    font-size: 13px;
+}
+
+@media print {
+    body {
+        background: white;
+        color: black;
+    }
+
+    .page {
+        max-width: none;
+        padding: 0;
+    }
+
+    .card, .hero {
+        box-shadow: none;
+        break-inside: avoid;
+    }
+}
+
+@media (max-width: 900px) {
+    .grid, .two-col {
+        grid-template-columns: 1fr;
+    }
+
+    .quality-wrap {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+</style>
 </head>
+
 <body>
-    <div class="page">
-        <div class="hero">
-            <h1>AutoDQ Executive Data Quality Report</h1>
-            <p>Automated profiling, diagnosis, evidence-aware recommendations, cleaning validation, and workflow summary.</p>
-            <div class="meta">
-                <span>Dataset: datasets/sample/sales.csv</span>
-                <span>Generated: 2026-06-26 22:48:40</span>
-            </div>
+<div class="page">
+
+    <div class="hero">
+        <h1>AutoDQ Executive Data Quality Report</h1>
+        <p>Automated profiling, diagnosis, evidence-aware recommendations, cleaning validation, and workflow summary.</p>
+        <div class="meta">
+            <span>Dataset: datasets/sample/sales.csv</span>
+            <span>Style: print</span>
+            <span>Generated: 2026-06-26 22:54:14</span>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h3>Quality Before</h3>
+            <div class="metric">78.66</div>
+            <div class="metric-small">Initial quality score</div>
         </div>
 
-        <div class="grid">
-            <div class="card">
-                <h3>Quality Score Before</h3>
-                <div class="metric">78.66</div>
-                <div class="metric-small">Initial data quality score</div>
-            </div>
-
-            <div class="card">
-                <h3>Quality Score After</h3>
-                <div class="metric">100.0</div>
-                <div class="metric-small">After approved cleaning actions</div>
-            </div>
-
-            <div class="card">
-                <h3>Issues Detected</h3>
-                <div class="metric">3</div>
-                <div class="metric-small">Detected by diagnosis engine</div>
-            </div>
-
-            <div class="card">
-                <h3>Actions Successful</h3>
-                <div class="metric">4/10</div>
-                <div class="metric-small">Approved cleaning actions executed</div>
-            </div>
+        <div class="card">
+            <h3>Quality After</h3>
+            <div class="metric">100.0</div>
+            <div class="metric-small">After approved cleaning</div>
         </div>
 
-        <div class="section card">
-            <h2 class="section-title">Quality Score Gauge</h2>
-            <div class="quality-wrap">
-                <div class="gauge">
-                    <div class="gauge-value">100.0</div>
-                </div>
-                <div class="quality-info">
-                    <h2>78.66 → 100.0</h2>
-                    <p>Overall data quality score after approved cleaning actions.</p>
-                    <span class="change">Change: 21.34</span>
-                </div>
-            </div>
+        <div class="card">
+            <h3>Issues Detected</h3>
+            <div class="metric">3</div>
+            <div class="metric-small">Detected by diagnosis engine</div>
         </div>
 
-        <div class="section two-col">
-            <div class="card">
-                <h2 class="section-title">Before vs After</h2>
-                <table>
-                    <tr><th>Metric</th><th>Before</th><th>After</th></tr>
-                    <tr><td>Missing Values</td><td>3</td><td>0</td></tr>
-                    <tr><td>Duplicate Rows</td><td>1</td><td>0</td></tr>
-                    <tr><td>Rows</td><td>15</td><td>14</td></tr>
-                    <tr><td>Columns</td><td>12</td><td>12</td></tr>
-                </table>
-            </div>
+        <div class="card">
+            <h3>Actions Successful</h3>
+            <div class="metric">4/10</div>
+            <div class="metric-small">Executed safely</div>
+        </div>
+    </div>
 
-            <div class="card">
-                <h2 class="section-title">Issue Breakdown</h2>
-                <table>
-                    <tr><th>Issue</th><th>Severity</th><th>Confidence</th></tr>
-                    
+    <div class="section card">
+        <h2 class="section-title">Quality Score Gauge</h2>
+        <div class="quality-wrap">
+            <div class="gauge">
+                <div class="gauge-value">100.0</div>
+            </div>
+            <div class="quality-info">
+                <h2>78.66 → 100.0</h2>
+                <p>Overall quality score after approved cleaning actions.</p>
+                <span class="change">Improvement: 21.34</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="section two-col">
+        <div class="card">
+            <h2 class="section-title">Before vs After Comparison</h2>
+            <table>
+                <tr><th>Metric</th><th>Before</th><th>After</th><th>Meaning</th></tr>
+                <tr><td>Missing Values</td><td>3</td><td>0</td><td>Resolved 3</td></tr>
+                <tr><td>Duplicate Rows</td><td>1</td><td>0</td><td>Removed 1</td></tr>
+                <tr><td>Rows</td><td>15</td><td>14</td><td>Removed 1</td></tr>
+                <tr><td>Columns</td><td>12</td><td>12</td><td>No structural column loss</td></tr>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2 class="section-title">Before vs After Visual</h2>
+            <div class="before-after-bars">
+                
+        <div>
+            <div class="bar-row">
+                <strong>Missing values before</strong>
+                <div class="bar-track"><div class="bar-fill" style="width:100.0%"></div></div>
+                <span>3</span>
+            </div>
+            <div class="bar-row">
+                <strong>Missing values after</strong>
+                <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+                <span>0</span>
+            </div>
+        </div>
+        
+                
+        <div>
+            <div class="bar-row">
+                <strong>Duplicate rows before</strong>
+                <div class="bar-track"><div class="bar-fill" style="width:100.0%"></div></div>
+                <span>1</span>
+            </div>
+            <div class="bar-row">
+                <strong>Duplicate rows after</strong>
+                <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+                <span>0</span>
+            </div>
+        </div>
+        
+                
+        <div>
+            <div class="bar-row">
+                <strong>Rows before</strong>
+                <div class="bar-track"><div class="bar-fill" style="width:100.0%"></div></div>
+                <span>15</span>
+            </div>
+            <div class="bar-row">
+                <strong>Rows after</strong>
+                <div class="bar-track"><div class="bar-fill" style="width:93.33%"></div></div>
+                <span>14</span>
+            </div>
+        </div>
+        
+                
+        <div>
+            <div class="bar-row">
+                <strong>Quality score before</strong>
+                <div class="bar-track"><div class="bar-fill" style="width:78.66%"></div></div>
+                <span>78.66</span>
+            </div>
+            <div class="bar-row">
+                <strong>Quality score after</strong>
+                <div class="bar-track"><div class="bar-fill" style="width:100.0%"></div></div>
+                <span>100.0</span>
+            </div>
+        </div>
+        
+            </div>
+        </div>
+    </div>
+
+    <div class="section card">
+        <h2 class="section-title">Issue Breakdown</h2>
+        <table>
+            <tr><th>Issue</th><th>Severity</th><th>Confidence</th></tr>
+            
                 <tr>
                     <td>missing_values</td>
                     <td><span class="badge medium">medium</span></td>
@@ -337,29 +450,28 @@
                     <td>85.0%</td>
                 </tr>
                 
-                </table>
-            </div>
-        </div>
+        </table>
+    </div>
 
-        <div class="section card">
-            <h2 class="section-title">Evidence-Aware Recommendations</h2>
-            <table>
-                <tr>
-                    <th>#</th>
-                    <th>Issue</th>
-                    <th>Strategy</th>
-                    <th>Columns</th>
-                    <th>Confidence</th>
-                    <th>Reason</th>
-                </tr>
-                
+    <div class="section card">
+        <h2 class="section-title">Evidence-Aware Recommendations</h2>
+        <table>
+            <tr>
+                <th>#</th>
+                <th>Issue</th>
+                <th>Strategy</th>
+                <th>Columns</th>
+                <th>Confidence</th>
+                <th>Reason</th>
+            </tr>
+            
                 <tr>
                     <td>1</td>
                     <td>missing_values</td>
                     <td>median</td>
                     <td>Age</td>
                     <td>97.0%</td>
-                    <td>Diagnosis detected missing values in Age. Knowledge rule 'age' recommends median imputation. Statistics show mean=36.5714 and median=29.0. Interpretation: The mean is substantially above the median, suggesting an asymmetric distribution. Interpretation: Age appears right-skewed. Large values may be ...</td>
+                    <td>Diagnosis detected missing values in Age. Knowledge rule 'age' recommends median imputation. Statistics show mean=36.5714 and median=29.0. Interpretation: The mean is substantially above the median, suggesting an asymmetric distribution. Interpretation: Age appears right-skewed. ...</td>
                 </tr>
                 
 
@@ -379,7 +491,7 @@
                     <td>median</td>
                     <td>Revenue</td>
                     <td>97.0%</td>
-                    <td>Diagnosis detected missing values in Revenue. Knowledge rule 'revenue' recommends median imputation. Statistics show mean=1565.3571 and median=800.0. Interpretation: The mean is substantially above the median, suggesting an asymmetric distribution. Interpretation: Revenue appears right-skewed. Large...</td>
+                    <td>Diagnosis detected missing values in Revenue. Knowledge rule 'revenue' recommends median imputation. Statistics show mean=1565.3571 and median=800.0. Interpretation: The mean is substantially above the median, suggesting an asymmetric distribution. Interpretation: Revenue appears...</td>
                 </tr>
                 
 
@@ -399,7 +511,7 @@
                     <td>domain_range_check</td>
                     <td>Age</td>
                     <td>95.0%</td>
-                    <td>Diagnosis detected outlier behavior in Age. Knowledge rule 'age' recommends domain_range_check. Statistics show skewness=3.4687 and kurtosis=12.5029. Interpretation: Age appears right-skewed. Large values may be pulling the mean upward. Interpretation: Age has heavy-tailed behavior, suggesting extre...</td>
+                    <td>Diagnosis detected outlier behavior in Age. Knowledge rule 'age' recommends domain_range_check. Statistics show skewness=3.4687 and kurtosis=12.5029. Interpretation: Age appears right-skewed. Large values may be pulling the mean upward. Interpretation: Age has heavy-tailed behavi...</td>
                 </tr>
                 
 
@@ -409,7 +521,7 @@
                     <td>review_or_cap</td>
                     <td>Quantity</td>
                     <td>96.0%</td>
-                    <td>Diagnosis detected outlier behavior in Quantity. Knowledge rule 'quantity' recommends review_or_cap. Statistics show skewness=3.8604 and kurtosis=14.9296. Interpretation: Quantity appears right-skewed. Large values may be pulling the mean upward. Interpretation: Quantity has heavy-tailed behavior, s...</td>
+                    <td>Diagnosis detected outlier behavior in Quantity. Knowledge rule 'quantity' recommends review_or_cap. Statistics show skewness=3.8604 and kurtosis=14.9296. Interpretation: Quantity appears right-skewed. Large values may be pulling the mean upward. Interpretation: Quantity has heav...</td>
                 </tr>
                 
 
@@ -419,7 +531,7 @@
                     <td>review_or_winsorize</td>
                     <td>Unit_Price</td>
                     <td>96.0%</td>
-                    <td>Diagnosis detected outlier behavior in Unit_Price. Knowledge rule 'unit_price' recommends review_or_winsorize. Statistics show skewness=3.676 and kurtosis=13.9032. Interpretation: Unit_Price appears right-skewed. Large values may be pulling the mean upward. Interpretation: Unit_Price has heavy-taile...</td>
+                    <td>Diagnosis detected outlier behavior in Unit_Price. Knowledge rule 'unit_price' recommends review_or_winsorize. Statistics show skewness=3.676 and kurtosis=13.9032. Interpretation: Unit_Price appears right-skewed. Large values may be pulling the mean upward. Interpretation: Unit_P...</td>
                 </tr>
                 
 
@@ -429,7 +541,7 @@
                     <td>review_or_winsorize</td>
                     <td>Revenue</td>
                     <td>96.0%</td>
-                    <td>Diagnosis detected outlier behavior in Revenue. Knowledge rule 'revenue' recommends review_or_winsorize. Statistics show skewness=3.4256 and kurtosis=12.2554. Interpretation: Revenue appears right-skewed. Large values may be pulling the mean upward. Interpretation: Revenue has heavy-tailed behavior,...</td>
+                    <td>Diagnosis detected outlier behavior in Revenue. Knowledge rule 'revenue' recommends review_or_winsorize. Statistics show skewness=3.4256 and kurtosis=12.2554. Interpretation: Revenue appears right-skewed. Large values may be pulling the mean upward. Interpretation: Revenue has he...</td>
                 </tr>
                 
 
@@ -439,7 +551,7 @@
                     <td>domain_range_check</td>
                     <td>Discount</td>
                     <td>95.0%</td>
-                    <td>Diagnosis detected outlier behavior in Discount. Knowledge rule 'discount' recommends domain_range_check. Statistics show skewness=3.4251 and kurtosis=12.4382. Interpretation: Discount appears right-skewed. Large values may be pulling the mean upward. Interpretation: Discount has heavy-tailed behavi...</td>
+                    <td>Diagnosis detected outlier behavior in Discount. Knowledge rule 'discount' recommends domain_range_check. Statistics show skewness=3.4251 and kurtosis=12.4382. Interpretation: Discount appears right-skewed. Large values may be pulling the mean upward. Interpretation: Discount has...</td>
                 </tr>
                 
 
@@ -449,26 +561,26 @@
                     <td>review_or_winsorize</td>
                     <td>Profit</td>
                     <td>96.0%</td>
-                    <td>Diagnosis detected outlier behavior in Profit. Knowledge rule 'profit' recommends review_or_winsorize. Statistics show skewness=3.6937 and kurtosis=13.9859. Interpretation: Profit appears right-skewed. Large values may be pulling the mean upward. Interpretation: Profit has heavy-tailed behavior, sug...</td>
+                    <td>Diagnosis detected outlier behavior in Profit. Knowledge rule 'profit' recommends review_or_winsorize. Statistics show skewness=3.6937 and kurtosis=13.9859. Interpretation: Profit appears right-skewed. Large values may be pulling the mean upward. Interpretation: Profit has heavy-...</td>
                 </tr>
                 
-            </table>
-        </div>
+        </table>
+    </div>
 
-        <div class="section card">
-            <h2 class="section-title">Cleaning Actions Table</h2>
-            <table>
-                <tr>
-                    <th>Action</th>
-                    <th>Issue</th>
-                    <th>Strategy</th>
-                    <th>Status</th>
-                    <th>Columns</th>
-                    <th>Rows Before</th>
-                    <th>Rows After</th>
-                    <th>Message</th>
-                </tr>
-                
+    <div class="section card">
+        <h2 class="section-title">Cleaning Actions Table</h2>
+        <table>
+            <tr>
+                <th>Action</th>
+                <th>Issue</th>
+                <th>Strategy</th>
+                <th>Status</th>
+                <th>Columns</th>
+                <th>Rows Before</th>
+                <th>Rows After</th>
+                <th>Message</th>
+            </tr>
+            
                 <tr>
                     <td>1</td>
                     <td>missing_values</td>
@@ -588,12 +700,13 @@
                     <td>Strategy is not executable yet. Manual review required.</td>
                 </tr>
                 
-            </table>
-        </div>
-
-        <div class="footer">
-            Generated by AutoDQ Analytics — Intelligent Data Quality and Analytics Workflow Framework.
-        </div>
+        </table>
     </div>
+
+    <div class="footer">
+        Generated by AutoDQ Analytics — Intelligent Data Quality and Analytics Workflow Framework.
+    </div>
+
+</div>
 </body>
 </html>
