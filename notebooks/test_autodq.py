@@ -35,6 +35,7 @@ project.show_cleaning_report()
 project.validate_cleaning()
 project.show_validation()
 
+project.generate_report("reports/autodq_report.html")
+
 project.show_session()
 
-project.generate_report("report.html")
