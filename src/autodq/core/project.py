@@ -233,12 +233,23 @@ class AutoDQ:
         if self.state.diagnosis_report is None:
             self.diagnose()
 
+        if self.state.statistics_report is None:
+            self.statistics()
+
+        if self.state.interpretation_report is None:
+            self.interpret()
+
         engine = RecommendationEngine(self.knowledge_engine)
-        self.state.recommendations = engine.recommend(self.state.diagnosis_report)
+
+        self.state.recommendations = engine.recommend(
+            diagnosis_report=self.state.diagnosis_report,
+            statistics_report=self.state.statistics_report,
+            interpretation_report=self.state.interpretation_report,
+        )
 
         self.session.log(
             step="recommend",
-            message="Cleaning recommendations generated.",
+            message="Evidence-aware cleaning recommendations generated.",
             metadata={"recommendation_count": len(self.state.recommendations)},
         )
 
