@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from autodq.cleaning.engine import CleaningEngine
 from autodq.core.session import AutoDQSession
 from autodq.core.state import AutoDQState
 from autodq.decision.engine import DecisionEngine
@@ -12,15 +13,17 @@ from autodq.knowledge.engine import KnowledgeEngine
 from autodq.preview.engine import PreviewEngine
 from autodq.profiling.profiler import generate_profile
 from autodq.recommendations.engine import RecommendationEngine
+from autodq.renderers.console.cleaning import ConsoleCleaningRenderer
 from autodq.renderers.console.diagnosis import ConsoleDiagnosisRenderer
 from autodq.renderers.console.interpretation import ConsoleInterpretationRenderer
 from autodq.renderers.console.preview import ConsolePreviewRenderer
 from autodq.renderers.console.profile import ConsoleProfileRenderer
 from autodq.renderers.console.recommendations import ConsoleRecommendationRenderer
 from autodq.renderers.console.statistics import ConsoleStatisticsRenderer
+from autodq.renderers.console.validation import ConsoleValidationRenderer
+from autodq.reporting.engine import ReportingEngine
 from autodq.statistics.engine import StatisticsEngine
-from autodq.cleaning.engine import CleaningEngine
-from autodq.renderers.console.cleaning import ConsoleCleaningRenderer
+from autodq.validation.engine import ValidationEngine
 
 
 class AutoDQ:
@@ -37,9 +40,11 @@ class AutoDQ:
         self.knowledge_engine = KnowledgeEngine()
         self.statistics_engine = StatisticsEngine()
         self.interpretation_engine = InterpretationEngine()
+        self.cleaning_engine = CleaningEngine()
+        self.validation_engine = ValidationEngine()
+        self.reporting_engine = ReportingEngine()
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
-        self.cleaning_engine = CleaningEngine()
 
     @property
     def dataset_path(self):
@@ -102,25 +107,20 @@ class AutoDQ:
                 self.state.data[column],
                 errors="coerce",
             )
-
         elif dtype_normalized in ["str", "string", "text"]:
             self.state.data[column] = self.state.data[column].astype(str)
-
         elif dtype_normalized in ["int", "integer"]:
             self.state.data[column] = pd.to_numeric(
                 self.state.data[column],
                 errors="coerce",
             ).astype("Int64")
-
         elif dtype_normalized in ["float", "numeric", "number"]:
             self.state.data[column] = pd.to_numeric(
                 self.state.data[column],
                 errors="coerce",
             )
-
         elif dtype_normalized in ["category", "categorical"]:
             self.state.data[column] = self.state.data[column].astype("category")
-
         else:
             raise ValueError(
                 f"Unsupported dtype: {dtype}. "
@@ -293,9 +293,7 @@ class AutoDQ:
         )
 
         return self.state.preview_report
-    
-    
-    
+
     def approve_all(self) -> None:
         if self.state.decision_plan is None:
             self.decide()
@@ -337,14 +335,49 @@ class AutoDQ:
 
         return self.state.cleaned_data
 
-    def show_cleaning_report(self) -> None:
-        if self.state.cleaning_report is None:
-            print("\nNo cleaning report available. Run project.clean() first.")
-            return
+    def validate_cleaning(self):
+        if self.state.data is None:
+            self.load()
 
-        ConsoleCleaningRenderer.render(self.state.cleaning_report)
-    
-    
+        if self.state.cleaned_data is None:
+            print("\nNo cleaned dataset available. Run project.clean() first.")
+            return None
+
+        self.state.validation_report = self.validation_engine.validate(
+            before_df=self.state.data,
+            after_df=self.state.cleaned_data,
+        )
+
+        self.session.log(
+            step="validate_cleaning",
+            message="Post-cleaning validation completed.",
+            metadata={
+                "quality_score_before": self.state.validation_report.quality_score_before,
+                "quality_score_after": self.state.validation_report.quality_score_after,
+                "quality_score_change": self.state.validation_report.quality_score_change,
+            },
+        )
+
+        return self.state.validation_report
+
+    def generate_report(self, output: str) -> None:
+        report = self.reporting_engine.build_report(
+            self.state,
+            self.session,
+        )
+
+        self.reporting_engine.export(
+            report,
+            output,
+        )
+
+        self.session.log(
+            step="report",
+            message="Report exported.",
+            metadata={"output": output},
+        )
+
+        print(f"\nReport exported to {output}")
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:
@@ -416,6 +449,20 @@ class AutoDQ:
             self.preview()
 
         ConsolePreviewRenderer.render(self.state.preview_report)
+
+    def show_cleaning_report(self) -> None:
+        if self.state.cleaning_report is None:
+            print("\nNo cleaning report available. Run project.clean() first.")
+            return
+
+        ConsoleCleaningRenderer.render(self.state.cleaning_report)
+
+    def show_validation(self) -> None:
+        if self.state.validation_report is None:
+            self.validate_cleaning()
+
+        if self.state.validation_report is not None:
+            ConsoleValidationRenderer.render(self.state.validation_report)
 
     def show_session(self) -> None:
         self.session.summary()

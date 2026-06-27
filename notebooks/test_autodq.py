@@ -32,4 +32,9 @@ project.approve_all()
 project.clean()
 project.show_cleaning_report()
 
+project.validate_cleaning()
+project.show_validation()
+
 project.show_session()
+
+project.generate_report("report.html")
