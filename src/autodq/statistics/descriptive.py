@@ -1,12 +1,14 @@
 import numpy as np
 import pandas as pd
 
+from autodq.semantics.inference import infer_semantic_types
 from autodq.statistics.models import ColumnStatistics
 
 
 class DescriptiveStatisticsEngine:
     """
-    Computes descriptive statistics for numeric columns.
+    Computes descriptive statistics for numeric analytical columns.
+    Identifier-like numeric columns are skipped.
     """
 
     def analyze(
@@ -15,15 +17,17 @@ class DescriptiveStatisticsEngine:
     ) -> dict[str, ColumnStatistics]:
 
         results = {}
+        semantic_types = infer_semantic_types(df)
 
         numeric_columns = df.select_dtypes(include="number").columns
 
         for column in numeric_columns:
+            if semantic_types.get(column) == "identifier":
+                continue
 
             series = df[column]
 
             count = int(series.count())
-
             missing = int(series.isna().sum())
 
             missing_percent = round(
@@ -32,20 +36,16 @@ class DescriptiveStatisticsEngine:
             )
 
             q1 = series.quantile(0.25)
-
             q3 = series.quantile(0.75)
-
             iqr = q3 - q1
 
             mode = None
-
             modes = series.mode()
 
             if not modes.empty:
                 mode = modes.iloc[0]
 
             mean = series.mean()
-
             std = series.std()
 
             cv = None
