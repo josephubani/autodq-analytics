@@ -26,6 +26,7 @@ from autodq.statistics.engine import StatisticsEngine
 from autodq.validation.engine import ValidationEngine
 from autodq.visualization.engine import VisualizationEngine
 from autodq.renderers.console.visualization import ConsoleVisualizationRenderer
+from autodq.io.loaders import export_dataset, load_dataset
 
 
 class AutoDQ:
@@ -448,6 +449,74 @@ class AutoDQ:
 
         if self.state.visualization_report is not None:
             ConsoleVisualizationRenderer.render(self.state.visualization_report)
+            
+            
+    def head(self, n: int = 5) -> pd.DataFrame:
+        if self.state.data is None:
+            self.load()
+
+        return self.state.data.head(n)
+
+    def tail(self, n: int = 5) -> pd.DataFrame:
+        if self.state.data is None:
+            self.load()
+
+        return self.state.data.tail(n)
+
+    def sample(self, n: int = 5, random_state: int | None = 42) -> pd.DataFrame:
+        if self.state.data is None:
+            self.load()
+
+        return self.state.data.sample(n=n, random_state=random_state)
+
+    def view(self, n: int = 10) -> pd.DataFrame:
+        if self.state.data is None:
+            self.load()
+
+        return self.state.data.head(n)
+
+    def info(self) -> None:
+        if self.state.data is None:
+            self.load()
+
+        self.state.data.info()
+
+    def export_cleaned(self, output: str) -> None:
+        if self.state.cleaned_data is None:
+            print("\nNo cleaned dataset available. Run project.clean() first.")
+            return
+
+        export_dataset(self.state.cleaned_data, output)
+
+        self.session.log(
+            step="export_cleaned",
+            message="Cleaned dataset exported.",
+            metadata={
+                "output": output,
+                "rows": len(self.state.cleaned_data),
+                "columns": len(self.state.cleaned_data.columns),
+            },
+        )
+
+        print(f"\nCleaned dataset exported to {output}")
+
+    def export_current(self, output: str) -> None:
+        if self.state.data is None:
+            self.load()
+
+        export_dataset(self.state.data, output)
+
+        self.session.log(
+            step="export_current",
+            message="Current dataset exported.",
+            metadata={
+                "output": output,
+                "rows": len(self.state.data),
+                "columns": len(self.state.data.columns),
+            },
+        )
+
+        print(f"\nCurrent dataset exported to {output}")
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:

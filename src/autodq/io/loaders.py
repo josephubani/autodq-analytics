@@ -4,23 +4,6 @@ import pandas as pd
 
 
 def load_dataset(path: str | Path, sheet_name: str | int | None = 0) -> pd.DataFrame:
-    """
-    Load a tabular dataset from CSV or Excel.
-
-    Supported formats:
-    - .csv
-    - .xlsx
-    - .xls
-
-    Parameters
-    ----------
-    path:
-        Dataset file path.
-
-    sheet_name:
-        Excel sheet name or index. Defaults to first sheet.
-        Ignored for CSV files.
-    """
     path = Path(path)
 
     if not path.exists():
@@ -40,4 +23,24 @@ def load_dataset(path: str | Path, sheet_name: str | int | None = 0) -> pd.DataF
     raise ValueError(
         f"Unsupported file format: {suffix}. "
         "Supported formats are .csv, .xlsx, and .xls."
+    )
+
+
+def export_dataset(df: pd.DataFrame, path: str | Path) -> None:
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    suffix = path.suffix.lower()
+
+    if suffix == ".csv":
+        df.to_csv(path, index=False)
+        return
+
+    if suffix == ".xlsx":
+        df.to_excel(path, index=False, engine="openpyxl")
+        return
+
+    raise ValueError(
+        f"Unsupported export format: {suffix}. "
+        "Supported export formats are .csv and .xlsx."
     )

@@ -38,7 +38,14 @@ project.show_validation()
 project.visualize( chart = "auto")
 
 
+print(project.head())
+print(project.tail())
+print(project.sample(3))
+project.info()
 
+project.export_current("exports/current_sales.csv")
+project.export_cleaned("exports/cleaned_sales.csv")
+project.export_cleaned("exports/cleaned_sales.xlsx")
 
 project.generate_report("reports/autodq_executive.html", style="executive")
 project.generate_report("reports/autodq_dark.html", style="dark")
