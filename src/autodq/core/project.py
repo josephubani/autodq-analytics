@@ -29,6 +29,8 @@ from autodq.renderers.console.visualization import ConsoleVisualizationRenderer
 from autodq.io.loaders import export_dataset, load_dataset
 from autodq.correlation.engine import CorrelationEngine
 from autodq.renderers.console.correlation import ConsoleCorrelationRenderer
+from autodq.ml_readiness.engine import MLReadinessEngine
+from autodq.renderers.console.ml_readiness import ConsoleMLReadinessRenderer
 
 
 class AutoDQ:
@@ -50,6 +52,7 @@ class AutoDQ:
         self.reporting_engine = ReportingEngine()
         self.visualization_engine = VisualizationEngine()
         self.correlation_engine = CorrelationEngine()
+        self.ml_readiness_engine = MLReadinessEngine()
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
 
@@ -548,6 +551,51 @@ class AutoDQ:
             self.correlation()
 
         ConsoleCorrelationRenderer.render(self.state.correlation_report)
+        
+        
+    def ml_readiness(self):
+        if self.state.data is None:
+            self.load()
+
+        if self.state.diagnosis_report is None:
+            self.diagnose()
+
+        if self.state.statistics_report is None:
+            self.statistics()
+
+        if self.state.interpretation_report is None:
+            self.interpret()
+
+        if self.state.correlation_report is None:
+            self.correlation()
+
+        self.state.ml_readiness_report = self.ml_readiness_engine.analyze(
+            df=self.state.data,
+            target=self.state.target,
+            diagnosis_report=self.state.diagnosis_report,
+            statistics_report=self.state.statistics_report,
+            interpretation_report=self.state.interpretation_report,
+            correlation_report=self.state.correlation_report,
+        )
+
+        self.session.log(
+            step="ml_readiness",
+            message="Machine learning readiness evaluated.",
+            metadata={
+                "score": self.state.ml_readiness_report.score,
+                "target": self.state.ml_readiness_report.target,
+                "recommended_task": self.state.ml_readiness_report.recommended_task,
+                "issues": self.state.ml_readiness_report.issue_count,
+            },
+        )
+
+        return self.state.ml_readiness_report
+
+    def show_ml_readiness(self) -> None:
+        if self.state.ml_readiness_report is None:
+            self.ml_readiness()
+
+        ConsoleMLReadinessRenderer.render(self.state.ml_readiness_report)
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:
