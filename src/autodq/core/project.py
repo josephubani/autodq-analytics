@@ -27,6 +27,8 @@ from autodq.validation.engine import ValidationEngine
 from autodq.visualization.engine import VisualizationEngine
 from autodq.renderers.console.visualization import ConsoleVisualizationRenderer
 from autodq.io.loaders import export_dataset, load_dataset
+from autodq.correlation.engine import CorrelationEngine
+from autodq.renderers.console.correlation import ConsoleCorrelationRenderer
 
 
 class AutoDQ:
@@ -47,6 +49,7 @@ class AutoDQ:
         self.validation_engine = ValidationEngine()
         self.reporting_engine = ReportingEngine()
         self.visualization_engine = VisualizationEngine()
+        self.correlation_engine = CorrelationEngine()
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
 
@@ -517,6 +520,34 @@ class AutoDQ:
         )
 
         print(f"\nCurrent dataset exported to {output}")
+        
+        
+    def correlation(self, min_abs_correlation: float = 0.3):
+        if self.state.data is None:
+            self.load()
+
+        self.state.correlation_report = self.correlation_engine.analyze(
+            df=self.state.data,
+            target=self.state.target,
+            min_abs_correlation=min_abs_correlation,
+        )
+
+        self.session.log(
+            step="correlation",
+            message="Correlation intelligence generated.",
+            metadata={
+                "relationships": self.state.correlation_report.relationship_count,
+                "target_relationships": self.state.correlation_report.target_relationship_count,
+            },
+        )
+
+        return self.state.correlation_report
+
+    def show_correlation(self) -> None:
+        if self.state.correlation_report is None:
+            self.correlation()
+
+        ConsoleCorrelationRenderer.render(self.state.correlation_report)
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:

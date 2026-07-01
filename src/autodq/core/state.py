@@ -23,6 +23,7 @@ class AutoDQState:
     cleaning_report = None
     validation_report = None
     visualization_report = None
+    correlation_report = None
 
     def reset_outputs(self) -> None:
         self.profile_report = None
@@ -37,6 +38,7 @@ class AutoDQState:
         self.cleaned_data = None
         self.validation_report = None
         self.visualization_report = None
+        self.correlation_report = None
 
     def reset_all(self, dataset_path: str | Path) -> None:
         self.dataset_path = Path(dataset_path)

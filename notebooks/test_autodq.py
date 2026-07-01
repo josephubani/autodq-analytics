@@ -51,6 +51,11 @@ print(project.tail())
 print(project.sample(3))
 project.info()
 
+project.set_target("Revenue")
+
+project.correlation()
+project.show_correlation()
+
 project.export_current("exports/current_sales.csv")
 project.export_cleaned("exports/cleaned_sales.csv")
 project.export_cleaned("exports/cleaned_sales.xlsx")
