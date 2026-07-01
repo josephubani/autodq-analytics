@@ -76,12 +76,24 @@ class VisualizationEngine:
             if x is None or y is None:
                 raise ValueError("x and y are required for scatter chart.")
             report.charts.append(self._scatter_chart(df, x=x, y=y, stage=stage))
+        elif chart == "histogram":
+            if column is None:
+                raise ValueError("column is required for histogram chart.")
+            report.charts.append(self._histogram_chart(df, column, stage=stage))
+
+        elif chart == "boxplot":
+            if column is None:
+                raise ValueError("column is required for boxplot chart.")
+            report.charts.append(self._boxplot_chart(df, column, stage=stage))
+
+        elif chart == "correlation_heatmap":
+            report.charts.append(self._correlation_heatmap_chart(df, stage=stage))
 
         else:
             raise ValueError(
                 f"Unsupported chart: {chart}. "
                 "Supported: auto, quality_score, missing_values, issue_breakdown, "
-                "cleaning_status, comparison, distribution, bar, scatter"
+                "cleaning_status, comparison, distribution, bar, scatter, histogram, boxplot, correlation_heatmap"
             )
 
         return report
@@ -143,6 +155,95 @@ class VisualizationEngine:
                     "score": validation_report.quality_score_after,
                 },
             ],
+        )
+        
+    def _histogram_chart(
+        self,
+        df: pd.DataFrame,
+        column: str,
+        stage: str = "current",
+    ) -> VisualizationSpec:
+        if column not in df.columns:
+            raise ValueError(f"Column not found: {column}")
+
+        series = pd.to_numeric(df[column], errors="coerce").dropna()
+
+        if series.empty:
+            data = []
+        else:
+            bins = pd.cut(series, bins=20)
+            counts = bins.value_counts().sort_index()
+
+            data = [
+                {
+                    "bin": str(interval),
+                    "count": int(count),
+                }
+                for interval, count in counts.items()
+            ]
+
+        return VisualizationSpec(
+            chart_id=f"histogram_{column}_{stage}",
+            chart_type="histogram",
+            title=f"Histogram of {column} ({stage})",
+            description=f"Shows the frequency distribution of {column}.",
+            x="bin",
+            y="count",
+            stage=stage,
+            recommended=False,
+            data=data,
+        )
+
+    def _boxplot_chart(
+        self,
+        df: pd.DataFrame,
+        column: str,
+        stage: str = "current",
+    ) -> VisualizationSpec:
+        if column not in df.columns:
+            raise ValueError(f"Column not found: {column}")
+
+        series = pd.to_numeric(df[column], errors="coerce").dropna()
+
+        data = [{"value": float(value)} for value in series.tolist()]
+
+        return VisualizationSpec(
+            chart_id=f"boxplot_{column}_{stage}",
+            chart_type="boxplot",
+            title=f"Boxplot of {column} ({stage})",
+            description=f"Shows spread, median, quartiles, and possible outliers for {column}.",
+            x=None,
+            y="value",
+            stage=stage,
+            recommended=False,
+            data=data,
+        )
+
+    def _correlation_heatmap_chart(
+        self,
+        df: pd.DataFrame,
+        stage: str = "current",
+    ) -> VisualizationSpec:
+        numeric_df = df.select_dtypes(include="number")
+
+        if numeric_df.empty:
+            data = []
+        else:
+            corr = numeric_df.corr(numeric_only=True).round(3)
+            data = corr.reset_index().rename(columns={"index": "feature"}).to_dict(
+                orient="records"
+            )
+
+        return VisualizationSpec(
+            chart_id=f"correlation_heatmap_{stage}",
+            chart_type="correlation_heatmap",
+            title=f"Correlation Heatmap ({stage})",
+            description="Shows pairwise correlation between numeric variables.",
+            x=None,
+            y=None,
+            stage=stage,
+            recommended=True,
+            data=data,
         )
 
     def _missing_values_chart(

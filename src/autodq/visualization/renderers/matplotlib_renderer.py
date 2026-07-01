@@ -52,6 +52,15 @@ class MatplotlibVisualizationRenderer:
 
         if chart.chart_type == "scatter":
             return self._render_scatter(chart, output_dir)
+        if chart.chart_type == "histogram":
+            return self._render_histogram(chart, output_dir)
+
+        if chart.chart_type == "boxplot":
+            return self._render_boxplot(chart, output_dir)
+
+        if chart.chart_type == "correlation_heatmap":
+            return self._render_correlation_heatmap(chart, output_dir)
+        
 
         return None
 
@@ -100,6 +109,82 @@ class MatplotlibVisualizationRenderer:
         ax.set_xlabel(chart.x or "x")
         ax.set_ylabel(chart.y or "y")
         ax.grid(alpha=0.25)
+
+        fig.tight_layout()
+
+        path = output_dir / f"{chart.chart_id}.png"
+        fig.savefig(path, dpi=160, bbox_inches="tight")
+        plt.close(fig)
+
+        return path
+    def _render_histogram(self, chart, output_dir: Path) -> Path:
+        labels = [str(row.get(chart.x, "N/A")) for row in chart.data]
+        values = [row.get(chart.y, 0) for row in chart.data]
+
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.bar(range(len(labels)), values)
+        ax.set_title(chart.title)
+        ax.set_xlabel(chart.x or "bin")
+        ax.set_ylabel(chart.y or "count")
+        ax.set_xticks(range(len(labels)))
+        ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=7)
+        ax.grid(axis="y", alpha=0.25)
+
+        fig.tight_layout()
+
+        path = output_dir / f"{chart.chart_id}.png"
+        fig.savefig(path, dpi=160, bbox_inches="tight")
+        plt.close(fig)
+
+        return path
+
+    def _render_boxplot(self, chart, output_dir: Path) -> Path:
+        values = [
+            row.get("value")
+            for row in chart.data
+            if isinstance(row.get("value"), (int, float))
+        ]
+
+        fig, ax = plt.subplots(figsize=(7, 5))
+        ax.boxplot(values, vert=True, patch_artist=True)
+        ax.set_title(chart.title)
+        ax.set_ylabel(chart.y or "value")
+        ax.grid(axis="y", alpha=0.25)
+
+        fig.tight_layout()
+
+        path = output_dir / f"{chart.chart_id}.png"
+        fig.savefig(path, dpi=160, bbox_inches="tight")
+        plt.close(fig)
+
+        return path
+
+    def _render_correlation_heatmap(self, chart, output_dir: Path) -> Path:
+        import numpy as np
+
+        if not chart.data:
+            fig, ax = plt.subplots(figsize=(8, 5))
+            ax.text(0.5, 0.5, "No numeric columns available", ha="center", va="center")
+            ax.axis("off")
+        else:
+            features = [row["feature"] for row in chart.data]
+            matrix = []
+
+            for row in chart.data:
+                matrix.append([row.get(feature, 0) for feature in features])
+
+            matrix = np.array(matrix, dtype=float)
+
+            fig, ax = plt.subplots(figsize=(10, 8))
+            image = ax.imshow(matrix, aspect="auto")
+            ax.set_title(chart.title)
+
+            ax.set_xticks(range(len(features)))
+            ax.set_yticks(range(len(features)))
+            ax.set_xticklabels(features, rotation=45, ha="right", fontsize=8)
+            ax.set_yticklabels(features, fontsize=8)
+
+            fig.colorbar(image, ax=ax, fraction=0.046, pad=0.04)
 
         fig.tight_layout()
 

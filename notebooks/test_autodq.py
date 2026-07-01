@@ -37,6 +37,14 @@ project.show_validation()
 
 project.visualize( chart = "auto")
 
+project.visualize(chart="histogram", column="Revenue")
+project.generate_report("reports/histogram_report.html", style="executive")
+
+project.visualize(chart="boxplot", column="Revenue")
+project.generate_report("reports/boxplot_report.html", style="executive")
+
+project.visualize(chart="correlation_heatmap")
+project.generate_report("reports/correlation_report.html", style="executive")
 
 print(project.head())
 print(project.tail())
