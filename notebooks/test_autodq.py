@@ -66,6 +66,9 @@ project.apply_features(["profit_margin", "Date_month", "revenue_per_unit"])
 
 print(project.state.engineered_data.head())
 
+project.model()
+project.show_model()
+
 project.export_engineered("exports/engineered_sales.csv")
 
 project.export_engineered("exports/engineered_sales.xlsx")

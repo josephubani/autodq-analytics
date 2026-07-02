@@ -33,6 +33,8 @@ from autodq.ml_readiness.engine import MLReadinessEngine
 from autodq.renderers.console.ml_readiness import ConsoleMLReadinessRenderer
 from autodq.features.engine import FeatureEngineeringEngine
 from autodq.renderers.console.features import ConsoleFeatureRenderer
+from autodq.ml.engine import MLEngine
+from autodq.renderers.console.model import ConsoleModelRenderer
 
 
 class AutoDQ:
@@ -56,6 +58,7 @@ class AutoDQ:
         self.correlation_engine = CorrelationEngine()
         self.ml_readiness_engine = MLReadinessEngine()
         self.feature_engine = FeatureEngineeringEngine()
+        self.ml_engine = MLEngine()
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
 
@@ -686,6 +689,53 @@ class AutoDQ:
         )
 
         print(f"\nEngineered dataset exported to {output}")
+        
+        
+    def model(
+        self,
+        algorithm: str | None = "auto",
+        use_engineered: bool = True,
+        test_size: float = 0.2,
+        random_state: int = 42,
+    ):
+        if self.state.target is None:
+            raise ValueError("Set a target first using project.set_target('column_name').")
+
+        if use_engineered and self.state.engineered_data is not None:
+            active_df = self.state.engineered_data
+        elif self.state.cleaned_data is not None:
+            active_df = self.state.cleaned_data
+        else:
+            if self.state.data is None:
+                self.load()
+            active_df = self.state.data
+
+        self.state.model_report = self.ml_engine.train(
+            df=active_df,
+            target=self.state.target,
+            algorithm=algorithm,
+            test_size=test_size,
+            random_state=random_state,
+        )
+
+        self.session.log(
+            step="model",
+            message="Machine learning model trained.",
+            metadata={
+                "target": self.state.model_report.target,
+                "problem_type": self.state.model_report.problem_type,
+                "algorithm": self.state.model_report.algorithm,
+                "features": self.state.model_report.feature_count,
+            },
+        )
+
+        return self.state.model_report
+
+    def show_model(self) -> None:
+        if self.state.model_report is None:
+            self.model()
+
+        ConsoleModelRenderer.render(self.state.model_report)  
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:
