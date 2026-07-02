@@ -9,3 +9,4 @@ streamlit
 openpyxl
 xlrd
 matplotlib
+scikit-learn
