@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 from autodq.features.models import (
     FeatureEngineeringReport,
@@ -347,3 +348,109 @@ class FeatureEngineeringEngine:
                 rec.feature_name,
             ),
         )
+    def apply(
+        self,
+        df: pd.DataFrame,
+        feature_report: FeatureEngineeringReport,
+        selected_features: list[str] | None = None,
+    ) -> pd.DataFrame:
+        engineered_df = df.copy()
+
+        selected = set(selected_features) if selected_features else None
+
+        for recommendation in feature_report.recommendations:
+            if not recommendation.executable:
+                continue
+
+            if selected is not None and recommendation.feature_name not in selected:
+                continue
+
+            engineered_df = self._apply_recommendation(
+                engineered_df,
+                recommendation,
+            )
+
+        return engineered_df
+
+    def _apply_recommendation(
+        self,
+        df: pd.DataFrame,
+        recommendation: FeatureRecommendation,
+    ) -> pd.DataFrame:
+        name = recommendation.feature_name
+        source = recommendation.source_columns
+
+        if name in df.columns:
+            return df
+
+        if recommendation.feature_type in ["date_part", "date_flag"]:
+            column = source[0]
+
+            if column not in df.columns:
+                return df
+
+            date_series = pd.to_datetime(df[column], errors="coerce")
+
+            if name.endswith("_year"):
+                df[name] = date_series.dt.year
+
+            elif name.endswith("_month"):
+                df[name] = date_series.dt.month
+
+            elif name.endswith("_quarter"):
+                df[name] = date_series.dt.quarter
+
+            elif name.endswith("_weekday"):
+                df[name] = date_series.dt.dayofweek
+
+            elif name.endswith("_is_weekend"):
+                df[name] = date_series.dt.dayofweek.isin([5, 6]).astype(int)
+
+            return df
+
+        if name == "revenue_per_unit":
+            revenue, quantity = source
+            df[name] = df[revenue] / df[quantity].replace(0, np.nan)
+            return df
+
+        if name == "profit_margin":
+            profit, revenue = source
+            df[name] = df[profit] / df[revenue].replace(0, np.nan)
+            return df
+
+        if name == "discount_intensity":
+            discount_amount, gross_sales = source
+            df[name] = df[discount_amount] / df[gross_sales].replace(0, np.nan)
+            return df
+
+        if name == "cost_to_revenue_ratio":
+            cost, revenue = source
+            df[name] = df[cost] / df[revenue].replace(0, np.nan)
+            return df
+
+        if name == "high_value_transaction":
+            revenue = source[0]
+            threshold = df[revenue].quantile(0.75)
+            df[name] = (df[revenue] >= threshold).astype(int)
+            return df
+
+        if name == "is_returned_order":
+            returned = source[0]
+            df[name] = (df[returned] == 1).astype(int)
+            return df
+
+        if name == "customer_age_group":
+            age = source[0]
+            df[name] = pd.cut(
+                df[age],
+                bins=[17, 24, 34, 44, 54, np.inf],
+                labels=["18-24", "25-34", "35-44", "45-54", "55+"],
+            )
+            return df
+
+        if recommendation.feature_type == "transformation" and name.startswith("log_"):
+            column = source[0]
+            df[name] = np.log1p(pd.to_numeric(df[column], errors="coerce"))
+            return df
+
+        return df

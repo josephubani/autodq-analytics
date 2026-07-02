@@ -60,8 +60,15 @@ project.ml_readiness()
 project.show_ml_readiness()
 
 project.features()
-
 project.show_features()
+
+project.apply_features(["profit_margin", "Date_month", "revenue_per_unit"])
+
+print(project.state.engineered_data.head())
+
+project.export_engineered("exports/engineered_sales.csv")
+
+project.export_engineered("exports/engineered_sales.xlsx")
 
 project.export_current("exports/current_sales.csv")
 project.export_cleaned("exports/cleaned_sales.csv")

@@ -633,6 +633,59 @@ class AutoDQ:
             self.features()
 
         ConsoleFeatureRenderer.render(self.state.feature_report)
+        
+    def apply_features(self, features: list[str] | None = None) -> pd.DataFrame:
+        if self.state.data is None:
+            self.load()
+
+        if self.state.feature_report is None:
+            self.features()
+
+        self.state.engineered_data = self.feature_engine.apply(
+            df=self.state.data,
+            feature_report=self.state.feature_report,
+            selected_features=features,
+        )
+
+        added_columns = [
+            column
+            for column in self.state.engineered_data.columns
+            if column not in self.state.data.columns
+        ]
+
+        self.session.log(
+            step="apply_features",
+            message="Feature engineering recommendations applied.",
+            metadata={
+                "features_added": len(added_columns),
+                "added_columns": added_columns,
+                "rows": len(self.state.engineered_data),
+                "columns": len(self.state.engineered_data.columns),
+            },
+        )
+
+        print(f"\nFeature engineering completed. Added {len(added_columns)} feature(s).")
+
+        return self.state.engineered_data
+
+    def export_engineered(self, output: str) -> None:
+        if self.state.engineered_data is None:
+            print("\nNo engineered dataset available. Run project.apply_features() first.")
+            return
+
+        export_dataset(self.state.engineered_data, output)
+
+        self.session.log(
+            step="export_engineered",
+            message="Engineered dataset exported.",
+            metadata={
+                "output": output,
+                "rows": len(self.state.engineered_data),
+                "columns": len(self.state.engineered_data.columns),
+            },
+        )
+
+        print(f"\nEngineered dataset exported to {output}")
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:

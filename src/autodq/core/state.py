@@ -26,6 +26,7 @@ class AutoDQState:
     correlation_report = None
     ml_readiness_report = None
     feature_report = None
+    engineered_data = None
 
     def reset_outputs(self) -> None:
         self.profile_report = None
@@ -43,6 +44,7 @@ class AutoDQState:
         self.correlation_report = None
         self.ml_readiness_report = None
         self.feature_report = None
+        self.engineered_data = None
 
     def reset_all(self, dataset_path: str | Path) -> None:
         self.dataset_path = Path(dataset_path)
