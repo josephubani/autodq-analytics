@@ -31,6 +31,8 @@ from autodq.correlation.engine import CorrelationEngine
 from autodq.renderers.console.correlation import ConsoleCorrelationRenderer
 from autodq.ml_readiness.engine import MLReadinessEngine
 from autodq.renderers.console.ml_readiness import ConsoleMLReadinessRenderer
+from autodq.features.engine import FeatureEngineeringEngine
+from autodq.renderers.console.features import ConsoleFeatureRenderer
 
 
 class AutoDQ:
@@ -53,6 +55,7 @@ class AutoDQ:
         self.visualization_engine = VisualizationEngine()
         self.correlation_engine = CorrelationEngine()
         self.ml_readiness_engine = MLReadinessEngine()
+        self.feature_engine = FeatureEngineeringEngine()
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
 
@@ -596,6 +599,40 @@ class AutoDQ:
             self.ml_readiness()
 
         ConsoleMLReadinessRenderer.render(self.state.ml_readiness_report)
+        
+        
+    def features(self):
+        if self.state.data is None:
+            self.load()
+
+        if self.state.statistics_report is None:
+            self.statistics()
+
+        if self.state.interpretation_report is None:
+            self.interpret()
+
+        self.state.feature_report = self.feature_engine.recommend(
+            df=self.state.data,
+            target=self.state.target,
+            statistics_report=self.state.statistics_report,
+            interpretation_report=self.state.interpretation_report,
+        )
+
+        self.session.log(
+            step="features",
+            message="Feature engineering recommendations generated.",
+            metadata={
+                "recommendations": self.state.feature_report.recommendation_count,
+            },
+        )
+
+        return self.state.feature_report
+
+    def show_features(self) -> None:
+        if self.state.feature_report is None:
+            self.features()
+
+        ConsoleFeatureRenderer.render(self.state.feature_report)
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:

@@ -59,6 +59,10 @@ project.show_correlation()
 project.ml_readiness()
 project.show_ml_readiness()
 
+project.features()
+
+project.show_features()
+
 project.export_current("exports/current_sales.csv")
 project.export_cleaned("exports/cleaned_sales.csv")
 project.export_cleaned("exports/cleaned_sales.xlsx")
