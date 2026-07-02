@@ -25,13 +25,15 @@ class FeatureEngineeringEngine:
         recommendations.extend(self._date_features(df))
         recommendations.extend(self._sales_features(columns_lower))
         recommendations.extend(self._customer_features(columns_lower))
+        recommendations.extend(self._bounded_numeric_features(df))
         recommendations.extend(
             self._skew_transform_features(
                 df=df,
                 target=target,
-                interpretation_report=interpretation_report,
             )
         )
+
+        recommendations = self._sort_recommendations(recommendations)
 
         return FeatureEngineeringReport(
             recommendations=recommendations,
@@ -83,6 +85,16 @@ class FeatureEngineeringEngine:
                             priority="medium",
                             executable=True,
                             confidence=0.86,
+                        ),
+                        FeatureRecommendation(
+                            feature_name=f"{column}_is_weekend",
+                            source_columns=[column],
+                            feature_type="date_flag",
+                            formula=f"{column}.dt.dayofweek >= 5",
+                            reason="Weekend flags can reveal different buying or operational behaviour.",
+                            priority="medium",
+                            executable=True,
+                            confidence=0.84,
                         ),
                     ]
                 )
@@ -193,11 +205,11 @@ class FeatureEngineeringEngine:
                     feature_name="customer_age_group",
                     source_columns=[age],
                     feature_type="binning",
-                    formula=f"bin {age} into age groups",
-                    reason="Age groups are often more interpretable than raw age.",
-                    priority="medium",
-                    executable=False,
-                    confidence=0.82,
+                    formula=f"bin {age} into 18-24, 25-34, 35-44, 45-54, 55+",
+                    reason="Age groups are often more interpretable than raw age and support segmentation.",
+                    priority="high",
+                    executable=True,
+                    confidence=0.88,
                 )
             )
 
@@ -217,11 +229,39 @@ class FeatureEngineeringEngine:
 
         return recommendations
 
+    def _bounded_numeric_features(self, df: pd.DataFrame) -> list[FeatureRecommendation]:
+        recommendations = []
+
+        for column in df.select_dtypes(include="number").columns:
+            lower_name = column.lower()
+            series = pd.to_numeric(df[column], errors="coerce").dropna()
+
+            if series.empty:
+                continue
+
+            if self._is_binary(series):
+                continue
+
+            if self._is_rate_or_percentage(column, series):
+                recommendations.append(
+                    FeatureRecommendation(
+                        feature_name=f"{column}_level",
+                        source_columns=[column],
+                        feature_type="binning",
+                        formula=f"bin {column} into low, medium, high",
+                        reason=f"{column} appears to be a bounded rate/percentage. Binning may make it more interpretable than log transformation.",
+                        priority="medium",
+                        executable=False,
+                        confidence=0.82,
+                    )
+                )
+
+        return recommendations
+
     def _skew_transform_features(
         self,
         df: pd.DataFrame,
         target: str | None = None,
-        interpretation_report=None,
     ) -> list[FeatureRecommendation]:
         recommendations = []
 
@@ -234,6 +274,15 @@ class FeatureEngineeringEngine:
             series = pd.to_numeric(df[column], errors="coerce").dropna()
 
             if series.empty:
+                continue
+
+            if self._is_binary(series):
+                continue
+
+            if self._is_rate_or_percentage(column, series):
+                continue
+
+            if self._looks_like_identifier(column, series):
                 continue
 
             skewness = series.skew()
@@ -253,3 +302,48 @@ class FeatureEngineeringEngine:
                 )
 
         return recommendations
+
+    def _is_binary(self, series: pd.Series) -> bool:
+        values = set(series.dropna().unique().tolist())
+        return values.issubset({0, 1, 0.0, 1.0}) and len(values) <= 2
+
+    def _is_rate_or_percentage(self, column: str, series: pd.Series) -> bool:
+        name = column.lower()
+
+        name_suggests_rate = any(
+            keyword in name
+            for keyword in ["rate", "ratio", "percent", "percentage", "margin"]
+        )
+
+        bounded_between_zero_and_one = series.min() >= 0 and series.max() <= 1
+
+        return name_suggests_rate or bounded_between_zero_and_one
+
+    def _looks_like_identifier(self, column: str, series: pd.Series) -> bool:
+        name = column.lower()
+
+        if "id" in name:
+            return True
+
+        unique_ratio = series.nunique(dropna=True) / max(len(series), 1)
+
+        return unique_ratio > 0.9
+
+    def _sort_recommendations(
+        self,
+        recommendations: list[FeatureRecommendation],
+    ) -> list[FeatureRecommendation]:
+        priority_order = {
+            "high": 0,
+            "medium": 1,
+            "low": 2,
+        }
+
+        return sorted(
+            recommendations,
+            key=lambda rec: (
+                priority_order.get(rec.priority, 3),
+                -rec.confidence,
+                rec.feature_name,
+            ),
+        )
