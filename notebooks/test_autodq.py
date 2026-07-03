@@ -69,6 +69,9 @@ print(project.state.engineered_data.head())
 project.model(algorithm="auto", exclude_leakage=True)
 project.show_model()
 
+project.predict()
+project.show_predictions()
+
 project.export_engineered("exports/engineered_sales.csv")
 
 project.export_engineered("exports/engineered_sales.xlsx")

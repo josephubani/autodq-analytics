@@ -35,6 +35,8 @@ from autodq.features.engine import FeatureEngineeringEngine
 from autodq.renderers.console.features import ConsoleFeatureRenderer
 from autodq.ml.engine import MLEngine
 from autodq.renderers.console.model import ConsoleModelRenderer
+from autodq.prediction.engine import PredictionEngine
+from autodq.renderers.console.prediction import ConsolePredictionRenderer
 
 
 class AutoDQ:
@@ -59,6 +61,7 @@ class AutoDQ:
         self.ml_readiness_engine = MLReadinessEngine()
         self.feature_engine = FeatureEngineeringEngine()
         self.ml_engine = MLEngine()
+        self.prediction_engine = PredictionEngine()
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
 
@@ -806,7 +809,70 @@ class AutoDQ:
         if self.state.model_report is None:
             self.model()
 
-        ConsoleModelRenderer.render(self.state.model_report)  
+        ConsoleModelRenderer.render(self.state.model_report) 
+        
+        
+    def predict(self, data=None):
+        if self.state.model_report is None:
+            self.model()
+
+        if data is None:
+            if self.state.engineered_data is not None:
+                active_df = self.state.engineered_data
+            elif self.state.cleaned_data is not None:
+                active_df = self.state.cleaned_data
+            else:
+                if self.state.data is None:
+                    self.load()
+                active_df = self.state.data
+        else:
+            active_df = data
+
+        prediction_data, prediction_report = self.prediction_engine.predict(
+            model_report=self.state.model_report,
+            data=active_df,
+            target=self.state.target,
+        )
+
+        self.state.prediction_data = prediction_data
+        self.state.prediction_report = prediction_report
+
+        self.session.log(
+            step="predict",
+            message="Predictions generated.",
+            metadata={
+                "prediction_count": prediction_report.prediction_count,
+                "algorithm": prediction_report.algorithm,
+                "target": prediction_report.target,
+            },
+        )
+
+        return prediction_data
+
+    def show_predictions(self) -> None:
+        if self.state.prediction_report is None:
+            self.predict()
+
+        ConsolePredictionRenderer.render(self.state.prediction_report)
+
+    def export_predictions(self, output: str) -> None:
+        if self.state.prediction_data is None:
+            print("\nNo prediction data available. Run project.predict() first.")
+            return
+
+        export_dataset(self.state.prediction_data, output)
+
+        self.session.log(
+            step="export_predictions",
+            message="Prediction dataset exported.",
+            metadata={
+                "output": output,
+                "rows": len(self.state.prediction_data),
+                "columns": len(self.state.prediction_data.columns),
+            },
+        )
+
+        print(f"\nPredictions exported to {output}") 
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:
