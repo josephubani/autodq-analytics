@@ -77,6 +77,10 @@ project.show_model()
 project.predict()
 project.show_predictions()
 
+print(project.state.model_report is None)
+
+print(project.state.prediction_report is None)
+
 project.export_engineered("exports/engineered_sales.csv")
 project.export_engineered("exports/manual_features_sales.xlsx")
 project.export_engineered("exports/engineered_sales.xlsx")
@@ -88,6 +92,9 @@ project.export_cleaned("exports/cleaned_sales.xlsx")
 project.generate_report("reports/autodq_executive.html", style="executive")
 project.generate_report("reports/autodq_dark.html", style="dark")
 project.generate_report("reports/autodq_print.html", style="print")
+project.generate_report("reports/ml_prediction_report.html",style="executive",)
+project.generate_report("reports/ml_prediction_report_dark.html",style="dark",
+)
 
 project.show_session()
 

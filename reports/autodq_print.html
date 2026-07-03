@@ -109,6 +109,7 @@ body {
     margin-top: 10px;
     font-size: 30px;
     font-weight: 800;
+    overflow-wrap: anywhere;
 }
 
 .metric-small {
@@ -344,6 +345,43 @@ body {
     font-size: 12px;
 }
 
+.model-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.leaderboard-row {
+    display: grid;
+    grid-template-columns: 70px 1fr 120px;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.importance-row {
+    display: grid;
+    grid-template-columns: 180px 1fr 80px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.prediction-table {
+    font-size: 13px;
+}
+
+.recommendation-list {
+    margin: 0;
+    padding-left: 22px;
+}
+
+.recommendation-list li {
+    margin-bottom: 10px;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -422,7 +460,8 @@ th {
     .two-col,
     .chart-grid,
     .visualization-grid,
-    .rendered-viz-grid {
+    .rendered-viz-grid,
+    .model-grid {
         grid-template-columns: 1fr;
     }
 
@@ -439,11 +478,11 @@ th {
 
     <div class="hero">
         <h1>AutoDQ Executive Data Quality Report</h1>
-        <p>Automated profiling, diagnosis, evidence-aware recommendations, cleaning validation, visualization, and workflow summary.</p>
+        <p>Automated profiling, diagnosis, evidence-aware recommendations, cleaning validation, visualization, machine learning, and prediction summary.</p>
         <div class="meta">
             <span>Dataset: datasets/sample/sales.csv</span>
             <span>Style: print</span>
-            <span>Generated: 2026-07-03 04:46:41</span>
+            <span>Generated: 2026-07-03 05:27:17</span>
         </div>
     </div>
 
@@ -683,6 +722,467 @@ th {
         
         </div>
     </div>
+
+    
+        <div class="section card">
+            <h2 class="section-title">Machine Learning Model Summary</h2>
+
+            <div class="model-grid">
+                <div class="card">
+                    <h3>Best Algorithm</h3>
+                    <div class="metric">random_forest_regressor</div>
+                    <div class="metric-small">Selected by AutoDQ</div>
+                </div>
+
+                <div class="card">
+                    <h3>Target</h3>
+                    <div class="metric">Revenue</div>
+                    <div class="metric-small">Prediction target</div>
+                </div>
+
+                <div class="card">
+                    <h3>Features Used</h3>
+                    <div class="metric">20</div>
+                    <div class="metric-small">Training features</div>
+                </div>
+
+                <div class="card">
+                    <h3>Predictions Stored</h3>
+                    <div class="metric">25</div>
+                    <div class="metric-small">Sample predictions</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">Model Performance Metrics</h2>
+            <div class="model-grid">
+                
+            
+        <div class="chart-card">
+            <div class="chart-title">MAE</div>
+            <div class="metric">44.7978</div>
+        </div>
+        
+            
+        <div class="chart-card">
+            <div class="chart-title">RMSE</div>
+            <div class="metric">427.0193</div>
+        </div>
+        
+            
+        <div class="chart-card">
+            <div class="chart-title">R²</div>
+            <div class="metric">0.8752</div>
+        </div>
+        
+            
+        <div class="chart-card">
+            <div class="chart-title">Problem</div>
+            <div class="metric">regression</div>
+        </div>
+        
+            
+            </div>
+        </div>
+
+        <div class="section two-col">
+            <div class="card">
+                <h2 class="section-title">Model Comparison Leaderboard</h2>
+                
+                <div class="leaderboard-row">
+                    <strong>🥇</strong>
+                    <span>random_forest_regressor</span>
+                    <strong>r2: 0.8752</strong>
+                </div>
+                
+
+                <div class="leaderboard-row">
+                    <strong>🥈</strong>
+                    <span>decision_tree_regressor</span>
+                    <strong>r2: 0.7964</strong>
+                </div>
+                
+
+                <div class="leaderboard-row">
+                    <strong>🥉</strong>
+                    <span>linear_regression</span>
+                    <strong>r2: -0.7084</strong>
+                </div>
+                
+            </div>
+
+            <div class="card">
+                <h2 class="section-title">Top Feature Importance</h2>
+                
+                <div class="importance-row">
+                    <span>Quantity</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>0.3199</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Unit_Price</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:95.65%"></div>
+                    </div>
+                    <strong>0.306</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>log_unit_price</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:91.76%"></div>
+                    </div>
+                    <strong>0.2936</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Customer_ID_CUST-9350</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:8.06%"></div>
+                    </div>
+                    <strong>0.0258</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Customer_ID_CUST-1808</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:4.36%"></div>
+                    </div>
+                    <strong>0.014</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Customer_Satisfaction</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:1.03%"></div>
+                    </div>
+                    <strong>0.0033</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Payment_Method_PayPal</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:0.92%"></div>
+                    </div>
+                    <strong>0.003</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Discount_Rate</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:0.92%"></div>
+                    </div>
+                    <strong>0.0029</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Date_month</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:0.9%"></div>
+                    </div>
+                    <strong>0.0029</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Returned</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:0.81%"></div>
+                    </div>
+                    <strong>0.0026</strong>
+                </div>
+                
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">Model Recommendations</h2>
+            <ul class="recommendation-list">
+                <li>Model performance is strong based on R². Review target leakage before trusting results.</li>
+<li>The most influential feature appears to be 'Quantity'. Review whether it is valid or causes leakage.</li>
+<li>random_forest_regressor was selected as the best model based on r2.</li>
+<li>random_forest_regressor clearly outperformed the next-best model by 0.0788 r2 points.</li>
+            </ul>
+        </div>
+        
+
+    
+        <div class="section card">
+            <h2 class="section-title">Prediction Results</h2>
+
+            <div class="grid">
+                <div class="card">
+                    <h3>Predictions</h3>
+                    <div class="metric">100</div>
+                    <div class="metric-small">Stored in report</div>
+                </div>
+
+                <div class="card">
+                    <h3>Target</h3>
+                    <div class="metric">Revenue</div>
+                    <div class="metric-small">Prediction target</div>
+                </div>
+
+                <div class="card">
+                    <h3>Algorithm</h3>
+                    <div class="metric">random_forest_regressor</div>
+                    <div class="metric-small">Trained model</div>
+                </div>
+
+                <div class="card">
+                    <h3>Problem Type</h3>
+                    <div class="metric">regression</div>
+                    <div class="metric-small">ML task</div>
+                </div>
+            </div>
+
+            <table class="prediction-table">
+                <tr>
+                    <th>Row</th>
+                    <th>Actual</th>
+                    <th>Predicted</th>
+                    <th>Residual</th>
+                    <th>Abs Error</th>
+                    <th>% Error</th>
+                    <th>Confidence</th>
+                    <th>Top Drivers</th>
+                </tr>
+                
+                <tr>
+                    <td>0</td>
+                    <td>89.11</td>
+                    <td>90.083</td>
+                    <td>-0.973</td>
+                    <td>0.973</td>
+                    <td>1.0919</td>
+                    <td>98.91%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>1</td>
+                    <td>284.09</td>
+                    <td>283.4693</td>
+                    <td>0.6207</td>
+                    <td>0.6207</td>
+                    <td>0.2185</td>
+                    <td>99%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>2</td>
+                    <td>31.98</td>
+                    <td>31.8157</td>
+                    <td>0.1643</td>
+                    <td>0.1643</td>
+                    <td>0.5138</td>
+                    <td>99%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>3</td>
+                    <td>199.58</td>
+                    <td>201.2662</td>
+                    <td>-1.6862</td>
+                    <td>1.6862</td>
+                    <td>0.8449</td>
+                    <td>99%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>4</td>
+                    <td>209.53</td>
+                    <td>211.2281</td>
+                    <td>-1.6981</td>
+                    <td>1.6981</td>
+                    <td>0.8104</td>
+                    <td>99%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>5</td>
+                    <td>37.6</td>
+                    <td>37.8828</td>
+                    <td>-0.2828</td>
+                    <td>0.2828</td>
+                    <td>0.7521</td>
+                    <td>99%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>6</td>
+                    <td>168.62</td>
+                    <td>164.9781</td>
+                    <td>3.6419</td>
+                    <td>3.6419</td>
+                    <td>2.1598</td>
+                    <td>97.84%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>7</td>
+                    <td>83.0</td>
+                    <td>83.2122</td>
+                    <td>-0.2122</td>
+                    <td>0.2122</td>
+                    <td>0.2557</td>
+                    <td>99%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>8</td>
+                    <td>10.22</td>
+                    <td>10.9851</td>
+                    <td>-0.7651</td>
+                    <td>0.7651</td>
+                    <td>7.4863</td>
+                    <td>92.51%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>9</td>
+                    <td>5065.55</td>
+                    <td>4899.9873</td>
+                    <td>165.5627</td>
+                    <td>165.5627</td>
+                    <td>3.2684</td>
+                    <td>96.73%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>10</td>
+                    <td>143.3</td>
+                    <td>143.018</td>
+                    <td>0.282</td>
+                    <td>0.282</td>
+                    <td>0.1968</td>
+                    <td>99%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>11</td>
+                    <td>239.42</td>
+                    <td>238.1791</td>
+                    <td>1.2409</td>
+                    <td>1.2409</td>
+                    <td>0.5183</td>
+                    <td>99%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>12</td>
+                    <td>192.53</td>
+                    <td>192.4424</td>
+                    <td>0.0876</td>
+                    <td>0.0876</td>
+                    <td>0.0455</td>
+                    <td>99%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>13</td>
+                    <td>9.49</td>
+                    <td>10.017</td>
+                    <td>-0.527</td>
+                    <td>0.527</td>
+                    <td>5.5532</td>
+                    <td>94.45%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>14</td>
+                    <td>249.49</td>
+                    <td>249.6962</td>
+                    <td>-0.2062</td>
+                    <td>0.2062</td>
+                    <td>0.0826</td>
+                    <td>99%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>15</td>
+                    <td>1346.29</td>
+                    <td>1304.0094</td>
+                    <td>42.2806</td>
+                    <td>42.2806</td>
+                    <td>3.1405</td>
+                    <td>96.86%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>16</td>
+                    <td>92.68</td>
+                    <td>93.4707</td>
+                    <td>-0.7907</td>
+                    <td>0.7907</td>
+                    <td>0.8532</td>
+                    <td>99%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>17</td>
+                    <td>44.62</td>
+                    <td>46.5232</td>
+                    <td>-1.9032</td>
+                    <td>1.9032</td>
+                    <td>4.2654</td>
+                    <td>95.73%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>18</td>
+                    <td>107.39</td>
+                    <td>107.5458</td>
+                    <td>-0.1558</td>
+                    <td>0.1558</td>
+                    <td>0.1451</td>
+                    <td>99%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+                <tr>
+                    <td>19</td>
+                    <td>135.35</td>
+                    <td>128.6083</td>
+                    <td>6.7417</td>
+                    <td>6.7417</td>
+                    <td>4.9809</td>
+                    <td>95.02%</td>
+                    <td>Quantity, Unit_Price, log_unit_price</td>
+                </tr>
+                
+            </table>
+        </div>
+        
 
     <div class="section card">
         <h2 class="section-title">Issue Breakdown</h2>

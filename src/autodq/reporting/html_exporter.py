@@ -19,6 +19,9 @@ class HTMLExporter:
         diagnosis = report.diagnosis
         recommendations = report.recommendations or []
 
+        model = getattr(report, "model", None)
+        prediction = getattr(report, "prediction", None)
+
         quality_before = validation.quality_score_before if validation else None
         quality_after = validation.quality_score_after if validation else None
         quality_change = validation.quality_score_change if validation else None
@@ -43,12 +46,15 @@ class HTMLExporter:
         cleaning_rows = self._build_cleaning_rows(cleaning)
 
         visualization_cards = self._build_visualization_cards(
-            report.visualizations
+            getattr(report, "visualizations", None)
         )
 
         rendered_visualization_cards = self._build_rendered_visualization_cards(
-            report.rendered_visualizations
+            getattr(report, "rendered_visualizations", None)
         )
+
+        model_section = self._build_model_section(model)
+        prediction_section = self._build_prediction_section(prediction)
 
         return f"""
 <!DOCTYPE html>
@@ -136,6 +142,7 @@ body {{
     margin-top: 10px;
     font-size: 30px;
     font-weight: 800;
+    overflow-wrap: anywhere;
 }}
 
 .metric-small {{
@@ -371,6 +378,43 @@ body {{
     font-size: 12px;
 }}
 
+.model-grid {{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}}
+
+.leaderboard-row {{
+    display: grid;
+    grid-template-columns: 70px 1fr 120px;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+}}
+
+.importance-row {{
+    display: grid;
+    grid-template-columns: 180px 1fr 80px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 13px;
+}}
+
+.prediction-table {{
+    font-size: 13px;
+}}
+
+.recommendation-list {{
+    margin: 0;
+    padding-left: 22px;
+}}
+
+.recommendation-list li {{
+    margin-bottom: 10px;
+}}
+
 table {{
     width: 100%;
     border-collapse: collapse;
@@ -449,7 +493,8 @@ th {{
     .two-col,
     .chart-grid,
     .visualization-grid,
-    .rendered-viz-grid {{
+    .rendered-viz-grid,
+    .model-grid {{
         grid-template-columns: 1fr;
     }}
 
@@ -466,7 +511,7 @@ th {{
 
     <div class="hero">
         <h1>AutoDQ Executive Data Quality Report</h1>
-        <p>Automated profiling, diagnosis, evidence-aware recommendations, cleaning validation, visualization, and workflow summary.</p>
+        <p>Automated profiling, diagnosis, evidence-aware recommendations, cleaning validation, visualization, machine learning, and prediction summary.</p>
         <div class="meta">
             <span>Dataset: {report.dataset}</span>
             <span>Style: {style}</span>
@@ -560,6 +605,10 @@ th {{
             {visualization_cards}
         </div>
     </div>
+
+    {model_section}
+
+    {prediction_section}
 
     <div class="section card">
         <h2 class="section-title">Issue Breakdown</h2>
@@ -910,6 +959,248 @@ th {{
             {"".join(rows)}
         </table>
         """
+
+    def _build_model_section(self, model):
+        if model is None:
+            return """
+            <div class="section card">
+                <h2 class="section-title">Machine Learning Model</h2>
+                <p class="metric-small">No model has been trained yet.</p>
+            </div>
+            """
+
+        metrics = model.metrics
+
+        if model.problem_type == "regression":
+            metric_cards = f"""
+            {self._model_metric_card("MAE", metrics.mae)}
+            {self._model_metric_card("RMSE", metrics.rmse)}
+            {self._model_metric_card("R²", metrics.r2)}
+            {self._model_metric_card("Problem", model.problem_type)}
+            """
+        else:
+            metric_cards = f"""
+            {self._model_metric_card("Accuracy", metrics.accuracy)}
+            {self._model_metric_card("Precision", metrics.precision)}
+            {self._model_metric_card("Recall", metrics.recall)}
+            {self._model_metric_card("F1", metrics.f1)}
+            """
+
+        comparison_rows = self._build_model_comparison_rows(model)
+        importance_rows = self._build_feature_importance_rows(model)
+        recommendation_rows = self._build_model_recommendation_rows(model)
+
+        return f"""
+        <div class="section card">
+            <h2 class="section-title">Machine Learning Model Summary</h2>
+
+            <div class="model-grid">
+                <div class="card">
+                    <h3>Best Algorithm</h3>
+                    <div class="metric">{model.algorithm}</div>
+                    <div class="metric-small">Selected by AutoDQ</div>
+                </div>
+
+                <div class="card">
+                    <h3>Target</h3>
+                    <div class="metric">{model.target}</div>
+                    <div class="metric-small">Prediction target</div>
+                </div>
+
+                <div class="card">
+                    <h3>Features Used</h3>
+                    <div class="metric">{model.feature_count}</div>
+                    <div class="metric-small">Training features</div>
+                </div>
+
+                <div class="card">
+                    <h3>Predictions Stored</h3>
+                    <div class="metric">{model.prediction_count}</div>
+                    <div class="metric-small">Sample predictions</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">Model Performance Metrics</h2>
+            <div class="model-grid">
+                {metric_cards}
+            </div>
+        </div>
+
+        <div class="section two-col">
+            <div class="card">
+                <h2 class="section-title">Model Comparison Leaderboard</h2>
+                {comparison_rows}
+            </div>
+
+            <div class="card">
+                <h2 class="section-title">Top Feature Importance</h2>
+                {importance_rows}
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">Model Recommendations</h2>
+            <ul class="recommendation-list">
+                {recommendation_rows}
+            </ul>
+        </div>
+        """
+
+    def _model_metric_card(self, title, value):
+        return f"""
+        <div class="chart-card">
+            <div class="chart-title">{title}</div>
+            <div class="metric">{value if value is not None else "N/A"}</div>
+        </div>
+        """
+
+    def _build_model_comparison_rows(self, model):
+        if not getattr(model, "model_comparison", None):
+            return "<p class='metric-small'>No model comparison available.</p>"
+
+        rows = []
+
+        for item in model.model_comparison:
+            medal = (
+                "🥇"
+                if item.rank == 1
+                else "🥈"
+                if item.rank == 2
+                else "🥉"
+                if item.rank == 3
+                else item.rank
+            )
+
+            rows.append(
+                f"""
+                <div class="leaderboard-row">
+                    <strong>{medal}</strong>
+                    <span>{item.algorithm}</span>
+                    <strong>{item.primary_metric}: {item.primary_score}</strong>
+                </div>
+                """
+            )
+
+        return "\n".join(rows)
+
+    def _build_feature_importance_rows(self, model):
+        if not getattr(model, "feature_importance", None):
+            return "<p class='metric-small'>No feature importance available.</p>"
+
+        rows = []
+        max_importance = max(
+            [item.importance for item in model.feature_importance[:10]] or [1]
+        )
+
+        if max_importance == 0:
+            max_importance = 1
+
+        for item in model.feature_importance[:10]:
+            width = round((item.importance / max_importance) * 100, 2)
+
+            rows.append(
+                f"""
+                <div class="importance-row">
+                    <span>{item.feature}</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:{width}%"></div>
+                    </div>
+                    <strong>{round(item.importance, 4)}</strong>
+                </div>
+                """
+            )
+
+        return "\n".join(rows)
+
+    def _build_model_recommendation_rows(self, model):
+        if not getattr(model, "recommendations", None):
+            return "<li>No model recommendations available.</li>"
+
+        return "\n".join(
+            f"<li>{recommendation}</li>"
+            for recommendation in model.recommendations
+        )
+
+    def _build_prediction_section(self, prediction):
+        if prediction is None:
+            return """
+            <div class="section card">
+                <h2 class="section-title">Prediction Results</h2>
+                <p class="metric-small">No predictions generated yet.</p>
+            </div>
+            """
+
+        rows = []
+
+        for item in prediction.predictions[:20]:
+            rows.append(
+                f"""
+                <tr>
+                    <td>{item.row_id}</td>
+                    <td>{item.actual}</td>
+                    <td>{self._format_prediction_value(item.predicted)}</td>
+                    <td>{item.residual}</td>
+                    <td>{item.absolute_error}</td>
+                    <td>{item.percent_error}</td>
+                    <td>{item.confidence}%</td>
+                    <td>{", ".join(item.top_features) if item.top_features else "-"}</td>
+                </tr>
+                """
+            )
+
+        return f"""
+        <div class="section card">
+            <h2 class="section-title">Prediction Results</h2>
+
+            <div class="grid">
+                <div class="card">
+                    <h3>Predictions</h3>
+                    <div class="metric">{prediction.prediction_count}</div>
+                    <div class="metric-small">Stored in report</div>
+                </div>
+
+                <div class="card">
+                    <h3>Target</h3>
+                    <div class="metric">{prediction.target}</div>
+                    <div class="metric-small">Prediction target</div>
+                </div>
+
+                <div class="card">
+                    <h3>Algorithm</h3>
+                    <div class="metric">{prediction.algorithm}</div>
+                    <div class="metric-small">Trained model</div>
+                </div>
+
+                <div class="card">
+                    <h3>Problem Type</h3>
+                    <div class="metric">{prediction.problem_type}</div>
+                    <div class="metric-small">ML task</div>
+                </div>
+            </div>
+
+            <table class="prediction-table">
+                <tr>
+                    <th>Row</th>
+                    <th>Actual</th>
+                    <th>Predicted</th>
+                    <th>Residual</th>
+                    <th>Abs Error</th>
+                    <th>% Error</th>
+                    <th>Confidence</th>
+                    <th>Top Drivers</th>
+                </tr>
+                {"".join(rows)}
+            </table>
+        </div>
+        """
+
+    def _format_prediction_value(self, value):
+        if isinstance(value, (int, float)):
+            return round(float(value), 4)
+
+        return value
 
     def _build_issue_rows(self, diagnosis):
         if diagnosis is None or not diagnosis.issues:

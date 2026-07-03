@@ -109,6 +109,7 @@ body {
     margin-top: 10px;
     font-size: 30px;
     font-weight: 800;
+    overflow-wrap: anywhere;
 }
 
 .metric-small {
@@ -344,6 +345,43 @@ body {
     font-size: 12px;
 }
 
+.model-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.leaderboard-row {
+    display: grid;
+    grid-template-columns: 70px 1fr 120px;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.importance-row {
+    display: grid;
+    grid-template-columns: 180px 1fr 80px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.prediction-table {
+    font-size: 13px;
+}
+
+.recommendation-list {
+    margin: 0;
+    padding-left: 22px;
+}
+
+.recommendation-list li {
+    margin-bottom: 10px;
+}
+
 table {
     width: 100%;
     border-collapse: collapse;
@@ -422,7 +460,8 @@ th {
     .two-col,
     .chart-grid,
     .visualization-grid,
-    .rendered-viz-grid {
+    .rendered-viz-grid,
+    .model-grid {
         grid-template-columns: 1fr;
     }
 
@@ -439,11 +478,11 @@ th {
 
     <div class="hero">
         <h1>AutoDQ Executive Data Quality Report</h1>
-        <p>Automated profiling, diagnosis, evidence-aware recommendations, cleaning validation, visualization, and workflow summary.</p>
+        <p>Automated profiling, diagnosis, evidence-aware recommendations, cleaning validation, visualization, machine learning, and prediction summary.</p>
         <div class="meta">
             <span>Dataset: datasets/sample/sales.csv</span>
             <span>Style: executive</span>
-            <span>Generated: 2026-07-03 04:46:41</span>
+            <span>Generated: 2026-07-03 05:26:54</span>
         </div>
     </div>
 
@@ -683,6 +722,20 @@ th {
         
         </div>
     </div>
+
+    
+            <div class="section card">
+                <h2 class="section-title">Machine Learning Model</h2>
+                <p class="metric-small">No model has been trained yet.</p>
+            </div>
+            
+
+    
+            <div class="section card">
+                <h2 class="section-title">Prediction Results</h2>
+                <p class="metric-small">No predictions generated yet.</p>
+            </div>
+            
 
     <div class="section card">
         <h2 class="section-title">Issue Breakdown</h2>

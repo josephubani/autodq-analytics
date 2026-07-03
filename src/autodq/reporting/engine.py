@@ -9,10 +9,19 @@ from autodq.visualization.renderers.matplotlib_renderer import (
 
 
 class ReportingEngine:
+    """
+    Builds and exports complete AutoDQ reports.
+    """
+
     def __init__(self):
         self.visual_renderer = MatplotlibVisualizationRenderer()
 
-    def build_report(self, state, session, output_dir: str | Path = "reports"):
+    def build_report(
+        self,
+        state,
+        session,
+        output_dir: str | Path = "reports",
+    ):
         output_dir = Path(output_dir)
         chart_dir = output_dir / "charts"
 
@@ -23,29 +32,52 @@ class ReportingEngine:
 
         return AutoDQReport(
             dataset=str(state.dataset_path),
+
             profile=state.profile_report,
             statistics=state.statistics_report,
             interpretations=state.interpretation_report,
+
             diagnosis=state.diagnosis_report,
             recommendations=state.recommendations,
+
             decision_plan=state.decision_plan,
             preview=state.preview_report,
+
             cleaning=state.cleaning_report,
             validation=state.validation_report,
+
             visualizations=state.visualization_report,
             rendered_visualizations=rendered_visualizations,
+
+            # -------- NEW --------
+            model=state.model_report,
+            prediction=state.prediction_report,
+            # ---------------------
+
             session=session,
         )
 
-    def export(self, report, output: str, style: str = "executive"):
+    def export(
+        self,
+        report,
+        output: str,
+        style: str = "executive",
+    ):
         output = Path(output)
+
         suffix = output.suffix.lower()
 
         if suffix == ".json":
             JSONExporter().export(report, output)
 
         elif suffix == ".html":
-            HTMLExporter().export(report, output, style=style)
+            HTMLExporter().export(
+                report,
+                output,
+                style=style,
+            )
 
         else:
-            raise ValueError(f"Unsupported report format: {suffix}")
+            raise ValueError(
+                f"Unsupported report format: {suffix}"
+            )
