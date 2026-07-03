@@ -63,6 +63,21 @@ class PredictionEngine:
 
                     if actual != 0:
                         percent_error = round((absolute_error / abs(float(actual))) * 100, 4)
+            confidence = self._estimate_confidence(
+                model_report=model_report,
+                absolute_error=absolute_error,
+                actual=actual,
+            )
+
+            top_features = self._top_features(model_report)
+
+            explanation = self._build_explanation(
+                predicted=predicted,
+                actual=actual,
+                confidence=confidence,
+                top_features=top_features,
+                problem_type=model_report.problem_type,
+            )         
 
             results.append(
                 PredictionResult(
@@ -72,6 +87,9 @@ class PredictionEngine:
                     residual=residual,
                     absolute_error=absolute_error,
                     percent_error=percent_error,
+                    confidence=confidence,
+                    top_features=top_features,
+                    explanation=explanation,
                 )
             )
 
@@ -84,3 +102,61 @@ class PredictionEngine:
         )
 
         return output_df, report
+    def _top_features(self, model_report, limit: int = 3) -> list[str]:
+        if not model_report.feature_importance:
+            return []
+
+        return [
+            item.feature
+            for item in model_report.feature_importance[:limit]
+        ]
+
+    def _estimate_confidence(
+        self,
+        model_report,
+        absolute_error,
+        actual,
+    ) -> float:
+        if model_report.problem_type != "regression":
+            return 80.0
+
+        if absolute_error is None or actual is None:
+            return 80.0
+
+        if actual == 0:
+            return 75.0
+
+        error_ratio = abs(float(absolute_error)) / max(abs(float(actual)), 1)
+
+        confidence = 100 - min(60, error_ratio * 100)
+
+        return round(max(40, min(99, confidence)), 2)
+
+    def _build_explanation(
+        self,
+        predicted,
+        actual,
+        confidence,
+        top_features,
+        problem_type,
+    ) -> str:
+        if problem_type == "regression":
+            feature_text = ", ".join(top_features) if top_features else "the strongest model features"
+
+            if actual is not None:
+                return (
+                    f"The model predicted {round(float(predicted), 4)}. "
+                    f"This prediction is mainly influenced by {feature_text}. "
+                    f"Estimated confidence is {confidence}%."
+                )
+
+            return (
+                f"The model predicted {round(float(predicted), 4)}. "
+                f"This prediction is mainly influenced by {feature_text}. "
+                f"Estimated confidence is {confidence}%."
+            )
+
+        return (
+            f"The model predicted class '{predicted}'. "
+            f"The prediction is mainly influenced by {', '.join(top_features) if top_features else 'the strongest model features'}."
+        )

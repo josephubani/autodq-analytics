@@ -11,6 +11,9 @@ class PredictionResult:
     residual: float | None = None
     absolute_error: float | None = None
     percent_error: float | None = None
+    confidence: float | None = None
+    top_features: list[str] = field(default_factory=list)
+    explanation: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -20,6 +23,9 @@ class PredictionResult:
             "residual": self.residual,
             "absolute_error": self.absolute_error,
             "percent_error": self.percent_error,
+            "confidence": self.confidence,
+            "top_features": self.top_features,
+            "explanation": self.explanation,
         }
 
 
@@ -43,6 +49,9 @@ class PredictionReport:
             "algorithm": self.algorithm,
             "prediction_count": self.prediction_count,
             "warnings": self.warnings,
-            "predictions": [prediction.to_dict() for prediction in self.predictions],
+            "predictions": [
+                prediction.to_dict()
+                for prediction in self.predictions
+            ],
             "generated_at": self.generated_at.isoformat(),
         }
