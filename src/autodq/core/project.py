@@ -789,11 +789,16 @@ class AutoDQ:
             column_lower = column.lower()
 
             if column == target:
-                continue
+              continue
 
+    # Any feature containing the target name is suspicious
+            if target_lower in column_lower:
+                name_based_candidates.append(column)
+
+    # Business-derived columns are also suspicious
             if any(keyword in column_lower for keyword in leakage_keywords):
-                if target_lower in ["revenue", "sales", "profit"]:
-                    name_based_candidates.append(column)
+               if target_lower in ["revenue", "sales", "profit"]:
+                   name_based_candidates.append(column)
 
         return sorted(set(leakage_candidates + name_based_candidates))
 
