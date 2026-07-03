@@ -4,7 +4,7 @@ from sklearn.model_selection import train_test_split
 
 from autodq.ml.evaluator import ModelEvaluator
 from autodq.ml.model_selector import ModelSelector
-from autodq.ml.models import ModelReport
+from autodq.ml.models import ModelComparisonResult, ModelReport
 from autodq.ml.preprocessing import MLPreprocessor
 from autodq.ml.trainer import ModelTrainer
 
@@ -12,6 +12,11 @@ from autodq.ml.trainer import ModelTrainer
 class MLEngine:
     """
     End-to-end machine learning engine for AutoDQ.
+    Supports:
+    - automatic problem detection
+    - single-model training
+    - auto model comparison
+    - regression and classification
     """
 
     def __init__(self):
@@ -41,25 +46,85 @@ class MLEngine:
             target,
         )
 
-        selected_algorithm = self.selector.default_algorithm(
+        if algorithm == "auto":
+            candidate_algorithms = self.selector.candidate_algorithms(
+                problem_type
+            )
+        else:
+            candidate_algorithms = [
+                self.selector.default_algorithm(
+                    problem_type=problem_type,
+                    algorithm=algorithm,
+                )
+            ]
+
+        if not candidate_algorithms:
+            raise ValueError(
+                f"No supported algorithms available for problem type: {problem_type}"
+            )
+
+        trained_reports: list[ModelReport] = []
+
+        for candidate_algorithm in candidate_algorithms:
+            report = self._train_single_model(
+                df=working_df,
+                target=target,
+                problem_type=problem_type,
+                algorithm=candidate_algorithm,
+                test_size=test_size,
+                random_state=random_state,
+            )
+
+            trained_reports.append(report)
+
+        comparison = self._build_model_comparison(
+            reports=trained_reports,
             problem_type=problem_type,
-            algorithm=algorithm,
         )
 
-        scale_numeric = selected_algorithm in [
+        best_algorithm = comparison[0].algorithm
+
+        best_report = next(
+            report
+            for report in trained_reports
+            if report.algorithm == best_algorithm
+        )
+
+        best_report.model_comparison = comparison
+        best_report.recommendations.extend(
+            self._comparison_recommendations(comparison)
+        )
+
+        return best_report
+
+    def _train_single_model(
+        self,
+        df: pd.DataFrame,
+        target: str,
+        problem_type: str,
+        algorithm: str,
+        test_size: float,
+        random_state: int,
+    ) -> ModelReport:
+        scale_numeric = algorithm in [
             "linear_regression",
             "logistic_regression",
         ]
 
         X, y, preprocessor, numeric_features, categorical_features = (
             self.preprocessor.build(
-                df=working_df,
+                df=df,
                 target=target,
                 scale_numeric=scale_numeric,
             )
         )
 
-        stratify = y if problem_type == "classification" and y.nunique() > 1 else None
+        stratify = None
+
+        if problem_type == "classification" and y.nunique(dropna=True) > 1:
+            class_counts = y.value_counts(dropna=True)
+            if class_counts.min() >= 2:
+                stratify = y
 
         X_train, X_test, y_train, y_test = train_test_split(
             X,
@@ -71,7 +136,7 @@ class MLEngine:
 
         pipeline, _ = self.trainer.build_model(
             problem_type=problem_type,
-            algorithm=selected_algorithm,
+            algorithm=algorithm,
             preprocessor=preprocessor,
         )
 
@@ -81,13 +146,13 @@ class MLEngine:
 
         if problem_type == "regression":
             metrics = self.evaluator.evaluate_regression(
-                algorithm=selected_algorithm,
+                algorithm=algorithm,
                 y_test=y_test,
                 y_pred=y_pred,
             )
         else:
             metrics = self.evaluator.evaluate_classification(
-                algorithm=selected_algorithm,
+                algorithm=algorithm,
                 y_test=y_test,
                 y_pred=y_pred,
             )
@@ -113,7 +178,7 @@ class MLEngine:
         return ModelReport(
             target=target,
             problem_type=problem_type,
-            algorithm=selected_algorithm,
+            algorithm=algorithm,
             metrics=metrics,
             feature_importance=feature_importance,
             predictions=predictions,
@@ -122,6 +187,49 @@ class MLEngine:
             preprocessing_object=preprocessor,
             feature_columns=list(X.columns),
         )
+
+    def _build_model_comparison(
+        self,
+        reports: list[ModelReport],
+        problem_type: str,
+    ) -> list[ModelComparisonResult]:
+        comparison: list[ModelComparisonResult] = []
+
+        for report in reports:
+            if problem_type == "regression":
+                primary_metric = "r2"
+                primary_score = (
+                    report.metrics.r2
+                    if report.metrics.r2 is not None
+                    else -999
+                )
+            else:
+                primary_metric = "f1"
+                primary_score = (
+                    report.metrics.f1
+                    if report.metrics.f1 is not None
+                    else -999
+                )
+
+            comparison.append(
+                ModelComparisonResult(
+                    algorithm=report.algorithm,
+                    problem_type=problem_type,
+                    primary_metric=primary_metric,
+                    primary_score=primary_score,
+                    metrics=report.metrics,
+                )
+            )
+
+        comparison.sort(
+            key=lambda item: item.primary_score,
+            reverse=True,
+        )
+
+        for rank, item in enumerate(comparison, start=1):
+            item.rank = rank
+
+        return comparison
 
     def _recommendations(
         self,
@@ -164,5 +272,33 @@ class MLEngine:
             recommendations.append(
                 f"The most influential feature appears to be '{top_feature}'. Review whether it is valid or causes leakage."
             )
+
+        return recommendations
+
+    def _comparison_recommendations(
+        self,
+        comparison: list[ModelComparisonResult],
+    ) -> list[str]:
+        if not comparison:
+            return []
+
+        winner = comparison[0]
+
+        recommendations = [
+            f"{winner.algorithm} was selected as the best model based on {winner.primary_metric}."
+        ]
+
+        if len(comparison) > 1:
+            second = comparison[1]
+            gap = round(winner.primary_score - second.primary_score, 4)
+
+            if gap < 0.02:
+                recommendations.append(
+                    f"The top models performed similarly. Compare {winner.algorithm} and {second.algorithm} before final deployment."
+                )
+            else:
+                recommendations.append(
+                    f"{winner.algorithm} clearly outperformed the next-best model by {gap} {winner.primary_metric} points."
+                )
 
         return recommendations

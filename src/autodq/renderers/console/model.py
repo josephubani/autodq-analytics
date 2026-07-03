@@ -24,6 +24,15 @@ class ConsoleModelRenderer:
             print(f"  Precision: {report.metrics.precision}")
             print(f"  Recall: {report.metrics.recall}")
             print(f"  F1: {report.metrics.f1}")
+            
+        if report.model_comparison:
+            print("\nModel Comparison:")
+
+            for item in report.model_comparison:
+                print(
+                    f"  {item.rank}. {item.algorithm} | "
+                    f"{item.primary_metric}: {item.primary_score}"
+                )
 
         if report.feature_importance:
             print("\nTop Feature Importance:")

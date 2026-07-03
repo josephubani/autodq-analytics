@@ -44,3 +44,19 @@ class ModelSelector:
             return "random_forest_classifier"
 
         return "unsupported"
+    def candidate_algorithms(self, problem_type: str) -> list[str]:
+        if problem_type == "regression":
+            return [
+                "random_forest_regressor",
+                "decision_tree_regressor",
+                "linear_regression",
+            ]
+
+        if problem_type == "classification":
+            return [
+                "random_forest_classifier",
+                "decision_tree_classifier",
+                "logistic_regression",
+            ]
+
+        return []

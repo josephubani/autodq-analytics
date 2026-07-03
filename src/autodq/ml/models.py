@@ -60,6 +60,25 @@ class ModelPrediction:
 
 
 @dataclass(slots=True)
+class ModelComparisonResult:
+    algorithm: str
+    problem_type: str
+    primary_metric: str
+    primary_score: float
+    metrics: ModelMetrics
+    rank: int = 0
+
+    def to_dict(self) -> dict:
+        return {
+            "algorithm": self.algorithm,
+            "problem_type": self.problem_type,
+            "primary_metric": self.primary_metric,
+            "primary_score": self.primary_score,
+            "rank": self.rank,
+            "metrics": self.metrics.to_dict(),
+        }
+
+@dataclass(slots=True)
 class ModelReport:
     target: str
     problem_type: str
@@ -72,6 +91,7 @@ class ModelReport:
     preprocessing_object: object | None = None
     feature_columns: list[str] = field(default_factory=list)
     generated_at: datetime = field(default_factory=datetime.now)
+    model_comparison: list[ModelComparisonResult] = field(default_factory=list)
 
     @property
     def prediction_count(self) -> int:
@@ -98,4 +118,7 @@ class ModelReport:
             "prediction_count": self.prediction_count,
             "feature_count": self.feature_count,
             "generated_at": self.generated_at.isoformat(),
+            "model_comparison": [
+                 item.to_dict() for item in self.model_comparison
+             ],
         }
