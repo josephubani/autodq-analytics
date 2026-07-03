@@ -32,6 +32,7 @@ class MLEngine:
         algorithm: str | None = "auto",
         test_size: float = 0.2,
         random_state: int = 42,
+        exclude_features: list[str] | None = None,
     ) -> ModelReport:
         if target is None:
             raise ValueError("Target column must be set before modelling.")
@@ -40,6 +41,15 @@ class MLEngine:
             raise ValueError(f"Target column not found: {target}")
 
         working_df = df.dropna(subset=[target]).copy()
+        if exclude_features:
+            columns_to_drop = [
+                column
+                for column in exclude_features
+                if column in working_df.columns and column != target
+            ]
+
+            if columns_to_drop:
+                working_df = working_df.drop(columns=columns_to_drop)
 
         problem_type = self.selector.detect_problem_type(
             working_df,

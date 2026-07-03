@@ -697,6 +697,8 @@ class AutoDQ:
         use_engineered: bool = True,
         test_size: float = 0.2,
         random_state: int = 42,
+        exclude_features: list[str] | None = None,
+        exclude_leakage: bool = False,
     ):
         if self.state.target is None:
             raise ValueError("Set a target first using project.set_target('column_name').")
@@ -709,13 +711,25 @@ class AutoDQ:
             if self.state.data is None:
                 self.load()
             active_df = self.state.data
+            
+        final_exclusions = list(exclude_features or [])
 
-        self.state.model_report = self.ml_engine.train(
+        if exclude_leakage:
+            leakage_candidates = self._detect_leakage_candidates(
+                df=active_df,
+                target=self.state.target,
+            )
+
+            final_exclusions.extend(leakage_candidates)
+            final_exclusions = sorted(set(final_exclusions))
+
+            self.state.model_report = self.ml_engine.train(
             df=active_df,
             target=self.state.target,
             algorithm=algorithm,
             test_size=test_size,
             random_state=random_state,
+            exclude_features=final_exclusions,
         )
 
         self.session.log(
@@ -726,10 +740,62 @@ class AutoDQ:
                 "problem_type": self.state.model_report.problem_type,
                 "algorithm": self.state.model_report.algorithm,
                 "features": self.state.model_report.feature_count,
+                "excluded_features": final_exclusions,
             },
         )
 
         return self.state.model_report
+    
+    def _detect_leakage_candidates(
+        self,
+        df: pd.DataFrame,
+        target: str,
+        threshold: float = 0.95,
+    ) -> list[str]:
+        if target not in df.columns:
+            return []
+
+        numeric_df = df.select_dtypes(include="number")
+
+        if target not in numeric_df.columns:
+            return []
+
+        correlations = numeric_df.corr(numeric_only=True)[target].dropna()
+
+        leakage_candidates = []
+
+        for column, value in correlations.items():
+            if column == target:
+                continue
+
+            if abs(value) >= threshold:
+                leakage_candidates.append(column)
+
+        name_based_candidates = []
+
+        target_lower = target.lower()
+
+        leakage_keywords = [
+            "gross",
+            "net",
+            "total",
+            "amount",
+            "profit",
+            "cost",
+            "margin",
+        ]
+
+        for column in df.columns:
+            column_lower = column.lower()
+
+            if column == target:
+                continue
+
+            if any(keyword in column_lower for keyword in leakage_keywords):
+                if target_lower in ["revenue", "sales", "profit"]:
+                    name_based_candidates.append(column)
+
+        return sorted(set(leakage_candidates + name_based_candidates))
 
     def show_model(self) -> None:
         if self.state.model_report is None:
