@@ -640,6 +640,55 @@ class AutoDQ:
 
         ConsoleFeatureRenderer.render(self.state.feature_report)
         
+    def create_feature(
+        self,
+        name: str,
+        method: str,
+        column: str | None = None,
+        columns: list[str] | None = None,
+        expression: str | None = None,
+        bins: list[float] | None = None,
+        labels: list[str] | None = None,
+        use_engineered: bool = True,
+    ) -> pd.DataFrame:
+        if self.state.data is None:
+            self.load()
+
+        if use_engineered and self.state.engineered_data is not None:
+            active_df = self.state.engineered_data
+        elif self.state.cleaned_data is not None:
+            active_df = self.state.cleaned_data
+        else:
+            active_df = self.state.data
+
+        self.state.engineered_data = self.feature_engine.create_manual_feature(
+            df=active_df,
+            name=name,
+            method=method,
+            column=column,
+            columns=columns,
+            expression=expression,
+            bins=bins,
+            labels=labels,
+        )
+
+        self.session.log(
+            step="create_feature",
+            message="Manual feature created.",
+            metadata={
+                "feature": name,
+                "method": method,
+                "column": column,
+                "columns": columns,
+                "rows": len(self.state.engineered_data),
+                "columns_after": len(self.state.engineered_data.columns),
+            },
+        )
+
+        print(f"\nManual feature created: {name}")
+
+        return self.state.engineered_data
+        
     def apply_features(self, features: list[str] | None = None) -> pd.DataFrame:
         if self.state.data is None:
             self.load()

@@ -106,10 +106,20 @@ class PredictionEngine:
         if not model_report.feature_importance:
             return []
 
-        return [
-            item.feature
-            for item in model_report.feature_importance[:limit]
-        ]
+        clean_features = []
+
+        for item in model_report.feature_importance:
+            feature = item.feature.lower()
+
+            if "id" in feature:
+                continue
+
+            clean_features.append(item.feature)
+
+            if len(clean_features) == limit:
+                break
+
+        return clean_features
 
     def _estimate_confidence(
         self,

@@ -63,6 +63,11 @@ project.features()
 project.show_features()
 
 project.apply_features(["profit_margin", "Date_month", "revenue_per_unit"])
+project.create_feature(
+      name="log_unit_price",
+      method="log",
+      column="Unit_Price",
+)
 
 print(project.state.engineered_data.head())
 
@@ -73,7 +78,7 @@ project.predict()
 project.show_predictions()
 
 project.export_engineered("exports/engineered_sales.csv")
-
+project.export_engineered("exports/manual_features_sales.xlsx")
 project.export_engineered("exports/engineered_sales.xlsx")
 
 project.export_current("exports/current_sales.csv")

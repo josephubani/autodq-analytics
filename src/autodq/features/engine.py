@@ -454,3 +454,131 @@ class FeatureEngineeringEngine:
             return df
 
         return df
+    def create_manual_feature(
+        self,
+        df: pd.DataFrame,
+        name: str,
+        method: str,
+        column: str | None = None,
+        columns: list[str] | None = None,
+        expression: str | None = None,
+        bins: list[float] | None = None,
+        labels: list[str] | None = None,
+    ) -> pd.DataFrame:
+        import numpy as np
+
+        output_df = df.copy()
+        method = method.lower().strip()
+
+        if name in output_df.columns:
+            raise ValueError(f"Feature already exists: {name}")
+
+        if method in ["log", "log1p"]:
+            if column is None:
+                raise ValueError("column is required for log transformation.")
+            output_df[name] = np.log1p(pd.to_numeric(output_df[column], errors="coerce"))
+
+        elif method == "sqrt":
+            if column is None:
+                raise ValueError("column is required for sqrt transformation.")
+            output_df[name] = np.sqrt(pd.to_numeric(output_df[column], errors="coerce"))
+
+        elif method == "square":
+            if column is None:
+                raise ValueError("column is required for square transformation.")
+            output_df[name] = pd.to_numeric(output_df[column], errors="coerce") ** 2
+
+        elif method == "ratio":
+            if not columns or len(columns) != 2:
+                raise ValueError("columns=[numerator, denominator] is required for ratio.")
+            numerator, denominator = columns
+            output_df[name] = (
+                pd.to_numeric(output_df[numerator], errors="coerce")
+                / pd.to_numeric(output_df[denominator], errors="coerce").replace(0, np.nan)
+            )
+
+        elif method == "difference":
+            if not columns or len(columns) != 2:
+                raise ValueError("columns=[left, right] is required for difference.")
+            left, right = columns
+            output_df[name] = (
+                pd.to_numeric(output_df[left], errors="coerce")
+                - pd.to_numeric(output_df[right], errors="coerce")
+            )
+
+        elif method == "sum":
+            if not columns:
+                raise ValueError("columns is required for sum.")
+            output_df[name] = output_df[columns].apply(
+                pd.to_numeric,
+                errors="coerce",
+            ).sum(axis=1)
+
+        elif method == "product":
+            if not columns:
+                raise ValueError("columns is required for product.")
+            numeric_df = output_df[columns].apply(pd.to_numeric, errors="coerce")
+            output_df[name] = numeric_df.prod(axis=1)
+
+        elif method == "bin":
+            if column is None:
+                raise ValueError("column is required for binning.")
+            if bins is None:
+                raise ValueError("bins is required for binning.")
+            output_df[name] = pd.cut(
+                output_df[column],
+                bins=bins,
+                labels=labels,
+                include_lowest=True,
+            )
+
+        elif method == "flag_greater_equal":
+            if column is None or expression is None:
+                raise ValueError("column and expression threshold are required.")
+            threshold = float(expression)
+            output_df[name] = (output_df[column] >= threshold).astype(int)
+
+        elif method == "flag_equal":
+            if column is None or expression is None:
+                raise ValueError("column and expression value are required.")
+            output_df[name] = (output_df[column].astype(str) == str(expression)).astype(int)
+
+        elif method == "date_year":
+            if column is None:
+                raise ValueError("column is required for date_year.")
+            output_df[name] = pd.to_datetime(output_df[column], errors="coerce").dt.year
+
+        elif method == "date_month":
+            if column is None:
+                raise ValueError("column is required for date_month.")
+            output_df[name] = pd.to_datetime(output_df[column], errors="coerce").dt.month
+
+        elif method == "date_weekday":
+            if column is None:
+                raise ValueError("column is required for date_weekday.")
+            output_df[name] = pd.to_datetime(output_df[column], errors="coerce").dt.dayofweek
+
+        elif method == "date_weekend":
+            if column is None:
+                raise ValueError("column is required for date_weekend.")
+            output_df[name] = (
+                pd.to_datetime(output_df[column], errors="coerce")
+                .dt.dayofweek
+                .isin([5, 6])
+                .astype(int)
+            )
+
+        elif method == "expression":
+            if expression is None:
+                raise ValueError("expression is required for custom expression.")
+            output_df[name] = output_df.eval(expression)
+
+        else:
+            raise ValueError(
+                f"Unsupported manual feature method: {method}. "
+                "Supported: log, sqrt, square, ratio, difference, sum, product, "
+                "bin, flag_greater_equal, flag_equal, date_year, date_month, "
+                "date_weekday, date_weekend, expression."
+            )
+
+        return output_df  
