@@ -71,7 +71,7 @@ class ConsolePredictionRenderer:
 
                     if prediction.top_features:
                         print(
-                            f"  Top Drivers   : {', '.join(prediction.top_features)}"
+                            f"  Most Important Features   : {', '.join(prediction.top_features)}"
                         )
 
                     if prediction.explanation:

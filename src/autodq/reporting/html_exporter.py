@@ -1109,7 +1109,7 @@ th {{
                     <div class="bar-track">
                         <div class="bar-fill" style="width:{width}%"></div>
                     </div>
-                    <strong>{round(item.importance, 4)}</strong>
+                    <strong>{round(item.importance * 100, 2)}%</strong>
                 </div>
                 """
             )
@@ -1129,7 +1129,7 @@ th {{
         if prediction is None:
             return """
             <div class="section card">
-                <h2 class="section-title">Prediction Results</h2>
+                <h2 class="section-title">Prediction Results (First 20 Records)</h2>
                 <p class="metric-small">No predictions generated yet.</p>
             </div>
             """
@@ -1191,7 +1191,7 @@ th {{
                     <th>Abs Error</th>
                     <th>% Error</th>
                     <th>Confidence</th>
-                    <th>Top Drivers</th>
+                    <th>Most Important Features</th>
                 </tr>
                 {"".join(rows)}
             </table>
