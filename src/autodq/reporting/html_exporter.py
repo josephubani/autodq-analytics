@@ -1050,6 +1050,13 @@ th {{
         </div>
         """
 
+    def _regression_accuracy_estimate(self, metrics):
+        if metrics is None or getattr(metrics, "r2", None) is None:
+            return "N/A"
+
+        estimate = max(0, min(100, float(metrics.r2) * 100))
+        return f"{round(estimate, 2)}%"
+
     def _model_metric_card(self, title, value):
         return f"""
         <div class="chart-card">
@@ -1146,7 +1153,7 @@ th {{
                     <td>{item.residual}</td>
                     <td>{item.absolute_error}</td>
                     <td>{item.percent_error}</td>
-                    <td>{item.confidence}%</td>
+                    <td>{self._format_percent(item.confidence)}</td>
                     <td>{", ".join(item.top_features) if item.top_features else "-"}</td>
                 </tr>
                 """
@@ -1197,6 +1204,17 @@ th {{
             </table>
         </div>
         """
+
+    def _format_percent(self, value):
+        if value is None:
+            return "N/A"
+
+        value = float(value)
+
+        if value >= 99:
+            value = 98.9
+
+        return f"{round(value, 2)}%"
 
     def _format_prediction_value(self, value):
         if isinstance(value, (int, float)):
