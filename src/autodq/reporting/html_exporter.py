@@ -1,3 +1,5 @@
+from autodq.utils.ml_formatting import pretty_algorithm_name
+
 class HTMLExporter:
     """
     Exports professional AutoDQ HTML reports in multiple styles.
@@ -997,7 +999,7 @@ th {{
             <div class="model-grid">
                 <div class="card">
                     <h3>Best Algorithm</h3>
-                    <div class="metric">{model.algorithm}</div>
+                    <div class="metric">{pretty_algorithm_name(model.algorithm)}</div>
                     <div class="metric-small">Selected by AutoDQ</div>
                 </div>
 
@@ -1077,7 +1079,7 @@ th {{
                 f"""
                 <div class="leaderboard-row">
                     <strong>{medal}</strong>
-                    <span>{item.algorithm}</span>
+                    <span>{pretty_algorithm_name(item.algorithm)}</span>
                     <strong>{item.primary_metric}: {item.primary_score}</strong>
                 </div>
                 """
@@ -1169,7 +1171,7 @@ th {{
 
                 <div class="card">
                     <h3>Algorithm</h3>
-                    <div class="metric">{prediction.algorithm}</div>
+                    <div class="metric">{pretty_algorithm_name(prediction.algorithm)}</div>
                     <div class="metric-small">Trained model</div>
                 </div>
 

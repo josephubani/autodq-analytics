@@ -1,3 +1,4 @@
+from autodq.utils.ml_formatting import pretty_algorithm_name
 class ConsolePredictionRenderer:
     @staticmethod
     def render(report) -> None:
@@ -9,7 +10,7 @@ class ConsolePredictionRenderer:
 
         print(f"Target: {report.target}")
         print(f"Problem Type: {report.problem_type}")
-        print(f"Algorithm: {report.algorithm}")
+        print(f"Algorithm: {pretty_algorithm_name(report.algorithm)}")
         print(f"Predictions Stored: {report.prediction_count}")
 
         if report.warnings:
