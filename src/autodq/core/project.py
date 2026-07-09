@@ -37,6 +37,7 @@ from autodq.ml.engine import MLEngine
 from autodq.renderers.console.model import ConsoleModelRenderer
 from autodq.prediction.engine import PredictionEngine
 from autodq.renderers.console.prediction import ConsolePredictionRenderer
+from autodq.explainability.engine import ExplainabilityEngine
 
 
 class AutoDQ:
@@ -62,6 +63,7 @@ class AutoDQ:
         self.feature_engine = FeatureEngineeringEngine()
         self.ml_engine = MLEngine()
         self.prediction_engine = PredictionEngine()
+        self.explainability_engine = ExplainabilityEngine()
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
 
@@ -922,6 +924,72 @@ class AutoDQ:
         )
 
         print(f"\nPredictions exported to {output}") 
+        
+    def explain(
+        self,
+        max_rows: int = 20,
+    ):
+        if self.state.model_report is None:
+            self.model()
+
+        if self.state.prediction_report is None:
+            self.predict()
+
+        self.state.explainability_report = self.explainability_engine.explain(
+            model_report=self.state.model_report,
+            prediction_report=self.state.prediction_report,
+            max_rows=max_rows,
+        )
+
+        self.session.log(
+            step="explain",
+            message="Model explainability report generated.",
+            metadata={
+                "method": self.state.explainability_report.method,
+                "explanations": self.state.explainability_report.explanation_count,
+            },
+        )
+
+        return self.state.explainability_report
+
+    def show_explanations(self) -> None:
+        if self.state.explainability_report is None:
+            self.explain()
+
+        report = self.state.explainability_report
+
+        print("\n=== AutoDQ Explainability Report ===\n")
+        print(f"Algorithm: {report.algorithm}")
+        print(f"Method: {report.method}")
+        print(f"Explanations: {report.explanation_count}")
+
+        if report.warnings:
+            print("\nWarnings:")
+            for warning in report.warnings:
+                print(f"- {warning}")
+
+        if report.global_features:
+            print("\nGlobal Feature Contributions:")
+            for item in report.global_features[:10]:
+                print(
+                    f"  {item.rank}. {item.feature}: "
+                    f"{round(item.contribution * 100, 2)}% "
+                    f"({item.direction})"
+                )
+
+        if report.row_explanations:
+            print("\nSample Row Explanations:")
+            for row in report.row_explanations[:5]:
+                features = ", ".join(
+                    item.feature
+                    for item in row.top_contributions
+                )
+
+                print(
+                    f"  Row {row.row_id} | "
+                    f"Prediction: {row.prediction} | "
+                    f"Top features: {features}"
+                )
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:

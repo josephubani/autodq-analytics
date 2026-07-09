@@ -358,6 +358,26 @@ body {
     align-items: center;
     padding: 12px;
     border-bottom: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 8px;
+}
+
+.leaderboard-rank-1 {
+
+    background: var(--success-soft);
+
+}
+
+.leaderboard-rank-2 {
+
+    background: rgba(37, 99, 235, 0.08);
+
+}
+
+.leaderboard-rank-3 {
+
+    background: rgba(107, 114, 128, 0.10);
+
 }
 
 .importance-row {
@@ -482,7 +502,7 @@ th {
         <div class="meta">
             <span>Dataset: datasets/sample/sales.csv</span>
             <span>Style: executive</span>
-            <span>Generated: 2026-07-08 19:52:15</span>
+            <span>Generated: 2026-07-08 20:13:09</span>
         </div>
     </div>
 
@@ -790,26 +810,26 @@ th {
             <div class="card">
                 <h2 class="section-title">Model Comparison Leaderboard</h2>
                 
-                <div class="leaderboard-row">
-                    <strong>🥇</strong>
-                    <span>Random Forest Regressor</span>
-                    <strong>r2: 0.8752</strong>
-                </div>
-                
+               <div class="leaderboard-row leaderboard-rank-1">
+                   <strong>🥇</strong>
+                   <span>Random Forest Regressor</span>
+                   <strong>r2: 0.8752</strong>
+               </div>
+           
 
-                <div class="leaderboard-row">
-                    <strong>🥈</strong>
-                    <span>Decision Tree Regressor</span>
-                    <strong>r2: 0.7964</strong>
-                </div>
-                
+               <div class="leaderboard-row leaderboard-rank-2">
+                   <strong>🥈</strong>
+                   <span>Decision Tree Regressor</span>
+                   <strong>r2: 0.7964</strong>
+               </div>
+           
 
-                <div class="leaderboard-row">
-                    <strong>🥉</strong>
-                    <span>Linear Regression</span>
-                    <strong>r2: -0.7084</strong>
-                </div>
-                
+               <div class="leaderboard-row leaderboard-rank-3">
+                   <strong>🥉</strong>
+                   <span>Linear Regression</span>
+                   <strong>r2: -0.7084</strong>
+               </div>
+           
             </div>
 
             <div class="card">
