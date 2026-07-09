@@ -5,6 +5,7 @@ class ExplainabilityEngine:
     Current phase:
     - prepares structure for SHAP
     - falls back to global feature importance
+    - filters identifier-like features from explanation output
     """
 
     def explain(
@@ -23,8 +24,14 @@ class ExplainabilityEngine:
             raise ValueError("No model report available. Run project.model() first.")
 
         global_features = []
+        rank = 1
 
-        for index, item in enumerate(model_report.feature_importance[:10], start=1):
+        for item in model_report.feature_importance:
+            feature_lower = item.feature.lower()
+
+            if self._is_identifier_like(feature_lower):
+                continue
+
             direction = "positive" if item.importance >= 0 else "negative"
 
             global_features.append(
@@ -32,9 +39,14 @@ class ExplainabilityEngine:
                     feature=item.feature,
                     contribution=round(float(item.importance), 6),
                     direction=direction,
-                    rank=index,
+                    rank=rank,
                 )
             )
+
+            rank += 1
+
+            if len(global_features) == 10:
+                break
 
         row_explanations = []
 
@@ -61,3 +73,17 @@ class ExplainabilityEngine:
                 "SHAP is not active yet. Current explanations use global feature importance."
             ],
         )
+
+    def _is_identifier_like(self, feature_name: str) -> bool:
+        identifier_tokens = [
+            "id",
+            "uuid",
+            "guid",
+            "transaction",
+            "customer_id",
+            "order_id",
+            "invoice",
+            "receipt",
+        ]
+
+        return any(token in feature_name for token in identifier_tokens)
