@@ -393,6 +393,26 @@ body {{
     align-items: center;
     padding: 12px;
     border-bottom: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 8px;
+}}
+
+.leaderboard-rank-1 {{
+
+    background: var(--success-soft);
+
+}}
+
+.leaderboard-rank-2 {{
+
+    background: rgba(37, 99, 235, 0.08);
+
+}}
+
+.leaderboard-rank-3 {{
+
+    background: rgba(107, 114, 128, 0.10);
+
 }}
 
 .importance-row {{
@@ -1083,15 +1103,14 @@ th {{
             )
 
             rows.append(
-                f"""
-                <div class="leaderboard-row">
-                    <strong>{medal}</strong>
-                    <span>{pretty_algorithm_name(item.algorithm)}</span>
-                    <strong>{item.primary_metric}: {item.primary_score}</strong>
-                </div>
-                """
-            )
-
+               f"""
+               <div class="leaderboard-row leaderboard-rank-{item.rank}">
+                   <strong>{medal}</strong>
+                   <span>{pretty_algorithm_name(item.algorithm)}</span>
+                   <strong>{item.primary_metric}: {item.primary_score}</strong>
+               </div>
+           """
+       )
         return "\n".join(rows)
 
     def _build_feature_importance_rows(self, model):
