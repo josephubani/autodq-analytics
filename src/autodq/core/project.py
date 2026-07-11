@@ -928,6 +928,7 @@ class AutoDQ:
     def explain(
         self,
         max_rows: int = 20,
+        use_engineered: bool = True,
     ):
         if self.state.model_report is None:
             self.model()
@@ -935,10 +936,25 @@ class AutoDQ:
         if self.state.prediction_report is None:
             self.predict()
 
-        self.state.explainability_report = self.explainability_engine.explain(
-            model_report=self.state.model_report,
-            prediction_report=self.state.prediction_report,
-            max_rows=max_rows,
+        if use_engineered and self.state.engineered_data is not None:
+            active_df = self.state.engineered_data
+
+        elif self.state.cleaned_data is not None:
+            active_df = self.state.cleaned_data
+
+        else:
+            if self.state.data is None:
+                self.load()
+
+            active_df = self.state.data
+
+        self.state.explainability_report = (
+            self.explainability_engine.explain(
+                model_report=self.state.model_report,
+                data=active_df,
+                prediction_report=self.state.prediction_report,
+                max_rows=max_rows,
+            )
         )
 
         self.session.log(
@@ -946,7 +962,12 @@ class AutoDQ:
             message="Model explainability report generated.",
             metadata={
                 "method": self.state.explainability_report.method,
-                "explanations": self.state.explainability_report.explanation_count,
+                "explanations": (
+                    self.state.explainability_report.explanation_count
+                ),
+                "global_features": (
+                    self.state.explainability_report.global_feature_count
+                ),
             },
         )
 
@@ -965,31 +986,55 @@ class AutoDQ:
 
         if report.warnings:
             print("\nWarnings:")
+
             for warning in report.warnings:
                 print(f"- {warning}")
 
         if report.global_features:
-            print("\nGlobal Feature Contributions:")
+            print("\nGlobal SHAP Feature Contributions:")
+
             for item in report.global_features[:10]:
+                percent = (
+                    item.contribution_percent
+                    if item.contribution_percent is not None
+                    else 0
+                )
+
                 print(
                     f"  {item.rank}. {item.feature}: "
-                    f"{round(item.contribution * 100, 2)}% "
-                    f"({item.direction})"
+                    f"{percent}%"
                 )
 
         if report.row_explanations:
             print("\nSample Row Explanations:")
+
             for row in report.row_explanations[:5]:
-                features = ", ".join(
-                    item.feature
-                    for item in row.top_contributions
+                print(
+                    f"\nRow {row.row_id}"
+                    f" | Prediction: {row.prediction}"
+                    f" | Base Value: {row.base_value}"
                 )
 
+                for contribution in row.top_contributions:
+                    sign = (
+                        "+"
+                        if contribution.direction == "positive"
+                        else "-"
+                    )
+
+                    print(
+                        f"  {sign} {contribution.feature}"
+                        f" = {contribution.feature_value}"
+                        f" | SHAP: {contribution.contribution}"
+                        f" | Share: "
+                        f"{contribution.contribution_percent}%"
+                    )
+
                 print(
-                    f"  Row {row.row_id} | "
-                    f"Prediction: {row.prediction} | "
-                    f"Top features: {features}"
+                    f"  Explanation: {row.explanation}"
                 )
+
+        
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:

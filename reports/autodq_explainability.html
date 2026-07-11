@@ -482,7 +482,7 @@ th {
         <div class="meta">
             <span>Dataset: datasets/sample/sales.csv</span>
             <span>Style: executive</span>
-            <span>Generated: 2026-07-10 22:31:45</span>
+            <span>Generated: 2026-07-10 23:36:08</span>
         </div>
     </div>
 
@@ -1191,7 +1191,7 @@ th {
             <div class="grid">
                 <div class="card">
                     <h3>Method</h3>
-                    <div class="metric">Global Feature Importance Fallback</div>
+                    <div class="metric">Shap Tree Explainer</div>
                     <div class="metric-small">Explanation method</div>
                 </div>
 
@@ -1224,10 +1224,10 @@ th {
                     <div class="bar-track">
                         <div
                             class="bar-fill"
-                            style="width:31.99%"
+                            style="width:100%"
                         ></div>
                     </div>
-                    <strong>31.99%</strong>
+                    <strong>29216.48%</strong>
                 </div>
                 
                 <div class="importance-row">
@@ -1235,10 +1235,10 @@ th {
                     <div class="bar-track">
                         <div
                             class="bar-fill"
-                            style="width:30.6%"
+                            style="width:100%"
                         ></div>
                     </div>
-                    <strong>30.6%</strong>
+                    <strong>26039.02%</strong>
                 </div>
                 
                 <div class="importance-row">
@@ -1246,32 +1246,10 @@ th {
                     <div class="bar-track">
                         <div
                             class="bar-fill"
-                            style="width:29.36%"
+                            style="width:100%"
                         ></div>
                     </div>
-                    <strong>29.36%</strong>
-                </div>
-                
-                <div class="importance-row">
-                    <span>Customer_Satisfaction</span>
-                    <div class="bar-track">
-                        <div
-                            class="bar-fill"
-                            style="width:0.33%"
-                        ></div>
-                    </div>
-                    <strong>0.33%</strong>
-                </div>
-                
-                <div class="importance-row">
-                    <span>Payment_Method_PayPal</span>
-                    <div class="bar-track">
-                        <div
-                            class="bar-fill"
-                            style="width:0.3%"
-                        ></div>
-                    </div>
-                    <strong>0.3%</strong>
+                    <strong>23358.56%</strong>
                 </div>
                 
                 <div class="importance-row">
@@ -1279,10 +1257,32 @@ th {
                     <div class="bar-track">
                         <div
                             class="bar-fill"
-                            style="width:0.29%"
+                            style="width:100%"
                         ></div>
                     </div>
-                    <strong>0.29%</strong>
+                    <strong>1007.6%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>Customer_Age</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:100%"
+                        ></div>
+                    </div>
+                    <strong>244.09%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>Product_Laptop</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:100%"
+                        ></div>
+                    </div>
+                    <strong>154.95%</strong>
                 </div>
                 
                 <div class="importance-row">
@@ -1290,43 +1290,43 @@ th {
                     <div class="bar-track">
                         <div
                             class="bar-fill"
-                            style="width:0.29%"
+                            style="width:81.73%"
                         ></div>
                     </div>
-                    <strong>0.29%</strong>
+                    <strong>81.73%</strong>
                 </div>
                 
                 <div class="importance-row">
-                    <span>Returned</span>
+                    <span>Customer_Satisfaction</span>
                     <div class="bar-track">
                         <div
                             class="bar-fill"
-                            style="width:0.26%"
+                            style="width:77.98%"
                         ></div>
                     </div>
-                    <strong>0.26%</strong>
+                    <strong>77.98%</strong>
                 </div>
                 
                 <div class="importance-row">
-                    <span>Product_T-Shirt</span>
+                    <span>Sales_Channel_Online</span>
                     <div class="bar-track">
                         <div
                             class="bar-fill"
-                            style="width:0.24%"
+                            style="width:62.21%"
                         ></div>
                     </div>
-                    <strong>0.24%</strong>
+                    <strong>62.21%</strong>
                 </div>
                 
                 <div class="importance-row">
-                    <span>Product_Category_Grocery</span>
+                    <span>Delivery_Days</span>
                     <div class="bar-track">
                         <div
                             class="bar-fill"
-                            style="width:0.22%"
+                            style="width:49.92%"
                         ></div>
                     </div>
-                    <strong>0.22%</strong>
+                    <strong>49.92%</strong>
                 </div>
                 
             </div>
@@ -1334,7 +1334,7 @@ th {
             <div class="card">
                 <h2 class="section-title">Explainability Notes</h2>
                 <ul class="recommendation-list">
-                    <li>SHAP is not active yet. Current explanations use global feature importance.</li>
+                    <li>Identifier-like transformed features were excluded from the displayed explanations.</li>
                 </ul>
             </div>
         </div>
@@ -1353,71 +1353,71 @@ th {
                 <tr>
                     <td>0</td>
                     <td>90.083</td>
-                    <td>Quantity, Unit_Price, log_unit_price</td>
-                    <td>Temporary explanation based on global feature importance. SHAP row-level explanations will replace this.</td>
+                    <td>Quantity, Unit_Price, log_unit_price, Discount_Rate, Customer_Satisfaction</td>
+                    <td>The model predicted 90.08299999999994. The strongest decreasing influences were Quantity, Unit_Price, log_unit_price.</td>
                 </tr>
                 
                 <tr>
                     <td>1</td>
                     <td>283.4693</td>
-                    <td>Quantity, Unit_Price, log_unit_price</td>
-                    <td>Temporary explanation based on global feature importance. SHAP row-level explanations will replace this.</td>
+                    <td>Quantity, Unit_Price, log_unit_price, Discount_Rate, Customer_Satisfaction</td>
+                    <td>The model predicted 283.46930000000003. The strongest increasing influences were Quantity, Customer_Satisfaction. The strongest decreasing influences were Unit_Price, log_unit_price, Discount_Rate.</td>
                 </tr>
                 
                 <tr>
                     <td>2</td>
                     <td>31.8157</td>
-                    <td>Quantity, Unit_Price, log_unit_price</td>
-                    <td>Temporary explanation based on global feature importance. SHAP row-level explanations will replace this.</td>
+                    <td>Unit_Price, log_unit_price, Quantity, Discount_Rate, Customer_Age</td>
+                    <td>The model predicted 31.815700000000003. The strongest increasing influences were Discount_Rate. The strongest decreasing influences were Unit_Price, log_unit_price, Quantity.</td>
                 </tr>
                 
                 <tr>
                     <td>3</td>
                     <td>201.2662</td>
-                    <td>Quantity, Unit_Price, log_unit_price</td>
-                    <td>Temporary explanation based on global feature importance. SHAP row-level explanations will replace this.</td>
+                    <td>Quantity, Unit_Price, log_unit_price, Discount_Rate, Customer_Age</td>
+                    <td>The model predicted 201.26620000000014. The strongest increasing influences were Quantity, Customer_Age. The strongest decreasing influences were Unit_Price, log_unit_price, Discount_Rate.</td>
                 </tr>
                 
                 <tr>
                     <td>4</td>
                     <td>211.2281</td>
-                    <td>Quantity, Unit_Price, log_unit_price</td>
-                    <td>Temporary explanation based on global feature importance. SHAP row-level explanations will replace this.</td>
+                    <td>Unit_Price, log_unit_price, Quantity, Discount_Rate, Delivery_Days</td>
+                    <td>The model predicted 211.22809999999998. The strongest increasing influences were Quantity, Discount_Rate, Delivery_Days. The strongest decreasing influences were Unit_Price, log_unit_price.</td>
                 </tr>
                 
                 <tr>
                     <td>5</td>
                     <td>37.8828</td>
-                    <td>Quantity, Unit_Price, log_unit_price</td>
-                    <td>Temporary explanation based on global feature importance. SHAP row-level explanations will replace this.</td>
+                    <td>Quantity, Unit_Price, log_unit_price, Discount_Rate, Product_Category_Beauty</td>
+                    <td>The model predicted 37.88279999999997. The strongest increasing influences were Product_Category_Beauty. The strongest decreasing influences were Quantity, Unit_Price, log_unit_price.</td>
                 </tr>
                 
                 <tr>
                     <td>6</td>
                     <td>164.9781</td>
-                    <td>Quantity, Unit_Price, log_unit_price</td>
-                    <td>Temporary explanation based on global feature importance. SHAP row-level explanations will replace this.</td>
+                    <td>Unit_Price, Quantity, log_unit_price, Discount_Rate, Customer_Age</td>
+                    <td>The model predicted 164.97810000000024. The strongest increasing influences were Quantity, Discount_Rate. The strongest decreasing influences were Unit_Price, log_unit_price, Customer_Age.</td>
                 </tr>
                 
                 <tr>
                     <td>7</td>
                     <td>83.2122</td>
-                    <td>Quantity, Unit_Price, log_unit_price</td>
-                    <td>Temporary explanation based on global feature importance. SHAP row-level explanations will replace this.</td>
+                    <td>Unit_Price, log_unit_price, Quantity, Discount_Rate, Date_month</td>
+                    <td>The model predicted 83.21219999999998. The strongest decreasing influences were Unit_Price, log_unit_price, Quantity.</td>
                 </tr>
                 
                 <tr>
                     <td>8</td>
                     <td>10.9851</td>
-                    <td>Quantity, Unit_Price, log_unit_price</td>
-                    <td>Temporary explanation based on global feature importance. SHAP row-level explanations will replace this.</td>
+                    <td>Unit_Price, log_unit_price, Quantity, Discount_Rate, Customer_Age</td>
+                    <td>The model predicted 10.985099999999997. The strongest increasing influences were Discount_Rate, Customer_Age. The strongest decreasing influences were Unit_Price, log_unit_price, Quantity.</td>
                 </tr>
                 
                 <tr>
                     <td>9</td>
                     <td>4899.9873</td>
-                    <td>Quantity, Unit_Price, log_unit_price</td>
-                    <td>Temporary explanation based on global feature importance. SHAP row-level explanations will replace this.</td>
+                    <td>Quantity, Unit_Price, log_unit_price, Customer_Age, Discount_Rate</td>
+                    <td>The model predicted 4899.987299999996. The strongest increasing influences were Quantity, Unit_Price, log_unit_price.</td>
                 </tr>
                 
             </table>

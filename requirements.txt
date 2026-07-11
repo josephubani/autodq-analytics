@@ -10,3 +10,4 @@ openpyxl
 xlrd
 matplotlib
 scikit-learn
+SHAP

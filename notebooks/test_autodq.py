@@ -76,7 +76,7 @@ project.show_model()
 
 project.predict()
 project.show_predictions()
-project.explain()
+project.explain(max_rows=20)
 project.show_explanations()
 
 print(project.state.model_report is None)
