@@ -32,29 +32,21 @@ class ReportingEngine:
 
         return AutoDQReport(
             dataset=str(state.dataset_path),
-
+            session=session,
             profile=state.profile_report,
             statistics=state.statistics_report,
             interpretations=state.interpretation_report,
-
             diagnosis=state.diagnosis_report,
             recommendations=state.recommendations,
-
             decision_plan=state.decision_plan,
             preview=state.preview_report,
-
             cleaning=state.cleaning_report,
             validation=state.validation_report,
-
             visualizations=state.visualization_report,
             rendered_visualizations=rendered_visualizations,
-
-            # -------- NEW --------
             model=state.model_report,
             prediction=state.prediction_report,
-            # ---------------------
-
-            session=session,
+            explainability=state.explainability_report,
         )
 
     def export(
@@ -64,7 +56,6 @@ class ReportingEngine:
         style: str = "executive",
     ):
         output = Path(output)
-
         suffix = output.suffix.lower()
 
         if suffix == ".json":

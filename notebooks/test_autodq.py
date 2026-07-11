@@ -94,6 +94,7 @@ project.export_cleaned("exports/cleaned_sales.xlsx")
 project.generate_report("reports/autodq_executive.html", style="executive")
 project.generate_report("reports/autodq_dark.html", style="dark")
 project.generate_report("reports/autodq_print.html", style="print")
+project.generate_report("reports/autodq_explainability.html",style="executive",)
 project.generate_report("reports/ml_prediction_report.html",style="executive",)
 project.generate_report("reports/ml_prediction_report_dark.html",style="dark",
 )

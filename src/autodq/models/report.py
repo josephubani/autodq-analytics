@@ -5,14 +5,12 @@ from datetime import datetime
 @dataclass(slots=True)
 class AutoDQReport:
     """
-    Complete AutoDQ report object used by all exporters.
+    Complete AutoDQ report object used by report exporters.
     """
 
-    # ---------- Required ----------
     dataset: str
     session: object
 
-    # ---------- Optional Reports ----------
     profile: dict | None = None
     statistics: object | None = None
     interpretations: object | None = None
@@ -23,13 +21,11 @@ class AutoDQReport:
     cleaning: object | None = None
     validation: object | None = None
 
-    # ---------- Visualization ----------
     visualizations: object | None = None
     rendered_visualizations: list | None = None
 
-    # ---------- Machine Learning ----------
     model: object | None = None
     prediction: object | None = None
+    explainability: object | None = None
 
-    # ---------- Metadata ----------
     generated_at: datetime = field(default_factory=datetime.now)

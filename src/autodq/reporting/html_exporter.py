@@ -23,6 +23,7 @@ class HTMLExporter:
 
         model = getattr(report, "model", None)
         prediction = getattr(report, "prediction", None)
+        explainability = getattr(report, "explainability", None)
 
         quality_before = validation.quality_score_before if validation else None
         quality_after = validation.quality_score_after if validation else None
@@ -57,6 +58,9 @@ class HTMLExporter:
 
         model_section = self._build_model_section(model)
         prediction_section = self._build_prediction_section(prediction)
+        explainability_section = self._build_explainability_section(
+            explainability
+        )
 
         return f"""
 <!DOCTYPE html>
@@ -393,26 +397,6 @@ body {{
     align-items: center;
     padding: 12px;
     border-bottom: 1px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 8px;
-}}
-
-.leaderboard-rank-1 {{
-
-    background: var(--success-soft);
-
-}}
-
-.leaderboard-rank-2 {{
-
-    background: rgba(37, 99, 235, 0.08);
-
-}}
-
-.leaderboard-rank-3 {{
-
-    background: rgba(107, 114, 128, 0.10);
-
 }}
 
 .importance-row {{
@@ -631,6 +615,8 @@ th {{
     {model_section}
 
     {prediction_section}
+
+    {explainability_section}
 
     <div class="section card">
         <h2 class="section-title">Issue Breakdown</h2>
@@ -1103,14 +1089,15 @@ th {{
             )
 
             rows.append(
-               f"""
-               <div class="leaderboard-row leaderboard-rank-{item.rank}">
-                   <strong>{medal}</strong>
-                   <span>{pretty_algorithm_name(item.algorithm)}</span>
-                   <strong>{item.primary_metric}: {item.primary_score}</strong>
-               </div>
-           """
-       )
+                f"""
+                <div class="leaderboard-row">
+                    <strong>{medal}</strong>
+                    <span>{pretty_algorithm_name(item.algorithm)}</span>
+                    <strong>{item.primary_metric}: {item.primary_score}</strong>
+                </div>
+                """
+            )
+
         return "\n".join(rows)
 
     def _build_feature_importance_rows(self, model):
@@ -1240,6 +1227,132 @@ th {{
             return round(float(value), 4)
 
         return value
+
+    def _build_explainability_section(self, explainability):
+        if explainability is None:
+            return """
+            <div class="section card">
+                <h2 class="section-title">Model Explainability</h2>
+                <p class="metric-small">
+                    No explainability report has been generated.
+                </p>
+            </div>
+            """
+
+        global_rows = []
+
+        for item in explainability.global_features[:10]:
+            contribution_percent = round(
+                abs(float(item.contribution)) * 100,
+                2,
+            )
+
+            global_rows.append(
+                f"""
+                <div class="importance-row">
+                    <span>{item.feature}</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:{min(contribution_percent, 100)}%"
+                        ></div>
+                    </div>
+                    <strong>{contribution_percent}%</strong>
+                </div>
+                """
+            )
+
+        explanation_rows = []
+
+        for row in explainability.row_explanations[:10]:
+            features = ", ".join(
+                contribution.feature
+                for contribution in row.top_contributions
+            )
+
+            explanation_rows.append(
+                f"""
+                <tr>
+                    <td>{row.row_id}</td>
+                    <td>{self._format_prediction_value(row.prediction)}</td>
+                    <td>{features or "-"}</td>
+                    <td>{row.explanation or "-"}</td>
+                </tr>
+                """
+            )
+
+        warning_items = "".join(
+            f"<li>{warning}</li>"
+            for warning in explainability.warnings
+        )
+
+        method_name = (
+            explainability.method.replace("_", " ").title()
+            if explainability.method
+            else "Unknown"
+        )
+
+        status = "Fallback" if explainability.warnings else "Active"
+
+        return f"""
+        <div class="section card">
+            <h2 class="section-title">Model Explainability</h2>
+
+            <div class="grid">
+                <div class="card">
+                    <h3>Method</h3>
+                    <div class="metric">{method_name}</div>
+                    <div class="metric-small">Explanation method</div>
+                </div>
+
+                <div class="card">
+                    <h3>Rows Explained</h3>
+                    <div class="metric">{explainability.explanation_count}</div>
+                    <div class="metric-small">Stored row explanations</div>
+                </div>
+
+                <div class="card">
+                    <h3>Global Features</h3>
+                    <div class="metric">{len(explainability.global_features)}</div>
+                    <div class="metric-small">Ranked model features</div>
+                </div>
+
+                <div class="card">
+                    <h3>Status</h3>
+                    <div class="metric">{status}</div>
+                    <div class="metric-small">Explainability status</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section two-col">
+            <div class="card">
+                <h2 class="section-title">Global Feature Contributions</h2>
+                {"".join(global_rows) or "<p class='metric-small'>No global contributions available.</p>"}
+            </div>
+
+            <div class="card">
+                <h2 class="section-title">Explainability Notes</h2>
+                <ul class="recommendation-list">
+                    {warning_items or "<li>No warnings detected.</li>"}
+                </ul>
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">Sample Row Explanations</h2>
+
+            <table>
+                <tr>
+                    <th>Row</th>
+                    <th>Prediction</th>
+                    <th>Most Important Features</th>
+                    <th>Explanation</th>
+                </tr>
+                {"".join(explanation_rows) or '<tr><td colspan="4">No row explanations available.</td></tr>'}
+            </table>
+        </div>
+        """
 
     def _build_issue_rows(self, diagnosis):
         if diagnosis is None or not diagnosis.issues:
