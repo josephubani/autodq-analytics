@@ -2,7 +2,26 @@ from autodq import AutoDQ
 
 project = AutoDQ("datasets/sample/sales.csv")
 
+project.add_dataset(
+    name="customers",
+    dataset_path="datasets/sample/customers.csv",
+)
 
+project.list_datasets()
+
+merged = project.merge_datasets(
+    left="main",
+    right="customers",
+    on="Customer_ID",
+    how="left",
+    validate="many_to_one",
+    suffixes=("", "_customer"),
+)
+
+project.show_merge_report()
+
+print(merged.head())
+print(merged.shape)
 project.set_type("Date", "datetime")
 project.set_target("Revenue")
 

@@ -31,6 +31,8 @@ class AutoDQState:
     prediction_report = None
     prediction_data = None 
     explainability_report = None
+    merge_report = None
+    concat_report = None
 
     def reset_outputs(self) -> None:
         self.profile_report = None
@@ -53,6 +55,8 @@ class AutoDQState:
         self.prediction_report = None
         self.prediction_data = None
         self.explainability_report = None
+        self.merge_report = None
+        self.concat_report = None
 
     def reset_all(self, dataset_path: str | Path) -> None:
         self.dataset_path = Path(dataset_path)

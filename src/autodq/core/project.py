@@ -38,6 +38,9 @@ from autodq.renderers.console.model import ConsoleModelRenderer
 from autodq.prediction.engine import PredictionEngine
 from autodq.renderers.console.prediction import ConsolePredictionRenderer
 from autodq.explainability.engine import ExplainabilityEngine
+from autodq.datasets.manager import DatasetManager
+from autodq.datasets.merger import DatasetMerger
+from autodq.renderers.console.datasets import ConsoleDatasetRenderer
 
 
 class AutoDQ:
@@ -64,8 +67,15 @@ class AutoDQ:
         self.ml_engine = MLEngine()
         self.prediction_engine = PredictionEngine()
         self.explainability_engine = ExplainabilityEngine()
+        self.dataset_manager = DatasetManager()
+        self.dataset_merger = DatasetMerger()
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
+        self.dataset_manager.add(
+          name="main",
+          dataset_path=self.state.dataset_path,
+        is_primary=True,
+      )
 
     @property
     def dataset_path(self):
@@ -80,16 +90,30 @@ class AutoDQ:
         return self.state.data
 
     def load(self) -> pd.DataFrame:
-        self.state.data = load_dataset(self.state.dataset_path)
+        if self.dataset_manager.exists("main"):
+            self.state.data = (
+            self.dataset_manager.get_data("main").copy()
+        )
+        else:
+            self.state.data = load_dataset(
+            self.state.dataset_path
+        )
+
+        self.dataset_manager.add(
+            name="main",
+            dataset_path=self.state.dataset_path,
+            data=self.state.data,
+            is_primary=True,
+        )
 
         self.session.log(
-            step="load",
-            message="Dataset loaded successfully.",
-            metadata={
-                "rows": len(self.state.data),
-                "columns": len(self.state.data.columns),
-            },
-        )
+        step="load",
+        message="Dataset loaded successfully.",
+        metadata={
+            "rows": len(self.state.data),
+            "columns": len(self.state.data.columns),
+        },
+    )
 
         return self.state.data
 
@@ -177,6 +201,9 @@ class AutoDQ:
         )
 
         return self.state.knowledge_rules
+    
+    
+    
 
     def profile(self) -> dict:
         if self.state.data is None:
@@ -1034,7 +1061,179 @@ class AutoDQ:
                     f"  Explanation: {row.explanation}"
                 )
 
-        
+    def add_dataset(
+        self,
+        name: str,
+        dataset_path: str | None = None,
+        data: pd.DataFrame | None = None,
+        overwrite: bool = False,
+    ) -> pd.DataFrame:
+        entry = self.dataset_manager.add(
+            name=name,
+            dataset_path=dataset_path,
+            data=data,
+            overwrite=overwrite,
+        )
+
+        self.session.log(
+            step="add_dataset",
+            message="Additional dataset registered.",
+            metadata=entry.to_dict(),
+        )
+
+        return entry.data
+
+    def list_datasets(self) -> None:
+        ConsoleDatasetRenderer.render_datasets(
+            self.dataset_manager.entries()
+        )
+
+    def use_dataset(
+        self,
+        name: str,
+        reset_outputs: bool = True,
+    ) -> pd.DataFrame:
+        entry = self.dataset_manager.set_primary(name)
+
+        self.state.dataset_path = (
+            Path(entry.path)
+            if entry.path is not None
+            else Path(f"{entry.name}.in_memory")
+        )
+
+        if reset_outputs:
+            self.state.reset_outputs()
+
+        self.state.data = entry.data.copy()
+
+        self.session.log(
+            step="use_dataset",
+            message="Active dataset changed.",
+            metadata={
+                "dataset": entry.name,
+                "rows": entry.rows,
+                "columns": entry.columns,
+            },
+        )
+
+        return self.state.data
+
+    def merge_datasets(
+        self,
+        left: str,
+        right: str,
+        output_name: str | None = None,
+        how: str = "left",
+        on: str | list[str] | None = None,
+        left_on: str | list[str] | None = None,
+        right_on: str | list[str] | None = None,
+        validate: str | None = None,
+        suffixes: tuple[str, str] = ("_left", "_right"),
+        make_active: bool = True,
+    ) -> pd.DataFrame:
+        left_df = self.dataset_manager.get_data(left)
+        right_df = self.dataset_manager.get_data(right)
+
+        merged_df, merge_report = self.dataset_merger.merge(
+            left_df=left_df,
+            right_df=right_df,
+            left_name=left,
+            right_name=right,
+            how=how,
+            on=on,
+            left_on=left_on,
+            right_on=right_on,
+            validate=validate,
+            suffixes=suffixes,
+        )
+
+        final_name = output_name or f"{left}_{right}_merged"
+
+        self.dataset_manager.add(
+            name=final_name,
+            data=merged_df,
+            overwrite=True,
+        )
+
+        self.state.merge_report = merge_report
+
+        if make_active:
+            self.use_dataset(
+                final_name,
+                reset_outputs=True,
+            )
+            self.state.merge_report = merge_report
+
+        self.session.log(
+            step="merge_datasets",
+            message="Datasets merged successfully.",
+            metadata=merge_report.to_dict(),
+        )
+
+        return merged_df
+
+    def concat_datasets(
+        self,
+        datasets: list[str],
+        output_name: str = "concatenated",
+        axis: int = 0,
+        ignore_index: bool = True,
+        join: str = "outer",
+        make_active: bool = True,
+    ) -> pd.DataFrame:
+        frames = [
+            self.dataset_manager.get_data(name)
+            for name in datasets
+        ]
+
+        combined_df, concat_report = self.dataset_merger.concat(
+            datasets=frames,
+            dataset_names=datasets,
+            axis=axis,
+            ignore_index=ignore_index,
+            join=join,
+        )
+
+        self.dataset_manager.add(
+            name=output_name,
+            data=combined_df,
+            overwrite=True,
+        )
+
+        self.state.concat_report = concat_report
+
+        if make_active:
+            self.use_dataset(
+                output_name,
+                reset_outputs=True,
+            )
+            self.state.concat_report = concat_report
+
+        self.session.log(
+            step="concat_datasets",
+            message="Datasets concatenated successfully.",
+            metadata=concat_report.to_dict(),
+        )
+
+        return combined_df
+
+    def show_merge_report(self) -> None:
+        if self.state.merge_report is None:
+            print("\nNo merge report available.")
+            return
+
+        ConsoleDatasetRenderer.render_merge(
+            self.state.merge_report
+        )
+
+    def show_concat_report(self) -> None:
+        if self.state.concat_report is None:
+            print("\nNo concatenation report available.")
+            return
+
+        ConsoleDatasetRenderer.render_concat(
+            self.state.concat_report
+        )  
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:
