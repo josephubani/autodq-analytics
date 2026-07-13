@@ -24,6 +24,7 @@ class HTMLExporter:
         model = getattr(report, "model", None)
         prediction = getattr(report, "prediction", None)
         explainability = getattr(report, "explainability", None)
+        blue = getattr(report, "blue", None)
         merge_report = getattr(report, "merge_report", None)
         concat_report = getattr(report, "concat_report", None)
 
@@ -67,6 +68,7 @@ class HTMLExporter:
             merge_report=merge_report,
             concat_report=concat_report,
         )
+        blue_section = self._build_blue_section(blue)
 
         return f"""
 <!DOCTYPE html>
@@ -509,6 +511,68 @@ th {{
     color: var(--danger-text);
 }}
 
+
+.blue-status-passed {{
+    background: var(--success-soft);
+    color: var(--success-text);
+}}
+
+.blue-status-warning {{
+    background: var(--warning-soft);
+    color: var(--warning-text);
+}}
+
+.blue-status-failed {{
+    background: var(--danger-soft);
+    color: var(--danger-text);
+}}
+
+.blue-assumption-grid {{
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}}
+
+.blue-assumption-card {{
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: var(--card);
+}}
+
+.blue-assumption-header {{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}}
+
+.blue-assumption-name {{
+    font-weight: 800;
+    font-size: 15px;
+}}
+
+.blue-detail {{
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 8px;
+    line-height: 1.5;
+}}
+
+.blue-feature-list {{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}}
+
+.blue-feature-pill {{
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: var(--bar-bg);
+    font-size: 12px;
+}}
+
 .footer {{
     color: var(--muted);
     text-align: center;
@@ -541,6 +605,10 @@ th {{
     .rendered-viz-grid,
     .model-grid,
     .operation-summary-grid {{
+        grid-template-columns: 1fr;
+    }}
+
+    .blue-assumption-grid {{
         grid-template-columns: 1fr;
     }}
 
@@ -653,6 +721,8 @@ th {{
             {visualization_cards}
         </div>
     </div>
+
+    {blue_section}
 
     {model_section}
 
@@ -1467,6 +1537,209 @@ th {{
                 </tr>
                 {"".join(explanation_rows) or '<tr><td colspan="7">No row explanations available.</td></tr>'}
             </table>
+        </div>
+        """
+
+    def _build_blue_section(self, blue):
+        if blue is None:
+            return """
+            <div class="section card">
+                <h2 class="section-title">BLUE Regression Diagnostics</h2>
+                <p class="metric-small">
+                    No BLUE diagnostics have been generated.
+                </p>
+            </div>
+            """
+
+        status_display = (
+            str(blue.overall_status)
+            .replace("_", " ")
+            .title()
+        )
+
+        assumption_cards = []
+
+        for result in blue.assumptions:
+            status = str(result.status).lower()
+
+            statistic = (
+                round(float(result.statistic), 6)
+                if result.statistic is not None
+                else "N/A"
+            )
+
+            p_value = (
+                round(float(result.p_value), 6)
+                if result.p_value is not None
+                else "N/A"
+            )
+
+            assumption_name = (
+                str(result.assumption)
+                .replace("_", " ")
+                .title()
+            )
+
+            assumption_cards.append(
+                f"""
+                <div class="blue-assumption-card">
+                    <div class="blue-assumption-header">
+                        <div class="blue-assumption-name">
+                            {assumption_name}
+                        </div>
+
+                        <span class="badge blue-status-{status}">
+                            {status.title()}
+                        </span>
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Statistic:</strong> {statistic}
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>P-value:</strong> {p_value}
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Interpretation:</strong>
+                        {result.interpretation}
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Recommendation:</strong>
+                        {result.recommendation}
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Confidence:</strong>
+                        {round(float(result.confidence) * 100, 2)}%
+                    </div>
+                </div>
+                """
+            )
+
+        vif_rows = []
+
+        for item in blue.vif_results[:15]:
+            vif_rows.append(
+                f"""
+                <tr>
+                    <td>{item.feature}</td>
+                    <td>{item.vif}</td>
+                    <td>
+                        <span class="badge {item.severity}">
+                            {str(item.severity).title()}
+                        </span>
+                    </td>
+                    <td>{item.interpretation}</td>
+                    <td>{item.recommendation}</td>
+                </tr>
+                """
+            )
+
+        feature_used_pills = "".join(
+            f'<span class="blue-feature-pill">{feature}</span>'
+            for feature in getattr(blue, "features_used", [])
+        )
+
+        excluded_feature_pills = "".join(
+            f'<span class="blue-feature-pill">{feature}</span>'
+            for feature in getattr(blue, "excluded_features", [])
+        )
+
+        recommendation_items = "".join(
+            f"<li>{recommendation}</li>"
+            for recommendation in blue.recommendations
+        )
+
+        warning_items = "".join(
+            f"<li>{warning}</li>"
+            for warning in blue.warnings
+        )
+
+        return f"""
+        <div class="section card">
+            <h2 class="section-title">BLUE Regression Diagnostics</h2>
+
+            <div class="grid">
+                <div class="card">
+                    <h3>Suitability Score</h3>
+                    <div class="metric">{blue.suitability_score}/100</div>
+                    <div class="metric-small">Linear-model suitability</div>
+                </div>
+
+                <div class="card">
+                    <h3>Overall Status</h3>
+                    <div class="metric">{status_display}</div>
+                    <div class="metric-small">Final BLUE assessment</div>
+                </div>
+
+                <div class="card">
+                    <h3>Rows Analyzed</h3>
+                    <div class="metric">{blue.rows_analyzed}</div>
+                    <div class="metric-small">Complete observations used</div>
+                </div>
+
+                <div class="card">
+                    <h3>Features Analyzed</h3>
+                    <div class="metric">{blue.features_analyzed}</div>
+                    <div class="metric-small">Leakage-safe predictors</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section two-col">
+            <div class="card">
+                <h2 class="section-title">Features Used</h2>
+                <div class="blue-feature-list">
+                    {feature_used_pills or "<span class='metric-small'>No features listed.</span>"}
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="section-title">Excluded Features</h2>
+                <div class="blue-feature-list">
+                    {excluded_feature_pills or "<span class='metric-small'>No features excluded.</span>"}
+                </div>
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">Assumption Results</h2>
+            <div class="blue-assumption-grid">
+                {"".join(assumption_cards)}
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">Variance Inflation Factors</h2>
+            <table>
+                <tr>
+                    <th>Feature</th>
+                    <th>VIF</th>
+                    <th>Severity</th>
+                    <th>Interpretation</th>
+                    <th>Recommendation</th>
+                </tr>
+                {"".join(vif_rows) or '<tr><td colspan="5">No VIF results available.</td></tr>'}
+            </table>
+        </div>
+
+        <div class="section two-col">
+            <div class="card">
+                <h2 class="section-title">BLUE Recommendations</h2>
+                <ul class="recommendation-list">
+                    {recommendation_items or "<li>No recommendations available.</li>"}
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2 class="section-title">BLUE Warnings</h2>
+                <ul class="recommendation-list">
+                    {warning_items or "<li>No BLUE warnings detected.</li>"}
+                </ul>
+            </div>
         </div>
         """
 

@@ -47,6 +47,7 @@ class ReportingEngine:
             model=state.model_report,
             prediction=state.prediction_report,
             explainability=state.explainability_report,
+            blue=state.blue_report,
         )
 
     def export(

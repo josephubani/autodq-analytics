@@ -464,6 +464,68 @@ th {
     color: var(--danger-text);
 }
 
+
+.blue-status-passed {
+    background: var(--success-soft);
+    color: var(--success-text);
+}
+
+.blue-status-warning {
+    background: var(--warning-soft);
+    color: var(--warning-text);
+}
+
+.blue-status-failed {
+    background: var(--danger-soft);
+    color: var(--danger-text);
+}
+
+.blue-assumption-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.blue-assumption-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: var(--card);
+}
+
+.blue-assumption-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.blue-assumption-name {
+    font-weight: 800;
+    font-size: 15px;
+}
+
+.blue-detail {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 8px;
+    line-height: 1.5;
+}
+
+.blue-feature-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.blue-feature-pill {
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: var(--bar-bg);
+    font-size: 12px;
+}
+
 .footer {
     color: var(--muted);
     text-align: center;
@@ -499,6 +561,10 @@ th {
         grid-template-columns: 1fr;
     }
 
+    .blue-assumption-grid {
+        grid-template-columns: 1fr;
+    }
+
     .quality-wrap {
         flex-direction: column;
         align-items: flex-start;
@@ -516,7 +582,7 @@ th {
         <div class="meta">
             <span>Dataset: sales_with_customers.in_memory</span>
             <span>Style: dark</span>
-            <span>Generated: 2026-07-12 21:31:05</span>
+            <span>Generated: 2026-07-12 21:54:35</span>
         </div>
     </div>
 
@@ -1147,6 +1213,469 @@ th {
         
         </div>
     </div>
+
+    
+        <div class="section card">
+            <h2 class="section-title">BLUE Regression Diagnostics</h2>
+
+            <div class="grid">
+                <div class="card">
+                    <h3>Suitability Score</h3>
+                    <div class="metric">69.17/100</div>
+                    <div class="metric-small">Linear-model suitability</div>
+                </div>
+
+                <div class="card">
+                    <h3>Overall Status</h3>
+                    <div class="metric">Suitable With Caution</div>
+                    <div class="metric-small">Final BLUE assessment</div>
+                </div>
+
+                <div class="card">
+                    <h3>Rows Analyzed</h3>
+                    <div class="metric">4762</div>
+                    <div class="metric-small">Complete observations used</div>
+                </div>
+
+                <div class="card">
+                    <h3>Features Analyzed</h3>
+                    <div class="metric">14</div>
+                    <div class="metric-small">Leakage-safe predictors</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section two-col">
+            <div class="card">
+                <h2 class="section-title">Features Used</h2>
+                <div class="blue-feature-list">
+                    <span class="blue-feature-pill">Cost</span><span class="blue-feature-pill">Unit_Price</span><span class="blue-feature-pill">Discount_Amount</span><span class="blue-feature-pill">Profit</span><span class="blue-feature-pill">log_unit_price</span><span class="blue-feature-pill">Quantity</span><span class="blue-feature-pill">Discount_Rate</span><span class="blue-feature-pill">Customer_Age_customer</span><span class="blue-feature-pill">Date_month</span><span class="blue-feature-pill">Customer_Age</span><span class="blue-feature-pill">Delivery_Days</span><span class="blue-feature-pill">Returned</span><span class="blue-feature-pill">Customer_Satisfaction</span><span class="blue-feature-pill">profit_margin</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 class="section-title">Excluded Features</h2>
+                <div class="blue-feature-list">
+                    <span class="blue-feature-pill">Transaction_ID</span><span class="blue-feature-pill">Gross_Sales</span><span class="blue-feature-pill">revenue_per_unit</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">Assumption Results</h2>
+            <div class="blue-assumption-grid">
+                
+                <div class="blue-assumption-card">
+                    <div class="blue-assumption-header">
+                        <div class="blue-assumption-name">
+                            Linearity
+                        </div>
+
+                        <span class="badge blue-status-passed">
+                            Passed
+                        </span>
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Statistic:</strong> -0.0
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>P-value:</strong> 1.0
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Interpretation:</strong>
+                        Residuals show little linear association with fitted values, supporting the linearity assumption.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Recommendation:</strong>
+                        No major linearity correction is currently required.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Confidence:</strong>
+                        85.0%
+                    </div>
+                </div>
+                
+                <div class="blue-assumption-card">
+                    <div class="blue-assumption-header">
+                        <div class="blue-assumption-name">
+                            Residual Normality
+                        </div>
+
+                        <span class="badge blue-status-failed">
+                            Failed
+                        </span>
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Statistic:</strong> 106391866.332351
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>P-value:</strong> 0.0
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Interpretation:</strong>
+                        Residuals significantly deviate from normality.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Recommendation:</strong>
+                        Review outliers, transform skewed variables, or use robust standard errors.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Confidence:</strong>
+                        90.0%
+                    </div>
+                </div>
+                
+                <div class="blue-assumption-card">
+                    <div class="blue-assumption-header">
+                        <div class="blue-assumption-name">
+                            Homoscedasticity
+                        </div>
+
+                        <span class="badge blue-status-failed">
+                            Failed
+                        </span>
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Statistic:</strong> 1620.091853
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>P-value:</strong> 0.0
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Interpretation:</strong>
+                        The Breusch-Pagan test detected non-constant residual variance.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Recommendation:</strong>
+                        Use heteroscedasticity-robust standard errors, transform the target, or consider weighted least squares.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Confidence:</strong>
+                        95.0%
+                    </div>
+                </div>
+                
+                <div class="blue-assumption-card">
+                    <div class="blue-assumption-header">
+                        <div class="blue-assumption-name">
+                            Independence
+                        </div>
+
+                        <span class="badge blue-status-passed">
+                            Passed
+                        </span>
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Statistic:</strong> 2.021695
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>P-value:</strong> N/A
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Interpretation:</strong>
+                        The Durbin-Watson statistic suggests limited residual autocorrelation.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Recommendation:</strong>
+                        No major autocorrelation correction is currently required.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Confidence:</strong>
+                        90.0%
+                    </div>
+                </div>
+                
+                <div class="blue-assumption-card">
+                    <div class="blue-assumption-header">
+                        <div class="blue-assumption-name">
+                            Influential Observations
+                        </div>
+
+                        <span class="badge blue-status-warning">
+                            Warning
+                        </span>
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Statistic:</strong> 1.848
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>P-value:</strong> N/A
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Interpretation:</strong>
+                        Several potentially influential observations were found.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Recommendation:</strong>
+                        Review high Cook's distance records and compare models with and without them.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Confidence:</strong>
+                        88.0%
+                    </div>
+                </div>
+                
+                <div class="blue-assumption-card">
+                    <div class="blue-assumption-header">
+                        <div class="blue-assumption-name">
+                            Multicollinearity
+                        </div>
+
+                        <span class="badge blue-status-passed">
+                            Passed
+                        </span>
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Statistic:</strong> 4.1969
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>P-value:</strong> N/A
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Interpretation:</strong>
+                        No major multicollinearity was detected.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Recommendation:</strong>
+                        Predictor collinearity appears acceptable.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Confidence:</strong>
+                        95.0%
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">Variance Inflation Factors</h2>
+            <table>
+                <tr>
+                    <th>Feature</th>
+                    <th>VIF</th>
+                    <th>Severity</th>
+                    <th>Interpretation</th>
+                    <th>Recommendation</th>
+                </tr>
+                
+                <tr>
+                    <td>Cost</td>
+                    <td>4.1969</td>
+                    <td>
+                        <span class="badge low">
+                            Low
+                        </span>
+                    </td>
+                    <td>No major multicollinearity concern.</td>
+                    <td>The feature can generally remain in the model.</td>
+                </tr>
+                
+                <tr>
+                    <td>Profit</td>
+                    <td>3.8132</td>
+                    <td>
+                        <span class="badge low">
+                            Low
+                        </span>
+                    </td>
+                    <td>No major multicollinearity concern.</td>
+                    <td>The feature can generally remain in the model.</td>
+                </tr>
+                
+                <tr>
+                    <td>Unit_Price</td>
+                    <td>2.7099</td>
+                    <td>
+                        <span class="badge low">
+                            Low
+                        </span>
+                    </td>
+                    <td>No major multicollinearity concern.</td>
+                    <td>The feature can generally remain in the model.</td>
+                </tr>
+                
+                <tr>
+                    <td>log_unit_price</td>
+                    <td>2.489</td>
+                    <td>
+                        <span class="badge low">
+                            Low
+                        </span>
+                    </td>
+                    <td>No major multicollinearity concern.</td>
+                    <td>The feature can generally remain in the model.</td>
+                </tr>
+                
+                <tr>
+                    <td>Customer_Age</td>
+                    <td>2.4469</td>
+                    <td>
+                        <span class="badge low">
+                            Low
+                        </span>
+                    </td>
+                    <td>No major multicollinearity concern.</td>
+                    <td>The feature can generally remain in the model.</td>
+                </tr>
+                
+                <tr>
+                    <td>Customer_Age_customer</td>
+                    <td>2.4459</td>
+                    <td>
+                        <span class="badge low">
+                            Low
+                        </span>
+                    </td>
+                    <td>No major multicollinearity concern.</td>
+                    <td>The feature can generally remain in the model.</td>
+                </tr>
+                
+                <tr>
+                    <td>Discount_Amount</td>
+                    <td>2.2875</td>
+                    <td>
+                        <span class="badge low">
+                            Low
+                        </span>
+                    </td>
+                    <td>No major multicollinearity concern.</td>
+                    <td>The feature can generally remain in the model.</td>
+                </tr>
+                
+                <tr>
+                    <td>profit_margin</td>
+                    <td>1.6983</td>
+                    <td>
+                        <span class="badge low">
+                            Low
+                        </span>
+                    </td>
+                    <td>No major multicollinearity concern.</td>
+                    <td>The feature can generally remain in the model.</td>
+                </tr>
+                
+                <tr>
+                    <td>Discount_Rate</td>
+                    <td>1.2276</td>
+                    <td>
+                        <span class="badge low">
+                            Low
+                        </span>
+                    </td>
+                    <td>No major multicollinearity concern.</td>
+                    <td>The feature can generally remain in the model.</td>
+                </tr>
+                
+                <tr>
+                    <td>Quantity</td>
+                    <td>1.1081</td>
+                    <td>
+                        <span class="badge low">
+                            Low
+                        </span>
+                    </td>
+                    <td>No major multicollinearity concern.</td>
+                    <td>The feature can generally remain in the model.</td>
+                </tr>
+                
+                <tr>
+                    <td>Delivery_Days</td>
+                    <td>1.0036</td>
+                    <td>
+                        <span class="badge low">
+                            Low
+                        </span>
+                    </td>
+                    <td>No major multicollinearity concern.</td>
+                    <td>The feature can generally remain in the model.</td>
+                </tr>
+                
+                <tr>
+                    <td>Date_month</td>
+                    <td>1.0025</td>
+                    <td>
+                        <span class="badge low">
+                            Low
+                        </span>
+                    </td>
+                    <td>No major multicollinearity concern.</td>
+                    <td>The feature can generally remain in the model.</td>
+                </tr>
+                
+                <tr>
+                    <td>Returned</td>
+                    <td>1.0014</td>
+                    <td>
+                        <span class="badge low">
+                            Low
+                        </span>
+                    </td>
+                    <td>No major multicollinearity concern.</td>
+                    <td>The feature can generally remain in the model.</td>
+                </tr>
+                
+                <tr>
+                    <td>Customer_Satisfaction</td>
+                    <td>1.001</td>
+                    <td>
+                        <span class="badge low">
+                            Low
+                        </span>
+                    </td>
+                    <td>No major multicollinearity concern.</td>
+                    <td>The feature can generally remain in the model.</td>
+                </tr>
+                
+            </table>
+        </div>
+
+        <div class="section two-col">
+            <div class="card">
+                <h2 class="section-title">BLUE Recommendations</h2>
+                <ul class="recommendation-list">
+                    <li>Review outliers, transform skewed variables, or use robust standard errors.</li><li>Use heteroscedasticity-robust standard errors, transform the target, or consider weighted least squares.</li><li>Review high Cook's distance records and compare models with and without them.</li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <h2 class="section-title">BLUE Warnings</h2>
+                <ul class="recommendation-list">
+                    <li>3 feature(s) were excluded from BLUE analysis because they appeared to be identifiers, duplicates, manually excluded fields, or leakage candidates.</li>
+                </ul>
+            </div>
+        </div>
+        
 
     
         <div class="section card">
@@ -1982,7 +2511,7 @@ th {
                     </td>
                     <td>Discount_Rate, Customer_Satisfaction</td>
                     <td>log_unit_price, Unit_Price, Quantity</td>
-                    <td>The model predicted 31.794200000000014. The strongest increasing influences were Discount_Rate, Customer_Satisfaction. The strongest decreasing influences were log_unit_price, Unit_Price, Quantity.</td>
+                    <td>The model predicted 31.79420000000001. The strongest increasing influences were Discount_Rate, Customer_Satisfaction. The strongest decreasing influences were log_unit_price, Unit_Price, Quantity.</td>
                 </tr>
                 
                 <tr>
@@ -2051,7 +2580,7 @@ th {
                     </td>
                     <td>Quantity, Customer_Age_customer</td>
                     <td>log_unit_price, Unit_Price, Discount_Rate</td>
-                    <td>The model predicted 200.38910000000016. The strongest increasing influences were Quantity, Customer_Age_customer. The strongest decreasing influences were log_unit_price, Unit_Price, Discount_Rate.</td>
+                    <td>The model predicted 200.3891000000001. The strongest increasing influences were Quantity, Customer_Age_customer. The strongest decreasing influences were log_unit_price, Unit_Price, Discount_Rate.</td>
                 </tr>
                 
                 <tr>
@@ -2120,7 +2649,7 @@ th {
                     </td>
                     <td>Quantity, Discount_Rate, Product_Category_Clothing</td>
                     <td>log_unit_price, Unit_Price</td>
-                    <td>The model predicted 211.18489999999994. The strongest increasing influences were Quantity, Discount_Rate, Product_Category_Clothing. The strongest decreasing influences were log_unit_price, Unit_Price.</td>
+                    <td>The model predicted 211.18490000000003. The strongest increasing influences were Quantity, Discount_Rate, Product_Category_Clothing. The strongest decreasing influences were log_unit_price, Unit_Price.</td>
                 </tr>
                 
                 <tr>

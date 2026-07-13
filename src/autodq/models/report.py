@@ -27,5 +27,6 @@ class AutoDQReport:
     model: object | None = None
     prediction: object | None = None
     explainability: object | None = None
+    blue: object | None = None
 
     generated_at: datetime = field(default_factory=datetime.now)
