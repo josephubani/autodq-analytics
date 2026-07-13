@@ -45,6 +45,9 @@ from autodq.blue.engine import BLUEEngine
 from autodq.renderers.console.blue import ConsoleBLUERenderer
 from autodq.visualization.gallery import VisualizationGallery
 from autodq.visualization.notebook_renderer import (NotebookVisualizationRenderer,)
+from autodq.blue.visualizer import (BLUEVisualizationReport,BLUEVisualizer,)
+
+
 
 class AutoDQ:
     """
@@ -75,7 +78,7 @@ class AutoDQ:
         self.dataset_manager = DatasetManager()
         self.dataset_merger = DatasetMerger()
         self.blue_engine = BLUEEngine()
-        
+        self.blue_visualizer = BLUEVisualizer()
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
         self.dataset_manager.add(
@@ -1478,6 +1481,71 @@ class AutoDQ:
         ConsoleVisualizationRenderer.render(
             self.state.visualization_report
         )
+    def visualize_blue(
+        self,
+        display: bool = True,
+        append: bool = True,
+        allow_duplicates: bool = False,
+    ):
+        if self.state.blue_report is None:
+            self.blue()
+
+        if self.state.engineered_data is not None:
+            active_df = self.state.engineered_data
+
+        elif self.state.cleaned_data is not None:
+            active_df = self.state.cleaned_data
+
+        else:
+            if self.state.data is None:
+                self.load()
+
+            active_df = self.state.data
+
+        blue_visualization_report = self.blue_visualizer.build(
+            df=active_df,
+            target=self.state.target,
+            blue_report=self.state.blue_report,
+        )
+
+        if not append:
+            self.visualization_gallery.clear()
+
+        added_charts = self.visualization_gallery.add_report(
+            blue_visualization_report,
+            allow_duplicates=allow_duplicates,
+        )
+
+        self.state.visualization_report = (
+            blue_visualization_report
+        )
+
+        self.state.visualization_report.charts = (
+            self.visualization_gallery.charts
+        )
+
+        if display and added_charts:
+            display_report = BLUEVisualizationReport(
+                charts=added_charts,
+            )
+
+            self.notebook_visualization_renderer.render(
+                display_report
+            )
+
+        self.session.log(
+            step="visualize_blue",
+            message="BLUE diagnostic visualizations generated.",
+            metadata={
+                "new_charts": len(added_charts),
+                "gallery_size": (
+                    self.visualization_gallery.chart_count
+                ),
+                "displayed_in_notebook": display,
+            },
+        )
+
+        return blue_visualization_report
 
 
     def show_knowledge(self) -> None:

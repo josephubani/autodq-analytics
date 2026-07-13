@@ -227,6 +227,19 @@ project.blue(
 
 project.show_blue()
 
+blue_visuals = project.visualize_blue(
+
+    display=True,
+
+)
+
+print(
+
+    "BLUE charts generated:",
+
+    blue_visuals.chart_count,
+
+)
 
 # ============================================================
 # 18. MODEL TRAINING AND COMPARISON
