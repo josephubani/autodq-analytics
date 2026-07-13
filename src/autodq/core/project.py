@@ -1237,13 +1237,24 @@ class AutoDQ:
             self.state.concat_report
         )  
         
-        
     def blue(
         self,
+        source: str = "data",
         use_engineered: bool = True,
+        exclude_leakage: bool = True,
         max_features: int = 20,
         significance_level: float = 0.05,
-    ):
+        leakage_threshold: float = 0.98,
+        exclude_features: list[str] | None = None,
+):
+        source = source.lower().strip()
+
+        if source != "data":
+            raise ValueError(
+                "BLUE currently supports source='data'. "
+                "Trained linear-model diagnostics will be added next."
+            )
+
         if self.state.target is None:
             raise ValueError(
                 "Set a target before running BLUE diagnostics."
@@ -1269,21 +1280,29 @@ class AutoDQ:
             target=self.state.target,
             max_features=max_features,
             significance_level=significance_level,
+            exclude_leakage=exclude_leakage,
+            leakage_threshold=leakage_threshold,
+            exclude_features=exclude_features,
         )
 
         self.session.log(
             step="blue",
-            message="BLUE regression diagnostics completed.",
+            message="Leakage-safe BLUE regression diagnostics completed.",
             metadata={
                 "target": self.state.blue_report.target,
+                "source": source,
                 "score": self.state.blue_report.suitability_score,
                 "status": self.state.blue_report.overall_status,
-                "features": self.state.blue_report.features_analyzed,
+                "features_used": self.state.blue_report.features_used,
+                "excluded_features": (
+                    self.state.blue_report.excluded_features
+                ),
                 "rows": self.state.blue_report.rows_analyzed,
             },
         )
 
         return self.state.blue_report
+        
 
     def show_blue(self) -> None:
         if self.state.blue_report is None:

@@ -68,6 +68,9 @@ class BLUEReport:
     features_analyzed: int
     overall_status: str
     suitability_score: float
+    
+    features_used: list[str] = field(default_factory=list)
+    excluded_features: list[str] = field(default_factory=list)
     assumptions: list[BLUEAssumptionResult] = field(default_factory=list)
     vif_results: list[VIFResult] = field(default_factory=list)
     recommendations: list[str] = field(default_factory=list)
@@ -104,6 +107,8 @@ class BLUEReport:
             "suitability_score": self.suitability_score,
             "passed_assumptions": self.passed_assumptions,
             "failed_assumptions": self.failed_assumptions,
+            "features_used": self.features_used,
+            "excluded_features": self.excluded_features,
             "warning_assumptions": self.warning_assumptions,
             "assumptions": [
                 result.to_dict()

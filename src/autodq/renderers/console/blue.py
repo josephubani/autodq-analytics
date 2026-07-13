@@ -10,6 +10,17 @@ class ConsoleBLUERenderer:
         print(f"Target: {report.target}")
         print(f"Rows Analyzed: {report.rows_analyzed}")
         print(f"Features Analyzed: {report.features_analyzed}")
+        if report.features_used:
+            print(
+                "Features Used: "
+                + ", ".join(report.features_used)
+            )
+
+        if report.excluded_features:
+            print(
+                "Excluded Features: "
+                + ", ".join(report.excluded_features)
+            )
         print(f"Suitability Score: {report.suitability_score}/100")
         print(f"Overall Status: {report.overall_status}")
 

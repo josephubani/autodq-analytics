@@ -35,6 +35,9 @@ class BLUEEngine:
         target: str,
         max_features: int = 20,
         significance_level: float = 0.05,
+        exclude_leakage: bool = True,
+        leakage_threshold: float = 0.98,
+        exclude_features: list[str] | None = None,
     ) -> BLUEReport:
         if target is None:
             raise ValueError(
@@ -57,22 +60,77 @@ class BLUEEngine:
                 "BLUE analysis currently requires a numeric target."
             )
 
-        feature_columns = [
+        candidate_features = [
             column
             for column in numeric_df.columns
             if column != target
         ]
 
-        feature_columns = self._filter_identifier_columns(
-            feature_columns
+        excluded_features: list[str] = []
+
+        identifier_features = [
+            column
+            for column in candidate_features
+            if self._is_identifier_column(column)
+        ]
+
+        excluded_features.extend(identifier_features)
+
+        feature_columns = [
+            column
+            for column in candidate_features
+            if column not in identifier_features
+        ]
+
+        manual_exclusions = [
+            column
+            for column in (exclude_features or [])
+            if column in feature_columns
+        ]
+
+        excluded_features.extend(manual_exclusions)
+
+        feature_columns = [
+            column
+            for column in feature_columns
+            if column not in manual_exclusions
+        ]
+
+        if exclude_leakage:
+            leakage_candidates = self._detect_leakage_candidates(
+                df=numeric_df,
+                target=target,
+                feature_columns=feature_columns,
+                threshold=leakage_threshold,
+            )
+
+            excluded_features.extend(leakage_candidates)
+
+            feature_columns = [
+                column
+                for column in feature_columns
+                if column not in leakage_candidates
+            ]
+
+        feature_columns = self._remove_duplicate_predictors(
+            df=numeric_df,
+            feature_columns=feature_columns,
+            excluded_features=excluded_features,
         )
 
         if not feature_columns:
             raise ValueError(
-                "No suitable numeric predictor columns were found."
+                "No suitable numeric predictor columns remained after "
+                "identifier and leakage filtering."
             )
 
-        feature_columns = feature_columns[:max_features]
+        feature_columns = self._rank_predictors(
+            df=numeric_df,
+            target=target,
+            feature_columns=feature_columns,
+        )[:max_features]
+
+        excluded_features = list(dict.fromkeys(excluded_features))
 
         model_df = numeric_df[
             feature_columns + [target]
@@ -158,12 +216,21 @@ class BLUEEngine:
                 "Review predictors for target leakage."
             )
 
+        if excluded_features:
+            warnings.append(
+                f"{len(excluded_features)} feature(s) were excluded from "
+                "BLUE analysis because they appeared to be identifiers, "
+                "duplicates, manually excluded fields, or leakage candidates."
+            )
+
         return BLUEReport(
             target=target,
             rows_analyzed=len(model_df),
             features_analyzed=len(feature_columns),
             overall_status=overall_status,
             suitability_score=suitability_score,
+            features_used=feature_columns,
+            excluded_features=excluded_features,
             assumptions=assumption_results,
             vif_results=vif_results,
             recommendations=recommendations,
@@ -711,24 +778,228 @@ class BLUEEngine:
 
         return list(dict.fromkeys(recommendations))
 
-    def _filter_identifier_columns(
+    def _detect_leakage_candidates(
         self,
-        columns: list[str],
+        df: pd.DataFrame,
+        target: str,
+        feature_columns: list[str],
+        threshold: float,
     ) -> list[str]:
-        identifier_tokens = (
-            "id",
-            "uuid",
-            "guid",
-            "transaction",
-            "invoice",
-            "receipt",
+        leakage_candidates: list[str] = []
+
+        target_series = pd.to_numeric(
+            df[target],
+            errors="coerce",
+        )
+
+        target_name = target.lower().strip()
+
+        for column in feature_columns:
+            column_name = column.lower().strip()
+
+            if self._is_target_derived_name(
+                column_name=column_name,
+                target_name=target_name,
+            ):
+                leakage_candidates.append(column)
+                continue
+
+            feature_series = pd.to_numeric(
+                df[column],
+                errors="coerce",
+            )
+
+            pair = pd.concat(
+                [target_series, feature_series],
+                axis=1,
+            ).replace(
+                [np.inf, -np.inf],
+                np.nan,
+            ).dropna()
+
+            if len(pair) < 3:
+                continue
+
+            if pair.iloc[:, 1].nunique() <= 1:
+                continue
+
+            correlation = pair.iloc[:, 0].corr(
+                pair.iloc[:, 1]
+            )
+
+            if (
+                correlation is not None
+                and not pd.isna(correlation)
+                and abs(float(correlation)) >= threshold
+            ):
+                leakage_candidates.append(column)
+
+        return list(dict.fromkeys(leakage_candidates))
+
+    def _is_target_derived_name(
+        self,
+        column_name: str,
+        target_name: str,
+    ) -> bool:
+        normalized_column = column_name.replace(" ", "_")
+        normalized_target = target_name.replace(" ", "_")
+
+        target_tokens = {
+            normalized_target,
+            f"log_{normalized_target}",
+            f"{normalized_target}_log",
+            f"{normalized_target}_scaled",
+            f"{normalized_target}_normalized",
+            f"{normalized_target}_per_unit",
+            f"{normalized_target}_ratio",
+            f"{normalized_target}_margin",
+        }
+
+        if normalized_column in target_tokens:
+            return True
+
+        if normalized_target in normalized_column:
+            derived_tokens = (
+                "ratio",
+                "margin",
+                "per_",
+                "_per",
+                "scaled",
+                "normalized",
+                "log",
+                "average",
+                "mean",
+                "total",
+            )
+
+            return any(
+                token in normalized_column
+                for token in derived_tokens
+            )
+
+        return False
+
+    def _remove_duplicate_predictors(
+        self,
+        df: pd.DataFrame,
+        feature_columns: list[str],
+        excluded_features: list[str],
+    ) -> list[str]:
+        retained: list[str] = []
+
+        for column in feature_columns:
+            duplicate_found = False
+
+            for existing_column in retained:
+                left = df[column]
+                right = df[existing_column]
+
+                comparable = pd.concat(
+                    [left, right],
+                    axis=1,
+                ).dropna()
+
+                if comparable.empty:
+                    continue
+
+                if comparable.iloc[:, 0].equals(
+                    comparable.iloc[:, 1]
+                ):
+                    excluded_features.append(column)
+                    duplicate_found = True
+                    break
+
+            if not duplicate_found:
+                retained.append(column)
+
+        return retained
+
+    def _rank_predictors(
+        self,
+        df: pd.DataFrame,
+        target: str,
+        feature_columns: list[str],
+    ) -> list[str]:
+        target_series = pd.to_numeric(
+            df[target],
+            errors="coerce",
+        )
+
+        ranked: list[tuple[str, float]] = []
+
+        for column in feature_columns:
+            feature_series = pd.to_numeric(
+                df[column],
+                errors="coerce",
+            )
+
+            pair = pd.concat(
+                [target_series, feature_series],
+                axis=1,
+            ).replace(
+                [np.inf, -np.inf],
+                np.nan,
+            ).dropna()
+
+            if len(pair) < 3:
+                score = 0.0
+            else:
+                correlation = pair.iloc[:, 0].corr(
+                    pair.iloc[:, 1]
+                )
+
+                score = (
+                    abs(float(correlation))
+                    if correlation is not None
+                    and not pd.isna(correlation)
+                    else 0.0
+                )
+
+            ranked.append((column, score))
+
+        ranked.sort(
+            key=lambda item: item[1],
+            reverse=True,
         )
 
         return [
             column
-            for column in columns
-            if not any(
-                token in column.lower()
-                for token in identifier_tokens
-            )
+            for column, _ in ranked
         ]
+
+    def _is_identifier_column(
+        self,
+        column: str,
+    ) -> bool:
+        name = column.lower().strip()
+
+        exact_tokens = {
+            "id",
+            "uuid",
+            "guid",
+            "transaction",
+            "transaction_id",
+            "customer_id",
+            "order_id",
+            "invoice_id",
+            "receipt_id",
+        }
+
+        if name in exact_tokens:
+            return True
+
+        if name.endswith("_id"):
+            return True
+
+        return any(
+            token in name
+            for token in (
+                "transaction_id",
+                "customer_id",
+                "order_id",
+                "invoice_id",
+                "receipt_id",
+                "uuid",
+                "guid",
+            )
+        )
