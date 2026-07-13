@@ -43,6 +43,8 @@ from autodq.datasets.merger import DatasetMerger
 from autodq.renderers.console.datasets import ConsoleDatasetRenderer
 from autodq.blue.engine import BLUEEngine
 from autodq.renderers.console.blue import ConsoleBLUERenderer
+from autodq.visualization.gallery import VisualizationGallery
+from autodq.visualization.notebook_renderer import (NotebookVisualizationRenderer,)
 
 class AutoDQ:
     """
@@ -62,6 +64,8 @@ class AutoDQ:
         self.validation_engine = ValidationEngine()
         self.reporting_engine = ReportingEngine()
         self.visualization_engine = VisualizationEngine()
+        self.visualization_gallery = VisualizationGallery()
+        self.notebook_visualization_renderer = (NotebookVisualizationRenderer())
         self.correlation_engine = CorrelationEngine()
         self.ml_readiness_engine = MLReadinessEngine()
         self.feature_engine = FeatureEngineeringEngine()
@@ -71,6 +75,7 @@ class AutoDQ:
         self.dataset_manager = DatasetManager()
         self.dataset_merger = DatasetMerger()
         self.blue_engine = BLUEEngine()
+        
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
         self.dataset_manager.add(
@@ -443,6 +448,8 @@ class AutoDQ:
 
         print(f"\nReport exported to {output}")
         
+    
+        
     def visualize(
         self,
         chart: str | None = None,
@@ -450,44 +457,94 @@ class AutoDQ:
         y: str | None = None,
         column: str | None = None,
         stage: str = "current",
+        append: bool = True,
+        display: bool = True,
+        allow_duplicates: bool = False,
     ):
         if self.state.data is None:
             self.load()
 
-        if stage == "after":
+        stage_normalized = stage.lower().strip()
+
+        if stage_normalized in {"after", "cleaned"}:
             if self.state.cleaned_data is None:
-                print("\nNo cleaned dataset available. Run project.clean() first.")
+                print(
+                    "\nNo cleaned dataset available. "
+                    "Run project.clean() first."
+                )
                 return None
 
             active_df = self.state.cleaned_data
 
+        elif stage_normalized in {"engineered", "features"}:
+            if self.state.engineered_data is None:
+                print(
+                    "\nNo engineered dataset available. "
+                    "Run project.apply_features() first."
+                )
+                return None
+
+            active_df = self.state.engineered_data
+
         else:
             active_df = self.state.data
 
-        self.state.visualization_report = self.visualization_engine.visualize(
+        new_report = self.visualization_engine.visualize(
             df=active_df,
             chart=chart,
             x=x,
             y=y,
             column=column,
-            stage=stage,
+            stage=stage_normalized,
             cleaned_df=self.state.cleaned_data,
             diagnosis_report=self.state.diagnosis_report,
             cleaning_report=self.state.cleaning_report,
             validation_report=self.state.validation_report,
         )
 
+        if not append:
+            self.visualization_gallery.clear()
+
+        added_charts = self.visualization_gallery.add_report(
+            new_report,
+            allow_duplicates=allow_duplicates,
+        )
+
+        self.state.visualization_report = new_report
+
+        if hasattr(
+            self.state.visualization_report,
+            "charts",
+        ):
+            self.state.visualization_report.charts = (
+                self.visualization_gallery.charts
+            )
+
+        if display and added_charts:
+            display_report = self._build_visualization_subset(
+                original_report=new_report,
+                charts=added_charts,
+            )
+
+            self.notebook_visualization_renderer.render(
+                display_report
+            )
+
         self.session.log(
             step="visualize",
-            message="Visualization specifications generated.",
+            message="Visualization generated and added to gallery.",
             metadata={
-                "chart_count": self.state.visualization_report.chart_count,
-                "chart": chart or "auto",
-                "stage": stage,
+                "requested_chart": chart or "auto",
+                "stage": stage_normalized,
+                "new_charts": len(added_charts),
+                "gallery_size": (
+                    self.visualization_gallery.chart_count
+                ),
+                "displayed_in_notebook": display,
             },
         )
 
-        return self.state.visualization_report
+        return new_report
 
     def show_visualizations(self) -> None:
         if self.state.visualization_report is None:
@@ -1310,6 +1367,116 @@ class AutoDQ:
 
         ConsoleBLUERenderer.render(
             self.state.blue_report
+        )
+        
+    def _build_visualization_subset(
+        self,
+        original_report,
+        charts: list,
+    ):
+        report_class = type(original_report)
+
+        try:
+            return report_class(charts=charts)
+
+        except TypeError:
+            subset = original_report
+
+            if hasattr(subset, "charts"):
+                subset.charts = charts
+
+            return subset
+        
+        
+    def list_visualizations(self) -> None:
+        print("\n=== AutoDQ Visualization Gallery ===\n")
+
+        charts = self.visualization_gallery.charts
+
+        if not charts:
+            print("No visualizations stored.")
+            return
+
+        for index, chart in enumerate(
+            charts,
+            start=1,
+        ):
+            print(
+                f"{index}. "
+                f"{getattr(chart, 'title', 'Untitled Chart')}"
+            )
+            print(
+                f"   ID: "
+                f"{getattr(chart, 'chart_id', 'N/A')}"
+            )
+            print(
+                f"   Type: "
+                f"{getattr(chart, 'chart_type', 'N/A')}"
+            )
+            print(
+                f"   Stage: "
+                f"{getattr(chart, 'stage', 'N/A')}"
+            )
+
+    def remove_visualization(
+        self,
+        chart_id: str,
+    ):
+        removed = self.visualization_gallery.remove(
+            chart_id
+        )
+
+        if self.state.visualization_report is not None:
+            self.state.visualization_report.charts = (
+                self.visualization_gallery.charts
+            )
+
+        self.session.log(
+            step="remove_visualization",
+            message="Visualization removed from gallery.",
+            metadata={
+                "chart_id": chart_id,
+                "gallery_size": (
+                    self.visualization_gallery.chart_count
+                ),
+            },
+        )
+
+        return removed
+
+    def clear_visualizations(self) -> None:
+        self.visualization_gallery.clear()
+
+        if self.state.visualization_report is not None:
+            self.state.visualization_report.charts = []
+
+        self.session.log(
+            step="clear_visualizations",
+            message="Visualization gallery cleared.",
+            metadata={"gallery_size": 0},
+        )
+
+        print("\nVisualization gallery cleared.")
+
+    def show_visualizations(self) -> None:
+        if self.state.visualization_report is None:
+            print("\nNo visualizations available.")
+            return
+
+        if not self.visualization_gallery.charts:
+            print("\nVisualization gallery is empty.")
+            return
+
+        self.state.visualization_report.charts = (
+            self.visualization_gallery.charts
+        )
+
+        self.notebook_visualization_renderer.render(
+            self.state.visualization_report
+        )
+
+        ConsoleVisualizationRenderer.render(
+            self.state.visualization_report
         )
 
 

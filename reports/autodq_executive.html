@@ -516,7 +516,7 @@ th {
         <div class="meta">
             <span>Dataset: sales_with_customers.in_memory</span>
             <span>Style: executive</span>
-            <span>Generated: 2026-07-12 21:00:20</span>
+            <span>Generated: 2026-07-12 21:31:04</span>
         </div>
     </div>
 
@@ -739,6 +739,116 @@ th {
         <div class="rendered-viz-grid">
             
                 <div class="rendered-viz-card">
+                    <div class="viz-title">Quality Score Before vs After</div>
+                    <div class="viz-description">Compares the dataset quality score before and after approved cleaning actions.</div>
+                    <img src="charts/quality_score_comparison.png" alt="Quality Score Before vs After">
+                    <div class="viz-meta">
+                        Chart ID: quality_score_comparison | Type: bar | Stage: comparison
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Missing Values by Column (before)</div>
+                    <div class="viz-description">Shows missing value counts by column.</div>
+                    <img src="charts/missing_values_before.png" alt="Missing Values by Column (before)">
+                    <div class="viz-meta">
+                        Chart ID: missing_values_before | Type: bar | Stage: before
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Missing Values by Column (after)</div>
+                    <div class="viz-description">Shows missing value counts by column.</div>
+                    <img src="charts/missing_values_after.png" alt="Missing Values by Column (after)">
+                    <div class="viz-meta">
+                        Chart ID: missing_values_after | Type: bar | Stage: after
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Data Quality Issue Breakdown</div>
+                    <div class="viz-description">Shows detected data quality issues and confidence levels.</div>
+                    <img src="charts/issue_breakdown.png" alt="Data Quality Issue Breakdown">
+                    <div class="viz-meta">
+                        Chart ID: issue_breakdown | Type: bar | Stage: before
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Cleaning Action Status</div>
+                    <div class="viz-description">Shows how many approved actions succeeded or were skipped.</div>
+                    <img src="charts/cleaning_action_status.png" alt="Cleaning Action Status">
+                    <div class="viz-meta">
+                        Chart ID: cleaning_action_status | Type: bar | Stage: after
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Missing Values Before vs After</div>
+                    <div class="viz-description">Compares missing values before and after cleaning.</div>
+                    <img src="charts/missing_values_comparison.png" alt="Missing Values Before vs After">
+                    <div class="viz-meta">
+                        Chart ID: missing_values_comparison | Type: bar | Stage: comparison
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Duplicate Rows Before vs After</div>
+                    <div class="viz-description">Compares duplicate rows before and after cleaning.</div>
+                    <img src="charts/duplicate_rows_comparison.png" alt="Duplicate Rows Before vs After">
+                    <div class="viz-meta">
+                        Chart ID: duplicate_rows_comparison | Type: bar | Stage: comparison
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Rows Before vs After</div>
+                    <div class="viz-description">Compares rows before and after cleaning.</div>
+                    <img src="charts/rows_comparison.png" alt="Rows Before vs After">
+                    <div class="viz-meta">
+                        Chart ID: rows_comparison | Type: bar | Stage: comparison
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Columns Before vs After</div>
+                    <div class="viz-description">Compares columns before and after cleaning.</div>
+                    <img src="charts/columns_comparison.png" alt="Columns Before vs After">
+                    <div class="viz-meta">
+                        Chart ID: columns_comparison | Type: bar | Stage: comparison
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Histogram of Revenue (after)</div>
+                    <div class="viz-description">Shows the frequency distribution of Revenue.</div>
+                    <img src="charts/histogram_Revenue_after.png" alt="Histogram of Revenue (after)">
+                    <div class="viz-meta">
+                        Chart ID: histogram_Revenue_after | Type: histogram | Stage: after
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Boxplot of Revenue (after)</div>
+                    <div class="viz-description">Shows spread, median, quartiles, and possible outliers for Revenue.</div>
+                    <img src="charts/boxplot_Revenue_after.png" alt="Boxplot of Revenue (after)">
+                    <div class="viz-meta">
+                        Chart ID: boxplot_Revenue_after | Type: boxplot | Stage: after
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
                     <div class="viz-title">Correlation Heatmap (after)</div>
                     <div class="viz-description">Shows pairwise correlation between numeric variables.</div>
                     <img src="charts/correlation_heatmap_after.png" alt="Correlation Heatmap (after)">
@@ -754,6 +864,278 @@ th {
         <h2 class="section-title">Visualization Engine Output</h2>
         <div class="visualization-grid">
             
+        <div class="viz-card">
+            <div class="viz-title">Quality Score Before vs After</div>
+            <div class="viz-description">Compares the dataset quality score before and after approved cleaning actions.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">before</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:85.01%"></div>
+                    </div>
+                    <strong>81.42</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">after</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>95.78</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: quality_score_comparison | Type: bar | Stage: comparison
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Missing Values by Column (before)</div>
+            <div class="viz-description">Shows missing value counts by column.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">City</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>60</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">City_customer</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:85.0%"></div>
+                    </div>
+                    <strong>51</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: missing_values_before | Type: bar | Stage: before
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Missing Values by Column (after)</div>
+            <div class="viz-description">Shows missing value counts by column.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">City</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>60</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">City_customer</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:85.0%"></div>
+                    </div>
+                    <strong>51</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: missing_values_after | Type: bar | Stage: after
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Data Quality Issue Breakdown</div>
+            <div class="viz-description">Shows detected data quality issues and confidence levels.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">missing_values</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>95.0</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">duplicate_rows</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:94.74%"></div>
+                    </div>
+                    <strong>90.0</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">outliers</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:89.47%"></div>
+                    </div>
+                    <strong>85.0</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: issue_breakdown | Type: bar | Stage: before
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Cleaning Action Status</div>
+            <div class="viz-description">Shows how many approved actions succeeded or were skipped.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">success</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:81.82%"></div>
+                    </div>
+                    <strong>9</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">skipped</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>11</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: cleaning_action_status | Type: bar | Stage: after
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Missing Values Before vs After</div>
+            <div class="viz-description">Compares missing values before and after cleaning.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">before</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>634</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">after</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:17.51%"></div>
+                    </div>
+                    <strong>111</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: missing_values_comparison | Type: bar | Stage: comparison
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Duplicate Rows Before vs After</div>
+            <div class="viz-description">Compares duplicate rows before and after cleaning.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">before</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>33</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">after</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:0.0%"></div>
+                    </div>
+                    <strong>0</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: duplicate_rows_comparison | Type: bar | Stage: comparison
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Rows Before vs After</div>
+            <div class="viz-description">Compares rows before and after cleaning.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">before</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>5035</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">after</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:99.34%"></div>
+                    </div>
+                    <strong>5002</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: rows_comparison | Type: bar | Stage: comparison
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Columns Before vs After</div>
+            <div class="viz-description">Compares columns before and after cleaning.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">before</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>28</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">after</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>28</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: columns_comparison | Type: bar | Stage: comparison
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Histogram of Revenue (after)</div>
+            <div class="viz-description">Shows the frequency distribution of Revenue.</div>
+            <p class='viz-description'>Unsupported chart preview.</p>
+            <div class="viz-meta">
+                Chart ID: histogram_Revenue_after | Type: histogram | Stage: after
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Boxplot of Revenue (after)</div>
+            <div class="viz-description">Shows spread, median, quartiles, and possible outliers for Revenue.</div>
+            <p class='viz-description'>Unsupported chart preview.</p>
+            <div class="viz-meta">
+                Chart ID: boxplot_Revenue_after | Type: boxplot | Stage: after
+            </div>
+        </div>
+        
+
         <div class="viz-card">
             <div class="viz-title">Correlation Heatmap (after)</div>
             <div class="viz-description">Shows pairwise correlation between numeric variables.</div>
@@ -1600,7 +1982,7 @@ th {
                     </td>
                     <td>Discount_Rate, Customer_Satisfaction</td>
                     <td>log_unit_price, Unit_Price, Quantity</td>
-                    <td>The model predicted 31.79420000000001. The strongest increasing influences were Discount_Rate, Customer_Satisfaction. The strongest decreasing influences were log_unit_price, Unit_Price, Quantity.</td>
+                    <td>The model predicted 31.794200000000014. The strongest increasing influences were Discount_Rate, Customer_Satisfaction. The strongest decreasing influences were log_unit_price, Unit_Price, Quantity.</td>
                 </tr>
                 
                 <tr>
@@ -1669,7 +2051,7 @@ th {
                     </td>
                     <td>Quantity, Customer_Age_customer</td>
                     <td>log_unit_price, Unit_Price, Discount_Rate</td>
-                    <td>The model predicted 200.3891000000001. The strongest increasing influences were Quantity, Customer_Age_customer. The strongest decreasing influences were log_unit_price, Unit_Price, Discount_Rate.</td>
+                    <td>The model predicted 200.38910000000016. The strongest increasing influences were Quantity, Customer_Age_customer. The strongest decreasing influences were log_unit_price, Unit_Price, Discount_Rate.</td>
                 </tr>
                 
                 <tr>
@@ -1738,7 +2120,7 @@ th {
                     </td>
                     <td>Quantity, Discount_Rate, Product_Category_Clothing</td>
                     <td>log_unit_price, Unit_Price</td>
-                    <td>The model predicted 211.18489999999997. The strongest increasing influences were Quantity, Discount_Rate, Product_Category_Clothing. The strongest decreasing influences were log_unit_price, Unit_Price.</td>
+                    <td>The model predicted 211.18489999999994. The strongest increasing influences were Quantity, Discount_Rate, Product_Category_Clothing. The strongest decreasing influences were log_unit_price, Unit_Price.</td>
                 </tr>
                 
                 <tr>
@@ -2083,7 +2465,7 @@ th {
                     </td>
                     <td>Quantity, log_unit_price, Unit_Price</td>
                     <td>-</td>
-                    <td>The model predicted 4938.828299999995. The strongest increasing influences were Quantity, log_unit_price, Unit_Price.</td>
+                    <td>The model predicted 4938.828299999996. The strongest increasing influences were Quantity, log_unit_price, Unit_Price.</td>
                 </tr>
                 
             </table>
