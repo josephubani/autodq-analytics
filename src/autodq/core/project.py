@@ -41,7 +41,8 @@ from autodq.explainability.engine import ExplainabilityEngine
 from autodq.datasets.manager import DatasetManager
 from autodq.datasets.merger import DatasetMerger
 from autodq.renderers.console.datasets import ConsoleDatasetRenderer
-
+from autodq.blue.engine import BLUEEngine
+from autodq.renderers.console.blue import ConsoleBLUERenderer
 
 class AutoDQ:
     """
@@ -69,6 +70,7 @@ class AutoDQ:
         self.explainability_engine = ExplainabilityEngine()
         self.dataset_manager = DatasetManager()
         self.dataset_merger = DatasetMerger()
+        self.blue_engine = BLUEEngine()
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
         self.dataset_manager.add(
@@ -1234,6 +1236,63 @@ class AutoDQ:
         ConsoleDatasetRenderer.render_concat(
             self.state.concat_report
         )  
+        
+        
+    def blue(
+        self,
+        use_engineered: bool = True,
+        max_features: int = 20,
+        significance_level: float = 0.05,
+    ):
+        if self.state.target is None:
+            raise ValueError(
+                "Set a target before running BLUE diagnostics."
+            )
+
+        if (
+            use_engineered
+            and self.state.engineered_data is not None
+        ):
+            active_df = self.state.engineered_data
+
+        elif self.state.cleaned_data is not None:
+            active_df = self.state.cleaned_data
+
+        else:
+            if self.state.data is None:
+                self.load()
+
+            active_df = self.state.data
+
+        self.state.blue_report = self.blue_engine.analyze(
+            df=active_df,
+            target=self.state.target,
+            max_features=max_features,
+            significance_level=significance_level,
+        )
+
+        self.session.log(
+            step="blue",
+            message="BLUE regression diagnostics completed.",
+            metadata={
+                "target": self.state.blue_report.target,
+                "score": self.state.blue_report.suitability_score,
+                "status": self.state.blue_report.overall_status,
+                "features": self.state.blue_report.features_analyzed,
+                "rows": self.state.blue_report.rows_analyzed,
+            },
+        )
+
+        return self.state.blue_report
+
+    def show_blue(self) -> None:
+        if self.state.blue_report is None:
+            self.blue()
+
+        ConsoleBLUERenderer.render(
+            self.state.blue_report
+        )
+
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:

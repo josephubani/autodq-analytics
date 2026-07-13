@@ -11,3 +11,5 @@ xlrd
 matplotlib
 scikit-learn
 SHAP
+statsmodels 
+scipy

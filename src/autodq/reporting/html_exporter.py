@@ -24,6 +24,8 @@ class HTMLExporter:
         model = getattr(report, "model", None)
         prediction = getattr(report, "prediction", None)
         explainability = getattr(report, "explainability", None)
+        merge_report = getattr(report, "merge_report", None)
+        concat_report = getattr(report, "concat_report", None)
 
         quality_before = validation.quality_score_before if validation else None
         quality_after = validation.quality_score_after if validation else None
@@ -60,6 +62,10 @@ class HTMLExporter:
         prediction_section = self._build_prediction_section(prediction)
         explainability_section = self._build_explainability_section(
             explainability
+        )
+        dataset_operations_section = self._build_dataset_operations_section(
+            merge_report=merge_report,
+            concat_report=concat_report,
         )
 
         return f"""
@@ -417,6 +423,39 @@ body {{
     padding-left: 22px;
 }}
 
+
+.shap-direction-positive {{
+    color: var(--success-text);
+    font-weight: 700;
+}}
+
+.shap-direction-negative {{
+    color: var(--danger-text);
+    font-weight: 700;
+}}
+
+.shap-row-details {{
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--bar-bg);
+}}
+
+.operation-summary-grid {{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}}
+
+.operation-warning-list {{
+    margin: 10px 0 0;
+    padding-left: 20px;
+}}
+
+.operation-warning-list li {{
+    margin-bottom: 8px;
+}}
+
 .recommendation-list li {{
     margin-bottom: 10px;
 }}
@@ -500,7 +539,8 @@ th {{
     .chart-grid,
     .visualization-grid,
     .rendered-viz-grid,
-    .model-grid {{
+    .model-grid,
+    .operation-summary-grid {{
         grid-template-columns: 1fr;
     }}
 
@@ -597,6 +637,8 @@ th {{
             {self._comparison_card("Quality Score", quality_before, quality_after)}
         </div>
     </div>
+
+    {dataset_operations_section}
 
     <div class="section card">
         <h2 class="section-title">Rendered Visualization Assets</h2>
@@ -1242,8 +1284,20 @@ th {{
         global_rows = []
 
         for item in explainability.global_features[:10]:
+            contribution_percent = getattr(
+                item,
+                "contribution_percent",
+                None,
+            )
+
+            if contribution_percent is None:
+                contribution_percent = round(
+                    abs(float(item.contribution)) * 100,
+                    2,
+                )
+
             contribution_percent = round(
-                abs(float(item.contribution)) * 100,
+                float(contribution_percent),
                 2,
             )
 
@@ -1265,9 +1319,60 @@ th {{
         explanation_rows = []
 
         for row in explainability.row_explanations[:10]:
-            features = ", ".join(
+            top_features = []
+
+            for contribution in row.top_contributions:
+                direction_class = (
+                    "shap-direction-positive"
+                    if contribution.direction == "positive"
+                    else "shap-direction-negative"
+                )
+
+                sign = "+" if contribution.direction == "positive" else "-"
+
+                share = getattr(
+                    contribution,
+                    "contribution_percent",
+                    None,
+                )
+
+                share_text = (
+                    f" ({round(float(share), 2)}%)"
+                    if share is not None
+                    else ""
+                )
+
+                top_features.append(
+                    f"""
+                    <div>
+                        <span class="{direction_class}">
+                            {sign} {contribution.feature}
+                        </span>
+                        <span>
+                            = {getattr(contribution, "feature_value", "N/A")}
+                            | SHAP: {round(float(contribution.contribution), 6)}
+                            {share_text}
+                        </span>
+                    </div>
+                    """
+                )
+
+            positive_features = ", ".join(
                 contribution.feature
-                for contribution in row.top_contributions
+                for contribution in getattr(
+                    row,
+                    "positive_contributions",
+                    [],
+                )[:3]
+            )
+
+            negative_features = ", ".join(
+                contribution.feature
+                for contribution in getattr(
+                    row,
+                    "negative_contributions",
+                    [],
+                )[:3]
             )
 
             explanation_rows.append(
@@ -1275,7 +1380,14 @@ th {{
                 <tr>
                     <td>{row.row_id}</td>
                     <td>{self._format_prediction_value(row.prediction)}</td>
-                    <td>{features or "-"}</td>
+                    <td>{self._format_prediction_value(getattr(row, "base_value", None))}</td>
+                    <td>
+                        <div class="shap-row-details">
+                            {"".join(top_features) or "No contribution details available."}
+                        </div>
+                    </td>
+                    <td>{positive_features or "-"}</td>
+                    <td>{negative_features or "-"}</td>
                     <td>{row.explanation or "-"}</td>
                 </tr>
                 """
@@ -1292,7 +1404,8 @@ th {{
             else "Unknown"
         )
 
-        status = "Fallback" if explainability.warnings else "Active"
+        is_shap_active = str(explainability.method).startswith("shap_")
+        status = "SHAP Active" if is_shap_active else "Fallback"
 
         return f"""
         <div class="section card">
@@ -1327,32 +1440,175 @@ th {{
 
         <div class="section two-col">
             <div class="card">
-                <h2 class="section-title">Global Feature Contributions</h2>
+                <h2 class="section-title">Global SHAP Feature Contributions</h2>
                 {"".join(global_rows) or "<p class='metric-small'>No global contributions available.</p>"}
             </div>
 
             <div class="card">
                 <h2 class="section-title">Explainability Notes</h2>
                 <ul class="recommendation-list">
-                    {warning_items or "<li>No warnings detected.</li>"}
+                    {warning_items or "<li>SHAP explanations generated successfully.</li>"}
                 </ul>
             </div>
         </div>
 
         <div class="section card">
-            <h2 class="section-title">Sample Row Explanations</h2>
+            <h2 class="section-title">Sample Row-Level SHAP Explanations</h2>
 
             <table>
                 <tr>
                     <th>Row</th>
                     <th>Prediction</th>
-                    <th>Most Important Features</th>
+                    <th>Base Value</th>
+                    <th>Top Contributions</th>
+                    <th>Increasing Features</th>
+                    <th>Decreasing Features</th>
                     <th>Explanation</th>
                 </tr>
-                {"".join(explanation_rows) or '<tr><td colspan="4">No row explanations available.</td></tr>'}
+                {"".join(explanation_rows) or '<tr><td colspan="7">No row explanations available.</td></tr>'}
             </table>
         </div>
         """
+
+    def _build_dataset_operations_section(
+        self,
+        merge_report=None,
+        concat_report=None,
+    ):
+        if merge_report is None and concat_report is None:
+            return """
+            <div class="section card">
+                <h2 class="section-title">Dataset Operations</h2>
+                <p class="metric-small">
+                    No merge or concatenation operation was recorded.
+                </p>
+            </div>
+            """
+
+        sections = []
+
+        if merge_report is not None:
+            merge_warnings = "".join(
+                f"<li>{warning}</li>"
+                for warning in merge_report.warnings
+            )
+
+            sections.append(
+                f"""
+                <div class="section card">
+                    <h2 class="section-title">Dataset Merge Summary</h2>
+
+                    <div class="operation-summary-grid">
+                        <div class="card">
+                            <h3>Left Dataset</h3>
+                            <div class="metric">{merge_report.left_dataset}</div>
+                            <div class="metric-small">{merge_report.left_rows} rows</div>
+                        </div>
+
+                        <div class="card">
+                            <h3>Right Dataset</h3>
+                            <div class="metric">{merge_report.right_dataset}</div>
+                            <div class="metric-small">{merge_report.right_rows} rows</div>
+                        </div>
+
+                        <div class="card">
+                            <h3>Output Rows</h3>
+                            <div class="metric">{merge_report.output_rows}</div>
+                            <div class="metric-small">
+                                Change: {merge_report.row_change:+}
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>Relationship</h3>
+                            <div class="metric">
+                                {str(merge_report.relationship).replace("_", " ").title()}
+                            </div>
+                            <div class="metric-small">
+                                Join type: {str(merge_report.how).title()}
+                            </div>
+                        </div>
+                    </div>
+
+                    <table>
+                        <tr>
+                            <th>Join Columns</th>
+                            <th>Matched Left Rows</th>
+                            <th>Unmatched Left Rows</th>
+                            <th>Duplicate Left Keys</th>
+                            <th>Duplicate Right Keys</th>
+                            <th>Expanded Rows</th>
+                        </tr>
+                        <tr>
+                            <td>{", ".join(merge_report.join_columns)}</td>
+                            <td>{merge_report.matched_left_rows}</td>
+                            <td>{merge_report.unmatched_left_rows}</td>
+                            <td>{merge_report.duplicate_left_keys}</td>
+                            <td>{merge_report.duplicate_right_keys}</td>
+                            <td>{merge_report.expanded_rows}</td>
+                        </tr>
+                    </table>
+
+                    <ul class="operation-warning-list">
+                        {merge_warnings or "<li>No merge warnings detected.</li>"}
+                    </ul>
+                </div>
+                """
+            )
+
+        if concat_report is not None:
+            concat_warnings = "".join(
+                f"<li>{warning}</li>"
+                for warning in concat_report.warnings
+            )
+
+            sections.append(
+                f"""
+                <div class="section card">
+                    <h2 class="section-title">Dataset Concatenation Summary</h2>
+
+                    <div class="operation-summary-grid">
+                        <div class="card">
+                            <h3>Datasets Combined</h3>
+                            <div class="metric">{len(concat_report.datasets)}</div>
+                            <div class="metric-small">
+                                {", ".join(concat_report.datasets)}
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>Axis</h3>
+                            <div class="metric">{concat_report.axis}</div>
+                            <div class="metric-small">
+                                {"Rows" if concat_report.axis == 0 else "Columns"}
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>Output Rows</h3>
+                            <div class="metric">{concat_report.output_rows}</div>
+                            <div class="metric-small">
+                                Input rows: {concat_report.input_rows}
+                            </div>
+                        </div>
+
+                        <div class="card">
+                            <h3>Output Columns</h3>
+                            <div class="metric">{concat_report.output_columns}</div>
+                            <div class="metric-small">
+                                Input columns: {concat_report.input_columns}
+                            </div>
+                        </div>
+                    </div>
+
+                    <ul class="operation-warning-list">
+                        {concat_warnings or "<li>No concatenation warnings detected.</li>"}
+                    </ul>
+                </div>
+                """
+            )
+
+        return "\n".join(sections)
 
     def _build_issue_rows(self, diagnosis):
         if diagnosis is None or not diagnosis.issues:

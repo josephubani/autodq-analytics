@@ -143,7 +143,7 @@ body {
     width: 170px;
     height: 170px;
     border-radius: 50%;
-    background: conic-gradient(var(--success) 97.88%, var(--gauge-bg) 0);
+    background: conic-gradient(var(--success) 95.78%, var(--gauge-bg) 0);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -378,6 +378,39 @@ body {
     padding-left: 22px;
 }
 
+
+.shap-direction-positive {
+    color: var(--success-text);
+    font-weight: 700;
+}
+
+.shap-direction-negative {
+    color: var(--danger-text);
+    font-weight: 700;
+}
+
+.shap-row-details {
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--bar-bg);
+}
+
+.operation-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.operation-warning-list {
+    margin: 10px 0 0;
+    padding-left: 20px;
+}
+
+.operation-warning-list li {
+    margin-bottom: 8px;
+}
+
 .recommendation-list li {
     margin-bottom: 10px;
 }
@@ -461,7 +494,8 @@ th {
     .chart-grid,
     .visualization-grid,
     .rendered-viz-grid,
-    .model-grid {
+    .model-grid,
+    .operation-summary-grid {
         grid-template-columns: 1fr;
     }
 
@@ -480,22 +514,22 @@ th {
         <h1>AutoDQ Executive Data Quality Report</h1>
         <p>Automated profiling, diagnosis, evidence-aware recommendations, cleaning validation, visualization, machine learning, and prediction summary.</p>
         <div class="meta">
-            <span>Dataset: datasets/sample/sales.csv</span>
+            <span>Dataset: main_customers_merged.in_memory</span>
             <span>Style: executive</span>
-            <span>Generated: 2026-07-10 23:35:31</span>
+            <span>Generated: 2026-07-12 20:32:14</span>
         </div>
     </div>
 
     <div class="grid">
         <div class="card">
             <h3>Quality Before</h3>
-            <div class="metric">87.92</div>
+            <div class="metric">81.42</div>
             <div class="metric-small">Initial quality score</div>
         </div>
 
         <div class="card">
             <h3>Quality After</h3>
-            <div class="metric">97.88</div>
+            <div class="metric">95.78</div>
             <div class="metric-small">After approved cleaning</div>
         </div>
 
@@ -507,7 +541,7 @@ th {
 
         <div class="card">
             <h3>Actions Successful</h3>
-            <div class="metric">6/16</div>
+            <div class="metric">9/20</div>
             <div class="metric-small">Executed safely</div>
         </div>
     </div>
@@ -516,12 +550,12 @@ th {
         <h2 class="section-title">Quality Score Gauge</h2>
         <div class="quality-wrap">
             <div class="gauge">
-                <div class="gauge-value">97.88</div>
+                <div class="gauge-value">95.78</div>
             </div>
             <div class="quality-info">
-                <h2>87.92 → 97.88</h2>
+                <h2>81.42 → 95.78</h2>
                 <p>Overall quality score after approved cleaning actions.</p>
-                <span class="change">Improvement: 9.96</span>
+                <span class="change">Improvement: 14.36</span>
             </div>
         </div>
     </div>
@@ -531,10 +565,10 @@ th {
             <h2 class="section-title">Before vs After Comparison</h2>
             <table>
                 <tr><th>Metric</th><th>Before</th><th>After</th><th>Meaning</th></tr>
-                <tr><td>Missing Values</td><td>382</td><td>60</td><td>Resolved 322</td></tr>
+                <tr><td>Missing Values</td><td>634</td><td>111</td><td>Resolved 523</td></tr>
                 <tr><td>Duplicate Rows</td><td>33</td><td>0</td><td>Removed 33</td></tr>
                 <tr><td>Rows</td><td>5035</td><td>5002</td><td>Removed 33</td></tr>
-                <tr><td>Columns</td><td>23</td><td>23</td><td>No structural column loss</td></tr>
+                <tr><td>Columns</td><td>28</td><td>28</td><td>No structural column loss</td></tr>
             </table>
         </div>
 
@@ -546,12 +580,12 @@ th {
             <div class="bar-row">
                 <strong>Missing values before</strong>
                 <div class="bar-track"><div class="bar-fill" style="width:100.0%"></div></div>
-                <span>382</span>
+                <span>634</span>
             </div>
             <div class="bar-row">
                 <strong>Missing values after</strong>
-                <div class="bar-track"><div class="bar-fill" style="width:15.71%"></div></div>
-                <span>60</span>
+                <div class="bar-track"><div class="bar-fill" style="width:17.51%"></div></div>
+                <span>111</span>
             </div>
         </div>
         
@@ -587,13 +621,13 @@ th {
         <div>
             <div class="bar-row">
                 <strong>Quality score before</strong>
-                <div class="bar-track"><div class="bar-fill" style="width:89.82%"></div></div>
-                <span>87.92</span>
+                <div class="bar-track"><div class="bar-fill" style="width:85.01%"></div></div>
+                <span>81.42</span>
             </div>
             <div class="bar-row">
                 <strong>Quality score after</strong>
                 <div class="bar-track"><div class="bar-fill" style="width:100.0%"></div></div>
-                <span>97.88</span>
+                <span>95.78</span>
             </div>
         </div>
         
@@ -612,17 +646,17 @@ th {
                 <div class="mini-bar-wrap">
                     <div class="mini-bar" style="height:100.0%"></div>
                     <div class="mini-label">Before</div>
-                    <div class="mini-value">382</div>
+                    <div class="mini-value">634</div>
                 </div>
 
                 <div class="mini-bar-wrap">
-                    <div class="mini-bar after" style="height:15.71%"></div>
+                    <div class="mini-bar after" style="height:17.51%"></div>
                     <div class="mini-label">After</div>
-                    <div class="mini-value">60</div>
+                    <div class="mini-value">111</div>
                 </div>
             </div>
 
-            <div class="metric-small">Change: -322</div>
+            <div class="metric-small">Change: -523</div>
         </div>
         
             
@@ -673,23 +707,32 @@ th {
 
             <div class="mini-bars">
                 <div class="mini-bar-wrap">
-                    <div class="mini-bar" style="height:89.82%"></div>
+                    <div class="mini-bar" style="height:85.01%"></div>
                     <div class="mini-label">Before</div>
-                    <div class="mini-value">87.92</div>
+                    <div class="mini-value">81.42</div>
                 </div>
 
                 <div class="mini-bar-wrap">
                     <div class="mini-bar after" style="height:100.0%"></div>
                     <div class="mini-label">After</div>
-                    <div class="mini-value">97.88</div>
+                    <div class="mini-value">95.78</div>
                 </div>
             </div>
 
-            <div class="metric-small">Change: +9.959999999999994</div>
+            <div class="metric-small">Change: +14.36</div>
         </div>
         
         </div>
     </div>
+
+    
+            <div class="section card">
+                <h2 class="section-title">Dataset Operations</h2>
+                <p class="metric-small">
+                    No merge or concatenation operation was recorded.
+                </p>
+            </div>
+            
 
     <div class="section card">
         <h2 class="section-title">Rendered Visualization Assets</h2>
@@ -838,6 +881,36 @@ th {
 
                 <tr>
                     <td>6</td>
+                    <td>missing_values</td>
+                    <td>median</td>
+                    <td>Customer_Age_customer</td>
+                    <td>88.0%</td>
+                    <td>Diagnosis detected missing values in Customer_Age_customer. Knowledge rule 'age' recommends median imputation. Statistics show mean=35.8877 and median=36.0.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>7</td>
+                    <td>missing_values</td>
+                    <td>mode</td>
+                    <td>Region_customer</td>
+                    <td>80.0%</td>
+                    <td>Diagnosis detected missing values in Region_customer. Knowledge rule 'region' recommends mode imputation.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>8</td>
+                    <td>missing_values</td>
+                    <td>review_missing_values</td>
+                    <td>City_customer</td>
+                    <td>70.0%</td>
+                    <td>Diagnosis detected missing values in City_customer.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>9</td>
                     <td>duplicate_rows</td>
                     <td>remove_exact_duplicates</td>
                     <td>-</td>
@@ -847,7 +920,7 @@ th {
                 
 
                 <tr>
-                    <td>7</td>
+                    <td>10</td>
                     <td>outliers</td>
                     <td>domain_range_check</td>
                     <td>Customer_Age</td>
@@ -857,7 +930,7 @@ th {
                 
 
                 <tr>
-                    <td>8</td>
+                    <td>11</td>
                     <td>outliers</td>
                     <td>review_or_cap</td>
                     <td>Quantity</td>
@@ -867,7 +940,7 @@ th {
                 
 
                 <tr>
-                    <td>9</td>
+                    <td>12</td>
                     <td>outliers</td>
                     <td>review_or_winsorize</td>
                     <td>Unit_Price</td>
@@ -877,7 +950,7 @@ th {
                 
 
                 <tr>
-                    <td>10</td>
+                    <td>13</td>
                     <td>outliers</td>
                     <td>review_or_treat_outliers</td>
                     <td>Gross_Sales</td>
@@ -887,7 +960,7 @@ th {
                 
 
                 <tr>
-                    <td>11</td>
+                    <td>14</td>
                     <td>outliers</td>
                     <td>domain_range_check</td>
                     <td>Discount_Rate</td>
@@ -897,7 +970,7 @@ th {
                 
 
                 <tr>
-                    <td>12</td>
+                    <td>15</td>
                     <td>outliers</td>
                     <td>domain_range_check</td>
                     <td>Discount_Amount</td>
@@ -907,7 +980,7 @@ th {
                 
 
                 <tr>
-                    <td>13</td>
+                    <td>16</td>
                     <td>outliers</td>
                     <td>review_or_winsorize</td>
                     <td>Revenue</td>
@@ -917,7 +990,7 @@ th {
                 
 
                 <tr>
-                    <td>14</td>
+                    <td>17</td>
                     <td>outliers</td>
                     <td>review_or_treat_outliers</td>
                     <td>Cost</td>
@@ -927,7 +1000,7 @@ th {
                 
 
                 <tr>
-                    <td>15</td>
+                    <td>18</td>
                     <td>outliers</td>
                     <td>review_or_winsorize</td>
                     <td>Profit</td>
@@ -937,12 +1010,22 @@ th {
                 
 
                 <tr>
-                    <td>16</td>
+                    <td>19</td>
                     <td>outliers</td>
                     <td>review_or_treat_outliers</td>
                     <td>Delivery_Days</td>
                     <td>79.0%</td>
                     <td>Diagnosis detected outlier behavior in Delivery_Days. Statistics show skewness=0.8642 and kurtosis=0.6586. Interpretation: Delivery_Days appears right-skewed. Large values may be pulling the mean upward.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>20</td>
+                    <td>outliers</td>
+                    <td>domain_range_check</td>
+                    <td>Customer_Age_customer</td>
+                    <td>86.0%</td>
+                    <td>Diagnosis detected outlier behavior in Customer_Age_customer. Knowledge rule 'age' recommends domain_range_check. Statistics show skewness=0.3601 and kurtosis=0.2159.</td>
                 </tr>
                 
         </table>
@@ -1024,6 +1107,42 @@ th {
 
                 <tr>
                     <td>6</td>
+                    <td>missing_values</td>
+                    <td>median</td>
+                    <td><span class="badge success">success</span></td>
+                    <td>Customer_Age_customer</td>
+                    <td>5035</td>
+                    <td>5035</td>
+                    <td>Applied median missing-value handling.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>7</td>
+                    <td>missing_values</td>
+                    <td>mode</td>
+                    <td><span class="badge success">success</span></td>
+                    <td>Region_customer</td>
+                    <td>5035</td>
+                    <td>5035</td>
+                    <td>Applied mode missing-value handling.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>8</td>
+                    <td>missing_values</td>
+                    <td>review_missing_values</td>
+                    <td><span class="badge success">success</span></td>
+                    <td>City_customer</td>
+                    <td>5035</td>
+                    <td>5035</td>
+                    <td>Applied review_missing_values missing-value handling.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>9</td>
                     <td>duplicate_rows</td>
                     <td>remove_exact_duplicates</td>
                     <td><span class="badge success">success</span></td>
@@ -1035,7 +1154,7 @@ th {
                 
 
                 <tr>
-                    <td>7</td>
+                    <td>10</td>
                     <td>outliers</td>
                     <td>domain_range_check</td>
                     <td><span class="badge skipped">skipped</span></td>
@@ -1047,7 +1166,7 @@ th {
                 
 
                 <tr>
-                    <td>8</td>
+                    <td>11</td>
                     <td>outliers</td>
                     <td>review_or_cap</td>
                     <td><span class="badge skipped">skipped</span></td>
@@ -1059,7 +1178,7 @@ th {
                 
 
                 <tr>
-                    <td>9</td>
+                    <td>12</td>
                     <td>outliers</td>
                     <td>review_or_winsorize</td>
                     <td><span class="badge skipped">skipped</span></td>
@@ -1071,7 +1190,7 @@ th {
                 
 
                 <tr>
-                    <td>10</td>
+                    <td>13</td>
                     <td>outliers</td>
                     <td>review_or_treat_outliers</td>
                     <td><span class="badge skipped">skipped</span></td>
@@ -1083,7 +1202,7 @@ th {
                 
 
                 <tr>
-                    <td>11</td>
+                    <td>14</td>
                     <td>outliers</td>
                     <td>domain_range_check</td>
                     <td><span class="badge skipped">skipped</span></td>
@@ -1095,7 +1214,7 @@ th {
                 
 
                 <tr>
-                    <td>12</td>
+                    <td>15</td>
                     <td>outliers</td>
                     <td>domain_range_check</td>
                     <td><span class="badge skipped">skipped</span></td>
@@ -1107,7 +1226,7 @@ th {
                 
 
                 <tr>
-                    <td>13</td>
+                    <td>16</td>
                     <td>outliers</td>
                     <td>review_or_winsorize</td>
                     <td><span class="badge skipped">skipped</span></td>
@@ -1119,7 +1238,7 @@ th {
                 
 
                 <tr>
-                    <td>14</td>
+                    <td>17</td>
                     <td>outliers</td>
                     <td>review_or_treat_outliers</td>
                     <td><span class="badge skipped">skipped</span></td>
@@ -1131,7 +1250,7 @@ th {
                 
 
                 <tr>
-                    <td>15</td>
+                    <td>18</td>
                     <td>outliers</td>
                     <td>review_or_winsorize</td>
                     <td><span class="badge skipped">skipped</span></td>
@@ -1143,11 +1262,23 @@ th {
                 
 
                 <tr>
-                    <td>16</td>
+                    <td>19</td>
                     <td>outliers</td>
                     <td>review_or_treat_outliers</td>
                     <td><span class="badge skipped">skipped</span></td>
                     <td>Delivery_Days</td>
+                    <td>5002</td>
+                    <td>5002</td>
+                    <td>Strategy is not executable yet. Manual review required.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>20</td>
+                    <td>outliers</td>
+                    <td>domain_range_check</td>
+                    <td><span class="badge skipped">skipped</span></td>
+                    <td>Customer_Age_customer</td>
                     <td>5002</td>
                     <td>5002</td>
                     <td>Strategy is not executable yet. Manual review required.</td>

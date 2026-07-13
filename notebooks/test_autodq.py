@@ -102,6 +102,12 @@ print(project.state.model_report is None)
 
 print(project.state.prediction_report is None)
 
+project.set_target("Revenue")
+
+project.blue(use_engineered=True,max_features=15,)
+
+project.show_blue()
+
 project.export_engineered("exports/engineered_sales.csv")
 project.export_engineered("exports/manual_features_sales.xlsx")
 project.export_engineered("exports/engineered_sales.xlsx")
