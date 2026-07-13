@@ -1,9 +1,8 @@
 from autodq import AutoDQ
 
 
-# ============================================================
 # 1. CREATE PROJECT AND REGISTER DATASETS
-# ============================================================
+
 
 project = AutoDQ(
     "datasets/sample/sales.csv",
@@ -18,9 +17,8 @@ project.add_dataset(
 project.list_datasets()
 
 
-# ============================================================
 # 2. MERGE DATASETS
-# ============================================================
+
 
 merged = project.merge_datasets(
     left="main",
@@ -42,9 +40,9 @@ print("\nMerged Dataset Shape:")
 print(merged.shape)
 
 
-# ============================================================
+
 # 3. DATA TYPE AND TARGET CONFIGURATION
-# ============================================================
+
 
 project.set_type(
     column="Date",
@@ -54,25 +52,25 @@ project.set_type(
 project.set_target("Revenue")
 
 
-# ============================================================
+
 # 4. KNOWLEDGE LAYER
-# ============================================================
+
 
 project.apply_knowledge()
 project.show_knowledge()
 
 
-# ============================================================
+
 # 5. DATA PROFILING
-# ============================================================
+
 
 project.profile()
 project.show_profile()
 
 
-# ============================================================
+
 # 6. STATISTICAL ANALYSIS AND INTERPRETATION
-# ============================================================
+
 
 project.statistics()
 project.show_statistics()
@@ -81,17 +79,16 @@ project.interpret()
 project.show_interpretations()
 
 
-# ============================================================
+
 # 7. DATA QUALITY DIAGNOSIS
-# ============================================================
+
 
 project.diagnose()
 project.show_diagnosis()
 
 
-# ============================================================
 # 8. CLEANING RECOMMENDATIONS AND DECISION PLAN
-# ============================================================
+
 
 project.recommend()
 project.show_recommendations()
@@ -102,9 +99,9 @@ project.preview()
 project.show_preview()
 
 
-# ============================================================
+
 # 9. APPLY CLEANING
-# ============================================================
+
 
 project.approve_all()
 
@@ -115,9 +112,8 @@ project.validate_cleaning()
 project.show_validation()
 
 
-# ============================================================
 # 10. DATA PREVIEW
-# ============================================================
+
 
 print("\nFirst 5 Rows:")
 print(project.head())
@@ -131,9 +127,9 @@ print(project.sample(3))
 project.info()
 
 
-# ============================================================
+
 # 11. VISUALIZATION ENGINE
-# ============================================================
+
 
 # Automatically recommended visualizations
 project.visualize(
@@ -162,33 +158,30 @@ project.visualize(
 project.show_visualizations()
 
 
-# ============================================================
 # 12. CORRELATION ANALYSIS
-# ============================================================
+
 
 project.correlation()
 project.show_correlation()
 
 
-# ============================================================
 # 13. MACHINE LEARNING READINESS
-# ============================================================
+
 
 project.ml_readiness()
 project.show_ml_readiness()
 
 
-# ============================================================
+
 # 14. FEATURE ENGINEERING RECOMMENDATIONS
-# ============================================================
+
 
 project.features()
 project.show_features()
 
 
-# ============================================================
 # 15. APPLY SELECTED RECOMMENDED FEATURES
-# ============================================================
+
 
 project.apply_features(
     [
@@ -199,9 +192,9 @@ project.apply_features(
 )
 
 
-# ============================================================
+
 # 16. CREATE MANUAL FEATURES
-# ============================================================
+
 
 project.create_feature(
     name="log_unit_price",
@@ -213,9 +206,9 @@ print("\nEngineered Dataset Preview:")
 print(project.state.engineered_data.head())
 
 
-# ============================================================
+
 # 17. BLUE REGRESSION DIAGNOSTICS
-# ============================================================
+
 
 project.blue(
     source="data",
@@ -241,9 +234,8 @@ print(
 
 )
 
-# ============================================================
 # 18. MODEL TRAINING AND COMPARISON
-# ============================================================
+
 
 project.model(
     algorithm="auto",
@@ -253,17 +245,16 @@ project.model(
 project.show_model()
 
 
-# ============================================================
+
 # 19. PREDICTION
-# ============================================================
 
 project.predict()
 project.show_predictions()
 
 
-# ============================================================
+
 # 20. SHAP EXPLAINABILITY
-# ============================================================
+
 
 project.explain(
     max_rows=20,
@@ -273,9 +264,9 @@ project.explain(
 project.show_explanations()
 
 
-# ============================================================
+
 # 21. VERIFY ML STATE
-# ============================================================
+
 
 print(
     "\nModel Report Available:",
@@ -298,9 +289,8 @@ print(
 )
 
 
-# ============================================================
 # 22. EXPORT DATASETS
-# ============================================================
+
 
 project.export_current(
     "exports/current_sales.csv",
@@ -327,9 +317,8 @@ project.export_engineered(
 )
 
 
-# ============================================================
 # 23. GENERATE FINAL REPORTS
-# ============================================================
+
 
 # Generate final reports only after cleaning, statistics,
 # visualizations, BLUE, modelling, prediction, and SHAP.
@@ -355,8 +344,6 @@ project.generate_report(
 )
 
 
-# ============================================================
 # 24. SESSION SUMMARY
-# ============================================================
 
 project.show_session()
