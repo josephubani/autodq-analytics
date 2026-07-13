@@ -582,7 +582,7 @@ th {
         <div class="meta">
             <span>Dataset: sales_with_customers.in_memory</span>
             <span>Style: executive</span>
-            <span>Generated: 2026-07-12 22:22:02</span>
+            <span>Generated: 2026-07-12 22:35:02</span>
         </div>
     </div>
 
@@ -924,37 +924,45 @@ th {
                 </div>
                 
 
-                    <div class="rendered-viz-card">
-                        <div class="viz-title">Residuals vs Fitted Values</div>
-                        <div class="viz-description">
-                            name 'output_path' is not defined
-                        </div>
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Residuals vs Fitted Values</div>
+                    <div class="viz-description">Assesses linearity and constant residual variance. A random horizontal pattern around zero is preferred.</div>
+                    <img src="charts/blue_residuals_vs_fitted.png" alt="Residuals vs Fitted Values">
+                    <div class="viz-meta">
+                        Chart ID: blue_residuals_vs_fitted | Type: blue_residuals_vs_fitted | Stage: blue
                     </div>
-                    
+                </div>
+                
 
-                    <div class="rendered-viz-card">
-                        <div class="viz-title">Residual Q–Q Plot</div>
-                        <div class="viz-description">
-                            name 'output_path' is not defined
-                        </div>
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Residual Q–Q Plot</div>
+                    <div class="viz-description">Compares observed residual quantiles with a normal distribution. Points close to a straight line support residual normality.</div>
+                    <img src="charts/blue_qq_plot.png" alt="Residual Q–Q Plot">
+                    <div class="viz-meta">
+                        Chart ID: blue_qq_plot | Type: blue_qq_plot | Stage: blue
                     </div>
-                    
+                </div>
+                
 
-                    <div class="rendered-viz-card">
-                        <div class="viz-title">Cook’s Distance</div>
-                        <div class="viz-description">
-                            name 'output_path' is not defined
-                        </div>
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Cook’s Distance</div>
+                    <div class="viz-description">Identifies observations that exert unusual influence on fitted regression coefficients.</div>
+                    <img src="charts/blue_cooks_distance.png" alt="Cook’s Distance">
+                    <div class="viz-meta">
+                        Chart ID: blue_cooks_distance | Type: blue_cooks_distance | Stage: blue
                     </div>
-                    
+                </div>
+                
 
-                    <div class="rendered-viz-card">
-                        <div class="viz-title">Variance Inflation Factors</div>
-                        <div class="viz-description">
-                            name 'output_path' is not defined
-                        </div>
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Variance Inflation Factors</div>
+                    <div class="viz-description">Higher VIF values indicate stronger multicollinearity. Values above 5 require review; values above 10 are severe.</div>
+                    <img src="charts/blue_vif_chart.png" alt="Variance Inflation Factors">
+                    <div class="viz-meta">
+                        Chart ID: blue_vif_chart | Type: blue_vif_chart | Stage: blue
                     </div>
-                    
+                </div>
+                
         </div>
     </div>
 
@@ -1750,27 +1758,1328 @@ th {
         
 
     
-            <div class="section card">
-                <h2 class="section-title">Machine Learning Model</h2>
-                <p class="metric-small">No model has been trained yet.</p>
+        <div class="section card">
+            <h2 class="section-title">Machine Learning Model Summary</h2>
+
+            <div class="model-grid">
+                <div class="card">
+                    <h3>Best Algorithm</h3>
+                    <div class="metric">Random Forest Regressor</div>
+                    <div class="metric-small">Selected by AutoDQ</div>
+                </div>
+
+                <div class="card">
+                    <h3>Target</h3>
+                    <div class="metric">Revenue</div>
+                    <div class="metric-small">Prediction target</div>
+                </div>
+
+                <div class="card">
+                    <h3>Features Used</h3>
+                    <div class="metric">25</div>
+                    <div class="metric-small">Training features</div>
+                </div>
+
+                <div class="card">
+                    <h3>Predictions Stored</h3>
+                    <div class="metric">25</div>
+                    <div class="metric-small">Sample predictions</div>
+                </div>
             </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">Model Performance Metrics</h2>
+            <div class="model-grid">
+                
             
+        <div class="chart-card">
+            <div class="chart-title">MAE</div>
+            <div class="metric">43.7047</div>
+        </div>
+        
+            
+        <div class="chart-card">
+            <div class="chart-title">RMSE</div>
+            <div class="metric">419.6172</div>
+        </div>
+        
+            
+        <div class="chart-card">
+            <div class="chart-title">R²</div>
+            <div class="metric">0.8795</div>
+        </div>
+        
+            
+        <div class="chart-card">
+            <div class="chart-title">Problem</div>
+            <div class="metric">regression</div>
+        </div>
+        
+            
+            </div>
+        </div>
+
+        <div class="section two-col">
+            <div class="card">
+                <h2 class="section-title">Model Comparison Leaderboard</h2>
+                
+                <div class="leaderboard-row">
+                    <strong>🥇</strong>
+                    <span>Random Forest Regressor</span>
+                    <strong>r2: 0.8795</strong>
+                </div>
+                
+
+                <div class="leaderboard-row">
+                    <strong>🥈</strong>
+                    <span>Decision Tree Regressor</span>
+                    <strong>r2: 0.8731</strong>
+                </div>
+                
+
+                <div class="leaderboard-row">
+                    <strong>🥉</strong>
+                    <span>Linear Regression</span>
+                    <strong>r2: -0.6994</strong>
+                </div>
+                
+            </div>
+
+            <div class="card">
+                <h2 class="section-title">Top Feature Importance</h2>
+                
+                <div class="importance-row">
+                    <span>Quantity</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>31.7%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>log_unit_price</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:97.62%"></div>
+                    </div>
+                    <strong>30.94%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Unit_Price</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:91.09%"></div>
+                    </div>
+                    <strong>28.87%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Customer_ID_CUST-9350</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:6.94%"></div>
+                    </div>
+                    <strong>2.2%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Customer_ID_CUST-1808</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:4.15%"></div>
+                    </div>
+                    <strong>1.32%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Sales_Channel_Mobile App</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:1.07%"></div>
+                    </div>
+                    <strong>0.34%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Transaction_ID</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:0.9%"></div>
+                    </div>
+                    <strong>0.29%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Customer_Satisfaction</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:0.88%"></div>
+                    </div>
+                    <strong>0.28%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Product_Category_Clothing</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:0.82%"></div>
+                    </div>
+                    <strong>0.26%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Date_month</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:0.8%"></div>
+                    </div>
+                    <strong>0.25%</strong>
+                </div>
+                
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">Model Recommendations</h2>
+            <ul class="recommendation-list">
+                <li>Model performance is strong based on R². Review target leakage before trusting results.</li>
+<li>The most influential feature appears to be 'Quantity'. Review whether it is valid or causes leakage.</li>
+<li>random_forest_regressor was selected as the best model based on r2.</li>
+<li>The top models performed similarly. Compare random_forest_regressor and decision_tree_regressor before final deployment.</li>
+            </ul>
+        </div>
+        
 
     
-            <div class="section card">
-                <h2 class="section-title">Prediction Results (First 20 Records)</h2>
-                <p class="metric-small">No predictions generated yet.</p>
+        <div class="section card">
+            <h2 class="section-title">Prediction Results</h2>
+
+            <div class="grid">
+                <div class="card">
+                    <h3>Predictions</h3>
+                    <div class="metric">100</div>
+                    <div class="metric-small">Stored in report</div>
+                </div>
+
+                <div class="card">
+                    <h3>Target</h3>
+                    <div class="metric">Revenue</div>
+                    <div class="metric-small">Prediction target</div>
+                </div>
+
+                <div class="card">
+                    <h3>Algorithm</h3>
+                    <div class="metric">Random Forest Regressor</div>
+                    <div class="metric-small">Trained model</div>
+                </div>
+
+                <div class="card">
+                    <h3>Problem Type</h3>
+                    <div class="metric">regression</div>
+                    <div class="metric-small">ML task</div>
+                </div>
             </div>
-            
+
+            <table class="prediction-table">
+                <tr>
+                    <th>Row</th>
+                    <th>Actual</th>
+                    <th>Predicted</th>
+                    <th>Residual</th>
+                    <th>Abs Error</th>
+                    <th>% Error</th>
+                    <th>Confidence</th>
+                    <th>Most Important Features</th>
+                </tr>
+                
+                <tr>
+                    <td>0</td>
+                    <td>89.11</td>
+                    <td>90.141</td>
+                    <td>-1.031</td>
+                    <td>1.031</td>
+                    <td>1.157</td>
+                    <td>98.84%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>1</td>
+                    <td>284.09</td>
+                    <td>284.8416</td>
+                    <td>-0.7516</td>
+                    <td>0.7516</td>
+                    <td>0.2646</td>
+                    <td>98.9%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>2</td>
+                    <td>31.98</td>
+                    <td>31.7942</td>
+                    <td>0.1858</td>
+                    <td>0.1858</td>
+                    <td>0.581</td>
+                    <td>98.9%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>3</td>
+                    <td>199.58</td>
+                    <td>200.3891</td>
+                    <td>-0.8091</td>
+                    <td>0.8091</td>
+                    <td>0.4054</td>
+                    <td>98.9%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>4</td>
+                    <td>209.53</td>
+                    <td>211.1849</td>
+                    <td>-1.6549</td>
+                    <td>1.6549</td>
+                    <td>0.7898</td>
+                    <td>98.9%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>5</td>
+                    <td>37.6</td>
+                    <td>37.8676</td>
+                    <td>-0.2676</td>
+                    <td>0.2676</td>
+                    <td>0.7117</td>
+                    <td>98.9%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>6</td>
+                    <td>168.62</td>
+                    <td>165.0722</td>
+                    <td>3.5478</td>
+                    <td>3.5478</td>
+                    <td>2.104</td>
+                    <td>97.9%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>7</td>
+                    <td>83.0</td>
+                    <td>83.2689</td>
+                    <td>-0.2689</td>
+                    <td>0.2689</td>
+                    <td>0.324</td>
+                    <td>98.9%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>8</td>
+                    <td>10.22</td>
+                    <td>10.8813</td>
+                    <td>-0.6613</td>
+                    <td>0.6613</td>
+                    <td>6.4706</td>
+                    <td>93.53%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>9</td>
+                    <td>5065.55</td>
+                    <td>4938.8283</td>
+                    <td>126.7217</td>
+                    <td>126.7217</td>
+                    <td>2.5016</td>
+                    <td>97.5%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>10</td>
+                    <td>143.3</td>
+                    <td>143.0814</td>
+                    <td>0.2186</td>
+                    <td>0.2186</td>
+                    <td>0.1525</td>
+                    <td>98.9%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>11</td>
+                    <td>239.42</td>
+                    <td>237.7151</td>
+                    <td>1.7049</td>
+                    <td>1.7049</td>
+                    <td>0.7121</td>
+                    <td>98.9%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>12</td>
+                    <td>192.53</td>
+                    <td>192.4655</td>
+                    <td>0.0645</td>
+                    <td>0.0645</td>
+                    <td>0.0335</td>
+                    <td>98.9%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>13</td>
+                    <td>9.49</td>
+                    <td>10.0921</td>
+                    <td>-0.6021</td>
+                    <td>0.6021</td>
+                    <td>6.3446</td>
+                    <td>93.66%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>14</td>
+                    <td>249.49</td>
+                    <td>249.6594</td>
+                    <td>-0.1694</td>
+                    <td>0.1694</td>
+                    <td>0.0679</td>
+                    <td>98.9%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>15</td>
+                    <td>1346.29</td>
+                    <td>1305.775</td>
+                    <td>40.515</td>
+                    <td>40.515</td>
+                    <td>3.0094</td>
+                    <td>96.99%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>16</td>
+                    <td>92.68</td>
+                    <td>93.2932</td>
+                    <td>-0.6132</td>
+                    <td>0.6132</td>
+                    <td>0.6616</td>
+                    <td>98.9%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>17</td>
+                    <td>44.62</td>
+                    <td>46.5668</td>
+                    <td>-1.9468</td>
+                    <td>1.9468</td>
+                    <td>4.3631</td>
+                    <td>95.64%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>18</td>
+                    <td>107.39</td>
+                    <td>107.6243</td>
+                    <td>-0.2343</td>
+                    <td>0.2343</td>
+                    <td>0.2182</td>
+                    <td>98.9%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+                <tr>
+                    <td>19</td>
+                    <td>135.35</td>
+                    <td>129.3347</td>
+                    <td>6.0153</td>
+                    <td>6.0153</td>
+                    <td>4.4443</td>
+                    <td>95.56%</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                </tr>
+                
+            </table>
+        </div>
+        
 
     
-            <div class="section card">
-                <h2 class="section-title">Model Explainability</h2>
-                <p class="metric-small">
-                    No explainability report has been generated.
-                </p>
+        <div class="section card">
+            <h2 class="section-title">Model Explainability</h2>
+
+            <div class="grid">
+                <div class="card">
+                    <h3>Method</h3>
+                    <div class="metric">Shap Tree Explainer</div>
+                    <div class="metric-small">Explanation method</div>
+                </div>
+
+                <div class="card">
+                    <h3>Rows Explained</h3>
+                    <div class="metric">20</div>
+                    <div class="metric-small">Stored row explanations</div>
+                </div>
+
+                <div class="card">
+                    <h3>Global Features</h3>
+                    <div class="metric">10</div>
+                    <div class="metric-small">Ranked model features</div>
+                </div>
+
+                <div class="card">
+                    <h3>Status</h3>
+                    <div class="metric">SHAP Active</div>
+                    <div class="metric-small">Explainability status</div>
+                </div>
             </div>
-            
+        </div>
+
+        <div class="section two-col">
+            <div class="card">
+                <h2 class="section-title">Global SHAP Feature Contributions</h2>
+                
+                <div class="importance-row">
+                    <span>Quantity</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:35.49%"
+                        ></div>
+                    </div>
+                    <strong>35.49%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>log_unit_price</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:30.98%"
+                        ></div>
+                    </div>
+                    <strong>30.98%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>Unit_Price</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:29.3%"
+                        ></div>
+                    </div>
+                    <strong>29.3%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>Discount_Rate</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:1.19%"
+                        ></div>
+                    </div>
+                    <strong>1.19%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>Customer_Age</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:0.29%"
+                        ></div>
+                    </div>
+                    <strong>0.29%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>Product_Laptop</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:0.21%"
+                        ></div>
+                    </div>
+                    <strong>0.21%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>Product_Category_Clothing</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:0.19%"
+                        ></div>
+                    </div>
+                    <strong>0.19%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>Customer_Age_customer</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:0.13%"
+                        ></div>
+                    </div>
+                    <strong>0.13%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>Date_month</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:0.13%"
+                        ></div>
+                    </div>
+                    <strong>0.13%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>Customer_Satisfaction</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:0.09%"
+                        ></div>
+                    </div>
+                    <strong>0.09%</strong>
+                </div>
+                
+            </div>
+
+            <div class="card">
+                <h2 class="section-title">Explainability Notes</h2>
+                <ul class="recommendation-list">
+                    <li>Identifier-like transformed features were excluded from the displayed explanations.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">Sample Row-Level SHAP Explanations</h2>
+
+            <table>
+                <tr>
+                    <th>Row</th>
+                    <th>Prediction</th>
+                    <th>Base Value</th>
+                    <th>Top Contributions</th>
+                    <th>Increasing Features</th>
+                    <th>Decreasing Features</th>
+                    <th>Explanation</th>
+                </tr>
+                
+                <tr>
+                    <td>0</td>
+                    <td>90.141</td>
+                    <td>509.994</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Quantity
+                        </span>
+                        <span>
+                            = 1.0
+                            | SHAP: -205.639862
+                             (48.52%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - log_unit_price
+                        </span>
+                        <span>
+                            = 4.661834033105633
+                            | SHAP: -110.193117
+                             (26.0%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Unit_Price
+                        </span>
+                        <span>
+                            = 104.83
+                            | SHAP: -86.985266
+                             (20.53%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Discount_Rate
+                        </span>
+                        <span>
+                            = 0.15
+                            | SHAP: -13.765529
+                             (3.25%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Delivery_Days
+                        </span>
+                        <span>
+                            = 4.0
+                            | SHAP: -0.236191
+                             (0.06%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>-</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                    <td>The model predicted 90.14099999999995. The strongest decreasing influences were Quantity, log_unit_price, Unit_Price.</td>
+                </tr>
+                
+                <tr>
+                    <td>1</td>
+                    <td>284.8416</td>
+                    <td>509.994</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Quantity
+                        </span>
+                        <span>
+                            = 5.0
+                            | SHAP: 345.825521
+                             (36.51%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - log_unit_price
+                        </span>
+                        <span>
+                            = 4.160912273160772
+                            | SHAP: -290.085277
+                             (30.62%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Unit_Price
+                        </span>
+                        <span>
+                            = 63.13
+                            | SHAP: -279.578602
+                             (29.51%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Product_Category_Clothing
+                        </span>
+                        <span>
+                            = 1.0
+                            | SHAP: 9.117354
+                             (0.96%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Discount_Rate
+                        </span>
+                        <span>
+                            = 0.1
+                            | SHAP: -6.996046
+                             (0.74%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>Quantity, Product_Category_Clothing</td>
+                    <td>log_unit_price, Unit_Price, Discount_Rate</td>
+                    <td>The model predicted 284.8416000000001. The strongest increasing influences were Quantity, Product_Category_Clothing. The strongest decreasing influences were log_unit_price, Unit_Price, Discount_Rate.</td>
+                </tr>
+                
+                <tr>
+                    <td>2</td>
+                    <td>31.7942</td>
+                    <td>509.994</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-negative">
+                            - log_unit_price
+                        </span>
+                        <span>
+                            = 2.8326249356838407
+                            | SHAP: -229.333684
+                             (45.79%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Unit_Price
+                        </span>
+                        <span>
+                            = 15.99
+                            | SHAP: -220.685874
+                             (44.06%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Quantity
+                        </span>
+                        <span>
+                            = 2.0
+                            | SHAP: -34.434389
+                             (6.88%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Discount_Rate
+                        </span>
+                        <span>
+                            = 0.0
+                            | SHAP: 9.108935
+                             (1.82%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Customer_Satisfaction
+                        </span>
+                        <span>
+                            = 5.0
+                            | SHAP: 0.45207
+                             (0.09%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>Discount_Rate, Customer_Satisfaction</td>
+                    <td>log_unit_price, Unit_Price, Quantity</td>
+                    <td>The model predicted 31.794200000000004. The strongest increasing influences were Discount_Rate, Customer_Satisfaction. The strongest decreasing influences were log_unit_price, Unit_Price, Quantity.</td>
+                </tr>
+                
+                <tr>
+                    <td>3</td>
+                    <td>200.3891</td>
+                    <td>509.994</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Quantity
+                        </span>
+                        <span>
+                            = 12.0
+                            | SHAP: 773.637717
+                             (41.11%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - log_unit_price
+                        </span>
+                        <span>
+                            = 2.969388298214389
+                            | SHAP: -559.439097
+                             (29.73%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Unit_Price
+                        </span>
+                        <span>
+                            = 18.48
+                            | SHAP: -521.042238
+                             (27.69%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Discount_Rate
+                        </span>
+                        <span>
+                            = 0.1
+                            | SHAP: -3.976364
+                             (0.21%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Customer_Age_customer
+                        </span>
+                        <span>
+                            = 52.0
+                            | SHAP: 2.144545
+                             (0.11%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>Quantity, Customer_Age_customer</td>
+                    <td>log_unit_price, Unit_Price, Discount_Rate</td>
+                    <td>The model predicted 200.38910000000016. The strongest increasing influences were Quantity, Customer_Age_customer. The strongest decreasing influences were log_unit_price, Unit_Price, Discount_Rate.</td>
+                </tr>
+                
+                <tr>
+                    <td>4</td>
+                    <td>211.1849</td>
+                    <td>509.994</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-negative">
+                            - log_unit_price
+                        </span>
+                        <span>
+                            = 4.311067545733388
+                            | SHAP: -206.869476
+                             (42.06%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Unit_Price
+                        </span>
+                        <span>
+                            = 73.52
+                            | SHAP: -182.511168
+                             (37.11%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Quantity
+                        </span>
+                        <span>
+                            = 3.0
+                            | SHAP: 87.157548
+                             (17.72%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Discount_Rate
+                        </span>
+                        <span>
+                            = 0.05
+                            | SHAP: 4.920501
+                             (1.0%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Product_Category_Clothing
+                        </span>
+                        <span>
+                            = 1.0
+                            | SHAP: 1.472091
+                             (0.3%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>Quantity, Discount_Rate, Product_Category_Clothing</td>
+                    <td>log_unit_price, Unit_Price</td>
+                    <td>The model predicted 211.18489999999994. The strongest increasing influences were Quantity, Discount_Rate, Product_Category_Clothing. The strongest decreasing influences were log_unit_price, Unit_Price.</td>
+                </tr>
+                
+                <tr>
+                    <td>5</td>
+                    <td>37.8676</td>
+                    <td>509.994</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Quantity
+                        </span>
+                        <span>
+                            = 1.0
+                            | SHAP: -165.903395
+                             (34.72%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - log_unit_price
+                        </span>
+                        <span>
+                            = 3.7560707036542595
+                            | SHAP: -154.256579
+                             (32.28%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Unit_Price
+                        </span>
+                        <span>
+                            = 41.78
+                            | SHAP: -146.707829
+                             (30.7%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Discount_Rate
+                        </span>
+                        <span>
+                            = 0.1
+                            | SHAP: -3.535044
+                             (0.74%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Product_Category_Beauty
+                        </span>
+                        <span>
+                            = 1.0
+                            | SHAP: 0.757843
+                             (0.16%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>Product_Category_Beauty</td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                    <td>The model predicted 37.86759999999995. The strongest increasing influences were Product_Category_Beauty. The strongest decreasing influences were Quantity, log_unit_price, Unit_Price.</td>
+                </tr>
+                
+                <tr>
+                    <td>6</td>
+                    <td>165.0722</td>
+                    <td>509.994</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-negative">
+                            - log_unit_price
+                        </span>
+                        <span>
+                            = 3.597312260588446
+                            | SHAP: -330.938247
+                             (33.5%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Unit_Price
+                        </span>
+                        <span>
+                            = 35.5
+                            | SHAP: -323.788598
+                             (32.78%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Quantity
+                        </span>
+                        <span>
+                            = 5.0
+                            | SHAP: 310.841884
+                             (31.47%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Discount_Rate
+                        </span>
+                        <span>
+                            = 0.05
+                            | SHAP: 4.999032
+                             (0.51%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Product_Laptop
+                        </span>
+                        <span>
+                            = 0.0
+                            | SHAP: -0.937881
+                             (0.09%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>Quantity, Discount_Rate</td>
+                    <td>log_unit_price, Unit_Price, Product_Laptop</td>
+                    <td>The model predicted 165.07220000000027. The strongest increasing influences were Quantity, Discount_Rate. The strongest decreasing influences were log_unit_price, Unit_Price, Product_Laptop.</td>
+                </tr>
+                
+                <tr>
+                    <td>7</td>
+                    <td>83.2689</td>
+                    <td>509.994</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-negative">
+                            - log_unit_price
+                        </span>
+                        <span>
+                            = 3.85248529271195
+                            | SHAP: -190.11844
+                             (43.67%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Unit_Price
+                        </span>
+                        <span>
+                            = 46.11
+                            | SHAP: -180.98932
+                             (41.57%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Quantity
+                        </span>
+                        <span>
+                            = 2.0
+                            | SHAP: -49.685794
+                             (11.41%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Discount_Rate
+                        </span>
+                        <span>
+                            = 0.1
+                            | SHAP: -5.323358
+                             (1.22%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Product_Category_Clothing
+                        </span>
+                        <span>
+                            = 1.0
+                            | SHAP: 1.474278
+                             (0.34%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>Product_Category_Clothing</td>
+                    <td>log_unit_price, Unit_Price, Quantity</td>
+                    <td>The model predicted 83.26889999999999. The strongest increasing influences were Product_Category_Clothing. The strongest decreasing influences were log_unit_price, Unit_Price, Quantity.</td>
+                </tr>
+                
+                <tr>
+                    <td>8</td>
+                    <td>10.8813</td>
+                    <td>509.994</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-negative">
+                            - log_unit_price
+                        </span>
+                        <span>
+                            = 2.464703942470481
+                            | SHAP: -184.015396
+                             (36.09%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Unit_Price
+                        </span>
+                        <span>
+                            = 10.76
+                            | SHAP: -177.368621
+                             (34.78%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Quantity
+                        </span>
+                        <span>
+                            = 1.0
+                            | SHAP: -138.599436
+                             (27.18%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Discount_Rate
+                        </span>
+                        <span>
+                            = 0.05
+                            | SHAP: 3.169803
+                             (0.62%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Customer_Age
+                        </span>
+                        <span>
+                            = 18.0
+                            | SHAP: 0.385338
+                             (0.08%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>Discount_Rate, Customer_Age</td>
+                    <td>log_unit_price, Unit_Price, Quantity</td>
+                    <td>The model predicted 10.881299999999996. The strongest increasing influences were Discount_Rate, Customer_Age. The strongest decreasing influences were log_unit_price, Unit_Price, Quantity.</td>
+                </tr>
+                
+                <tr>
+                    <td>9</td>
+                    <td>4938.8283</td>
+                    <td>509.994</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Quantity
+                        </span>
+                        <span>
+                            = 5.0
+                            | SHAP: 1730.756511
+                             (38.06%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + log_unit_price
+                        </span>
+                        <span>
+                            = 6.921766659529789
+                            | SHAP: 1302.479367
+                             (28.64%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Unit_Price
+                        </span>
+                        <span>
+                            = 1013.11
+                            | SHAP: 1246.336691
+                             (27.41%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Customer_Age
+                        </span>
+                        <span>
+                            = 20.0
+                            | SHAP: 39.502892
+                             (0.87%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Discount_Rate
+                        </span>
+                        <span>
+                            = 0.0
+                            | SHAP: 33.632294
+                             (0.74%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>Quantity, log_unit_price, Unit_Price</td>
+                    <td>-</td>
+                    <td>The model predicted 4938.828299999996. The strongest increasing influences were Quantity, log_unit_price, Unit_Price.</td>
+                </tr>
+                
+            </table>
+        </div>
+        
 
     <div class="section card">
         <h2 class="section-title">Issue Breakdown</h2>

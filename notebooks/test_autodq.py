@@ -345,6 +345,11 @@ project.generate_report(
 )
 
 project.generate_report(
+    "reports/autodq_blue_visuals.html",
+    style="executive",
+)
+
+project.generate_report(
     "reports/autodq_print.html",
     style="print",
 )
