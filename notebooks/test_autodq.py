@@ -226,6 +226,10 @@ blue_visuals = project.visualize_blue(
 
 )
 
+project.visualize_blue()
+project.interpret_blue_visuals()
+project.show_blue_visual_insights()
+
 print(
 
     "BLUE charts generated:",

@@ -75,6 +75,7 @@ class BLUEReport:
     vif_results: list[VIFResult] = field(default_factory=list)
     recommendations: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    visual_insights: list = field(default_factory=list)
     generated_at: datetime = field(default_factory=datetime.now)
 
     @property
@@ -120,5 +121,11 @@ class BLUEReport:
             ],
             "recommendations": self.recommendations,
             "warnings": self.warnings,
+            "visual_insights": [
+                insight.to_dict()
+                if hasattr(insight, "to_dict")
+                else insight
+                for insight in self.visual_insights
+         ],
             "generated_at": self.generated_at.isoformat(),
         }

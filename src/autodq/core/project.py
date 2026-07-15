@@ -46,7 +46,7 @@ from autodq.renderers.console.blue import ConsoleBLUERenderer
 from autodq.visualization.gallery import VisualizationGallery
 from autodq.visualization.notebook_renderer import (NotebookVisualizationRenderer,)
 from autodq.blue.visualizer import (BLUEVisualizationReport,BLUEVisualizer,)
-
+from autodq.blue.visual_interpreter import (BLUEVisualInterpreter,)
 
 
 class AutoDQ:
@@ -79,6 +79,7 @@ class AutoDQ:
         self.dataset_merger = DatasetMerger()
         self.blue_engine = BLUEEngine()
         self.blue_visualizer = BLUEVisualizer()
+        self.blue_visual_interpreter = BLUEVisualInterpreter()
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
         self.dataset_manager.add(
@@ -1546,7 +1547,48 @@ class AutoDQ:
         )
 
         return blue_visualization_report
+    def interpret_blue_visuals(self):
+        if self.state.blue_report is None:
+            self.blue()
 
+        self.state.blue_report.visual_insights = (
+            self.blue_visual_interpreter.interpret(
+                blue_report=self.state.blue_report,
+            )
+        )
+
+        self.session.log(
+            step="interpret_blue_visuals",
+            message="BLUE visual diagnostics interpreted.",
+            metadata={
+                "insight_count": len(
+                    self.state.blue_report.visual_insights
+                ),
+            },
+        )
+
+        return self.state.blue_report.visual_insights
+    
+    def show_blue_visual_insights(self) -> None:
+        if self.state.blue_report is None:
+            self.blue()
+
+        if not self.state.blue_report.visual_insights:
+            self.interpret_blue_visuals()
+
+        print("\n=== AutoDQ BLUE Visual Insights ===\n")
+
+        for insight in self.state.blue_report.visual_insights:
+            print(f"{insight.title}")
+            print(f"  Status: {insight.status}")
+            print(f"  Interpretation: {insight.interpretation}")
+            print(f"  Recommendation: {insight.recommendation}")
+            print(
+                f"  Confidence: "
+                f"{round(insight.confidence * 100, 2)}%"
+            )
+            print()
+    
 
     def show_knowledge(self) -> None:
         if not self.state.knowledge_rules:
