@@ -169,8 +169,10 @@ class BLUEVisualizer:
             chart_type="blue_residuals_vs_fitted",
             title="Residuals vs Fitted Values",
             description=(
-                "Assesses linearity and constant residual variance. "
-                "A random horizontal pattern around zero is preferred."
+                "Assesses linearity and homoscedasticity. "
+                "A random horizontal spread around zero is preferred. "
+                "See the BLUE Diagnostic Visual Insights section for "
+                "the automated interpretation."
             ),
             stage="blue",
             data=data,
@@ -212,9 +214,9 @@ class BLUEVisualizer:
             chart_type="blue_qq_plot",
             title="Residual Q–Q Plot",
             description=(
-                "Compares observed residual quantiles with a normal "
-                "distribution. Points close to a straight line support "
-                "residual normality."
+                "Compares residual quantiles with a theoretical normal "
+                "distribution. Points near the reference line support "
+                "normality. See the automated BLUE interpretation below."
             ),
             stage="blue",
             data=data,
@@ -248,8 +250,9 @@ class BLUEVisualizer:
             chart_type="blue_cooks_distance",
             title="Cook’s Distance",
             description=(
-                "Identifies observations that exert unusual influence "
-                "on fitted regression coefficients."
+                "Identifies observations that exert unusually strong "
+                "influence on the fitted regression coefficients. "
+                "See the BLUE visual insight for recommended action."
             ),
             stage="blue",
             data=data,
@@ -274,8 +277,9 @@ class BLUEVisualizer:
             chart_type="blue_vif_chart",
             title="Variance Inflation Factors",
             description=(
-                "Higher VIF values indicate stronger multicollinearity. "
-                "Values above 5 require review; values above 10 are severe."
+                "Displays predictor multicollinearity. VIF above 5 "
+                "requires review and values above 10 indicate severe "
+                "multicollinearity. See the automated interpretation."
             ),
             stage="blue",
             data=data,

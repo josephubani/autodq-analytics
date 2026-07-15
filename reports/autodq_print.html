@@ -582,7 +582,7 @@ th {
         <div class="meta">
             <span>Dataset: sales_with_customers.in_memory</span>
             <span>Style: print</span>
-            <span>Generated: 2026-07-15 19:42:21</span>
+            <span>Generated: 2026-07-15 19:58:34</span>
         </div>
     </div>
 
@@ -926,7 +926,7 @@ th {
 
                 <div class="rendered-viz-card">
                     <div class="viz-title">Residuals vs Fitted Values</div>
-                    <div class="viz-description">Assesses linearity and constant residual variance. A random horizontal pattern around zero is preferred.</div>
+                    <div class="viz-description">Assesses linearity and homoscedasticity. A random horizontal spread around zero is preferred. See the BLUE Diagnostic Visual Insights section for the automated interpretation.</div>
                     <img src="charts/blue_residuals_vs_fitted.png" alt="Residuals vs Fitted Values">
                     <div class="viz-meta">
                         Chart ID: blue_residuals_vs_fitted | Type: blue_residuals_vs_fitted | Stage: blue
@@ -936,7 +936,7 @@ th {
 
                 <div class="rendered-viz-card">
                     <div class="viz-title">Residual Q–Q Plot</div>
-                    <div class="viz-description">Compares observed residual quantiles with a normal distribution. Points close to a straight line support residual normality.</div>
+                    <div class="viz-description">Compares residual quantiles with a theoretical normal distribution. Points near the reference line support normality. See the automated BLUE interpretation below.</div>
                     <img src="charts/blue_qq_plot.png" alt="Residual Q–Q Plot">
                     <div class="viz-meta">
                         Chart ID: blue_qq_plot | Type: blue_qq_plot | Stage: blue
@@ -946,7 +946,7 @@ th {
 
                 <div class="rendered-viz-card">
                     <div class="viz-title">Cook’s Distance</div>
-                    <div class="viz-description">Identifies observations that exert unusual influence on fitted regression coefficients.</div>
+                    <div class="viz-description">Identifies observations that exert unusually strong influence on the fitted regression coefficients. See the BLUE visual insight for recommended action.</div>
                     <img src="charts/blue_cooks_distance.png" alt="Cook’s Distance">
                     <div class="viz-meta">
                         Chart ID: blue_cooks_distance | Type: blue_cooks_distance | Stage: blue
@@ -956,7 +956,7 @@ th {
 
                 <div class="rendered-viz-card">
                     <div class="viz-title">Variance Inflation Factors</div>
-                    <div class="viz-description">Higher VIF values indicate stronger multicollinearity. Values above 5 require review; values above 10 are severe.</div>
+                    <div class="viz-description">Displays predictor multicollinearity. VIF above 5 requires review and values above 10 indicate severe multicollinearity. See the automated interpretation.</div>
                     <img src="charts/blue_vif_chart.png" alt="Variance Inflation Factors">
                     <div class="viz-meta">
                         Chart ID: blue_vif_chart | Type: blue_vif_chart | Stage: blue
@@ -1254,7 +1254,7 @@ th {
 
         <div class="viz-card">
             <div class="viz-title">Residuals vs Fitted Values</div>
-            <div class="viz-description">Assesses linearity and constant residual variance. A random horizontal pattern around zero is preferred.</div>
+            <div class="viz-description">Assesses linearity and homoscedasticity. A random horizontal spread around zero is preferred. See the BLUE Diagnostic Visual Insights section for the automated interpretation.</div>
             <p class='viz-description'>Unsupported chart preview.</p>
             <div class="viz-meta">
                 Chart ID: blue_residuals_vs_fitted | Type: blue_residuals_vs_fitted | Stage: blue
@@ -1264,7 +1264,7 @@ th {
 
         <div class="viz-card">
             <div class="viz-title">Residual Q–Q Plot</div>
-            <div class="viz-description">Compares observed residual quantiles with a normal distribution. Points close to a straight line support residual normality.</div>
+            <div class="viz-description">Compares residual quantiles with a theoretical normal distribution. Points near the reference line support normality. See the automated BLUE interpretation below.</div>
             <p class='viz-description'>Unsupported chart preview.</p>
             <div class="viz-meta">
                 Chart ID: blue_qq_plot | Type: blue_qq_plot | Stage: blue
@@ -1274,7 +1274,7 @@ th {
 
         <div class="viz-card">
             <div class="viz-title">Cook’s Distance</div>
-            <div class="viz-description">Identifies observations that exert unusual influence on fitted regression coefficients.</div>
+            <div class="viz-description">Identifies observations that exert unusually strong influence on the fitted regression coefficients. See the BLUE visual insight for recommended action.</div>
             <p class='viz-description'>Unsupported chart preview.</p>
             <div class="viz-meta">
                 Chart ID: blue_cooks_distance | Type: blue_cooks_distance | Stage: blue
@@ -1284,7 +1284,7 @@ th {
 
         <div class="viz-card">
             <div class="viz-title">Variance Inflation Factors</div>
-            <div class="viz-description">Higher VIF values indicate stronger multicollinearity. Values above 5 require review; values above 10 are severe.</div>
+            <div class="viz-description">Displays predictor multicollinearity. VIF above 5 requires review and values above 10 indicate severe multicollinearity. See the automated interpretation.</div>
             <p class='viz-description'>Unsupported chart preview.</p>
             <div class="viz-meta">
                 Chart ID: blue_vif_chart | Type: blue_vif_chart | Stage: blue
@@ -1547,6 +1547,122 @@ th {
                     <div class="blue-detail">
                         <strong>Recommendation:</strong>
                         Predictor collinearity appears acceptable.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Confidence:</strong>
+                        95.0%
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">BLUE Diagnostic Visual Insights</h2>
+
+            <div class="blue-assumption-grid">
+                
+                <div class="blue-assumption-card">
+                    <div class="blue-assumption-header">
+                        <div class="blue-assumption-name">
+                            Residuals vs Fitted Values
+                        </div>
+
+                        <span class="badge blue-status-failed">
+                            Failed
+                        </span>
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Interpretation:</strong>
+                        The residual-versus-fitted diagnostics indicate that the linear model may contain nonlinear structure, non-constant variance, or both.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Recommendation:</strong>
+                        Consider transforming the target, adding polynomial or interaction terms, using weighted least squares, robust standard errors, or selecting a nonlinear model.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Confidence:</strong>
+                        90.0%
+                    </div>
+                </div>
+                
+                <div class="blue-assumption-card">
+                    <div class="blue-assumption-header">
+                        <div class="blue-assumption-name">
+                            Residual Q-Q Plot
+                        </div>
+
+                        <span class="badge blue-status-failed">
+                            Failed
+                        </span>
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Interpretation:</strong>
+                        The residual distribution differs substantially from normality. The Q-Q plot is expected to show deviations, particularly in the tails.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Recommendation:</strong>
+                        Review extreme observations, transform skewed variables or the target, and consider robust standard errors or robust regression.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Confidence:</strong>
+                        92.0%
+                    </div>
+                </div>
+                
+                <div class="blue-assumption-card">
+                    <div class="blue-assumption-header">
+                        <div class="blue-assumption-name">
+                            Cook's Distance
+                        </div>
+
+                        <span class="badge blue-status-warning">
+                            Warning
+                        </span>
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Interpretation:</strong>
+                        88 potentially influential observation(s) were detected.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Recommendation:</strong>
+                        Review the highest Cook's-distance observations before interpreting coefficient estimates.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Confidence:</strong>
+                        90.0%
+                    </div>
+                </div>
+                
+                <div class="blue-assumption-card">
+                    <div class="blue-assumption-header">
+                        <div class="blue-assumption-name">
+                            Variance Inflation Factors
+                        </div>
+
+                        <span class="badge blue-status-passed">
+                            Passed
+                        </span>
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Interpretation:</strong>
+                        All available VIF values are below the moderate-risk threshold of 5.
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Recommendation:</strong>
+                        Predictor multicollinearity appears acceptable.
                     </div>
 
                     <div class="blue-detail">
@@ -2660,7 +2776,7 @@ th {
                     </td>
                     <td>Quantity, Customer_Age_customer</td>
                     <td>log_unit_price, Unit_Price, Discount_Rate</td>
-                    <td>The model predicted 200.38910000000016. The strongest increasing influences were Quantity, Customer_Age_customer. The strongest decreasing influences were log_unit_price, Unit_Price, Discount_Rate.</td>
+                    <td>The model predicted 200.3891000000001. The strongest increasing influences were Quantity, Customer_Age_customer. The strongest decreasing influences were log_unit_price, Unit_Price, Discount_Rate.</td>
                 </tr>
                 
                 <tr>
@@ -2729,7 +2845,7 @@ th {
                     </td>
                     <td>Quantity, Discount_Rate, Product_Category_Clothing</td>
                     <td>log_unit_price, Unit_Price</td>
-                    <td>The model predicted 211.18489999999994. The strongest increasing influences were Quantity, Discount_Rate, Product_Category_Clothing. The strongest decreasing influences were log_unit_price, Unit_Price.</td>
+                    <td>The model predicted 211.18490000000003. The strongest increasing influences were Quantity, Discount_Rate, Product_Category_Clothing. The strongest decreasing influences were log_unit_price, Unit_Price.</td>
                 </tr>
                 
                 <tr>
@@ -3005,7 +3121,7 @@ th {
                     </td>
                     <td>Discount_Rate, Customer_Age</td>
                     <td>log_unit_price, Unit_Price, Quantity</td>
-                    <td>The model predicted 10.881299999999996. The strongest increasing influences were Discount_Rate, Customer_Age. The strongest decreasing influences were log_unit_price, Unit_Price, Quantity.</td>
+                    <td>The model predicted 10.8813. The strongest increasing influences were Discount_Rate, Customer_Age. The strongest decreasing influences were log_unit_price, Unit_Price, Quantity.</td>
                 </tr>
                 
                 <tr>
@@ -3074,7 +3190,7 @@ th {
                     </td>
                     <td>Quantity, log_unit_price, Unit_Price</td>
                     <td>-</td>
-                    <td>The model predicted 4938.828299999996. The strongest increasing influences were Quantity, log_unit_price, Unit_Price.</td>
+                    <td>The model predicted 4938.828299999995. The strongest increasing influences were Quantity, log_unit_price, Unit_Price.</td>
                 </tr>
                 
             </table>

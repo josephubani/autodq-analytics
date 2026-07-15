@@ -1658,6 +1658,62 @@ th {{
             for warning in blue.warnings
         )
 
+        visual_insight_cards = []
+
+        for insight in getattr(blue, "visual_insights", []):
+            status = str(
+                getattr(insight, "status", "warning")
+            ).lower()
+
+            title = getattr(
+                insight,
+                "title",
+                "BLUE Diagnostic Insight",
+            )
+
+            confidence = round(
+                float(
+                    getattr(
+                        insight,
+                        "confidence",
+                        0,
+                    )
+                )
+                * 100,
+                2,
+            )
+
+            visual_insight_cards.append(
+                f"""
+                <div class="blue-assumption-card">
+                    <div class="blue-assumption-header">
+                        <div class="blue-assumption-name">
+                            {title}
+                        </div>
+
+                        <span class="badge blue-status-{status}">
+                            {status.title()}
+                        </span>
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Interpretation:</strong>
+                        {getattr(insight, "interpretation", "-")}
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Recommendation:</strong>
+                        {getattr(insight, "recommendation", "-")}
+                    </div>
+
+                    <div class="blue-detail">
+                        <strong>Confidence:</strong>
+                        {confidence}%
+                    </div>
+                </div>
+                """
+            )
+
         return f"""
         <div class="section card">
             <h2 class="section-title">BLUE Regression Diagnostics</h2>
@@ -1709,6 +1765,23 @@ th {{
             <h2 class="section-title">Assumption Results</h2>
             <div class="blue-assumption-grid">
                 {"".join(assumption_cards)}
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">BLUE Diagnostic Visual Insights</h2>
+
+            <div class="blue-assumption-grid">
+                {
+                    "".join(visual_insight_cards)
+                    or """
+                    <p class="metric-small">
+                        No BLUE visual interpretations are available.
+                        Run project.interpret_blue_visuals() before
+                        generating the report.
+                    </p>
+                    """
+                }
             </div>
         </div>
 

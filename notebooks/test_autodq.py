@@ -226,7 +226,7 @@ blue_visuals = project.visualize_blue(
 
 )
 
-project.visualize_blue()
+project.visualize_blue(display=True,)
 project.interpret_blue_visuals()
 project.show_blue_visual_insights()
 
@@ -346,7 +346,10 @@ project.generate_report(
     "reports/autodq_print.html",
     style="print",
 )
-
+project.generate_report(
+    "reports/autodq_blue_complete.html",
+    style="executive",
+)
 
 # 24. SESSION SUMMARY
 
