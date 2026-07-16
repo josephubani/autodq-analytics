@@ -76,6 +76,7 @@ class BLUEReport:
     recommendations: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     visual_insights: list = field(default_factory=list)
+    prescriptions: list = field(default_factory=list)
     generated_at: datetime = field(default_factory=datetime.now)
 
     @property
@@ -127,5 +128,11 @@ class BLUEReport:
                 else insight
                 for insight in self.visual_insights
          ],
+            "prescriptions": [
+                prescription.to_dict()
+                if hasattr(prescription, "to_dict")
+                else prescription
+                for prescription in self.prescriptions
+            ],
             "generated_at": self.generated_at.isoformat(),
         }

@@ -47,6 +47,7 @@ from autodq.visualization.gallery import VisualizationGallery
 from autodq.visualization.notebook_renderer import (NotebookVisualizationRenderer,)
 from autodq.blue.visualizer import (BLUEVisualizationReport,BLUEVisualizer,)
 from autodq.blue.visual_interpreter import (BLUEVisualInterpreter,)
+from autodq.blue.prescriptions import BLUEPrescriptionEngine
 
 
 class AutoDQ:
@@ -80,6 +81,7 @@ class AutoDQ:
         self.blue_engine = BLUEEngine()
         self.blue_visualizer = BLUEVisualizer()
         self.blue_visual_interpreter = BLUEVisualInterpreter()
+        self.blue_prescription_engine = BLUEPrescriptionEngine()
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
         self.dataset_manager.add(
@@ -1603,6 +1605,54 @@ class AutoDQ:
                 f"{round(insight.confidence * 100, 2)}%"
             )
             print()
+            
+                
+    def prescribe_blue(self):
+        if self.state.blue_report is None:
+            self.blue()
+
+        self.state.blue_report.prescriptions = (
+            self.blue_prescription_engine.prescribe(
+                self.state.blue_report
+            )
+        )
+
+        self.session.log(
+            step="prescribe_blue",
+            message="BLUE diagnostic prescriptions generated.",
+            metadata={
+                "prescription_count": len(
+                    self.state.blue_report.prescriptions
+                ),
+            },
+        )
+
+        return self.state.blue_report.prescriptions
+
+
+    def show_blue_prescriptions(self) -> None:
+        if self.state.blue_report is None:
+            self.blue()
+
+        if not self.state.blue_report.prescriptions:
+            self.prescribe_blue()
+
+        print("\n=== AutoDQ BLUE Prescriptions ===\n")
+
+        for index, item in enumerate(
+            self.state.blue_report.prescriptions,
+            start=1,
+        ):
+            print(f"{index}. {item.action}")
+            print(f"   Category: {item.category}")
+            print(f"   Priority: {item.priority}")
+            print(f"   Reason: {item.reason}")
+            print(f"   Recommendation: {item.recommendation}")
+            print(
+                f"   Confidence: "
+                f"{round(item.confidence * 100, 2)}%"
+            )
+            print()    
     
 
     def show_knowledge(self) -> None:

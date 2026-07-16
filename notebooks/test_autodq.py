@@ -220,15 +220,13 @@ project.blue(
 
 project.show_blue()
 
-blue_visuals = project.visualize_blue(
-
-    display=True,
-
-)
-
+blue_visuals = project.visualize_blue(display=True,)
 project.visualize_blue(display=True,)
 project.interpret_blue_visuals()
 project.show_blue_visual_insights()
+
+project.prescribe_blue()
+project.show_blue_prescriptions()
 
 print(
 
@@ -248,13 +246,6 @@ project.model(
 
 project.show_model()
 
-project.blue(
-
-    source="trained_model",
-
-    use_engineered=True,
-
-)
 
 project.show_blue()
 

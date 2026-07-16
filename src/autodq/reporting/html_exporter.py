@@ -1714,6 +1714,72 @@ th {{
                 """
             )
 
+        prescription_rows = []
+
+        for index, prescription in enumerate(
+            getattr(blue, "prescriptions", []),
+            start=1,
+        ):
+            priority = str(
+                getattr(
+                    prescription,
+                    "priority",
+                    "medium",
+                )
+            ).lower()
+
+            category = (
+                str(
+                    getattr(
+                        prescription,
+                        "category",
+                        "general",
+                    )
+                )
+                .replace("_", " ")
+                .title()
+            )
+
+            related_assumptions = ", ".join(
+                str(assumption).replace("_", " ").title()
+                for assumption in getattr(
+                    prescription,
+                    "related_assumptions",
+                    [],
+                )
+            )
+
+            confidence = round(
+                float(
+                    getattr(
+                        prescription,
+                        "confidence",
+                        0,
+                    )
+                )
+                * 100,
+                2,
+            )
+
+            prescription_rows.append(
+                f"""
+                <tr>
+                    <td>{index}</td>
+                    <td>{getattr(prescription, "action", "-")}</td>
+                    <td>{category}</td>
+                    <td>
+                        <span class="badge {priority}">
+                            {priority.title()}
+                        </span>
+                    </td>
+                    <td>{getattr(prescription, "reason", "-")}</td>
+                    <td>{getattr(prescription, "recommendation", "-")}</td>
+                    <td>{confidence}%</td>
+                    <td>{related_assumptions or "-"}</td>
+                </tr>
+                """
+            )
+
         return f"""
         <div class="section card">
             <h2 class="section-title">BLUE Regression Diagnostics</h2>
@@ -1796,6 +1862,39 @@ th {{
                     <th>Recommendation</th>
                 </tr>
                 {"".join(vif_rows) or '<tr><td colspan="5">No VIF results available.</td></tr>'}
+            </table>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">BLUE Prescriptions</h2>
+            <p class="metric-small">
+                Practical corrective actions generated from the BLUE
+                assumption tests, visual insights, and VIF results.
+            </p>
+
+            <table>
+                <tr>
+                    <th>#</th>
+                    <th>Action</th>
+                    <th>Category</th>
+                    <th>Priority</th>
+                    <th>Reason</th>
+                    <th>Recommendation</th>
+                    <th>Confidence</th>
+                    <th>Related Assumptions</th>
+                </tr>
+                {
+                    "".join(prescription_rows)
+                    or """
+                    <tr>
+                        <td colspan="8">
+                            No BLUE prescriptions are available.
+                            Run project.prescribe_blue() before
+                            generating the report.
+                        </td>
+                    </tr>
+                    """
+                }
             </table>
         </div>
 
