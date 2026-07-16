@@ -237,6 +237,308 @@ class BLUEEngine:
             warnings=warnings,
         )
 
+        
+    def analyze_trained_model(
+        self,
+        model_report,
+        df: pd.DataFrame,
+        target: str,
+        significance_level: float = 0.05,
+    ) -> BLUEReport:
+        if model_report is None:
+            raise ValueError(
+                "No trained model report is available."
+            )
+
+        algorithm = str(
+            getattr(model_report, "algorithm", "")
+        ).lower()
+
+        supported_linear_models = {
+            "linear_regression",
+            "ridge_regression",
+            "lasso_regression",
+            "elastic_net_regression",
+        }
+
+        if algorithm not in supported_linear_models:
+            raise ValueError(
+                "BLUE diagnostics only apply to trained linear regression "
+                f"models. Current model: {algorithm or 'unknown'}"
+            )
+
+        pipeline = getattr(
+            model_report,
+            "model_object",
+            None,
+        )
+
+        if pipeline is None:
+            raise ValueError(
+                "The fitted model pipeline is unavailable."
+            )
+
+        if target not in df.columns:
+            raise ValueError(
+                f"Target column not found: {target}"
+            )
+
+        feature_columns = list(
+            getattr(
+                model_report,
+                "feature_columns",
+                [],
+            )
+        )
+
+        if not feature_columns:
+            feature_columns = [
+                column
+                for column in df.columns
+                if column != target
+            ]
+
+        missing_features = [
+            column
+            for column in feature_columns
+            if column not in df.columns
+        ]
+
+        if missing_features:
+            raise ValueError(
+                "The active dataset is missing trained model features: "
+                f"{missing_features}"
+            )
+
+        model_df = (
+            df[feature_columns + [target]]
+            .replace([np.inf, -np.inf], np.nan)
+            .dropna(subset=[target])
+            .copy()
+        )
+
+        if len(model_df) < 30:
+            raise ValueError(
+                "At least 30 rows are required for trained-model "
+                "BLUE diagnostics."
+            )
+
+        X = model_df[feature_columns]
+        y = pd.to_numeric(
+            model_df[target],
+            errors="coerce",
+        )
+
+        valid_rows = y.notna()
+
+        X = X.loc[valid_rows]
+        y = y.loc[valid_rows]
+
+        predictions = np.asarray(
+            pipeline.predict(X),
+            dtype=float,
+        )
+
+        actual_values = np.asarray(
+            y,
+            dtype=float,
+        )
+
+        residuals = actual_values - predictions
+
+        transformed_X, transformed_feature_names = (
+            self._extract_transformed_features(
+                pipeline=pipeline,
+                X=X,
+            )
+        )
+
+        if transformed_X.shape[1] == 0:
+            raise ValueError(
+                "No transformed model features were available."
+            )
+
+        diagnostic_design = sm.add_constant(
+            transformed_X,
+            has_constant="add",
+        )
+
+        diagnostic_model = sm.OLS(
+            actual_values,
+            diagnostic_design,
+        ).fit()
+
+        fitted_values = predictions
+
+        assumption_results = [
+            self._test_linearity(
+                residuals=pd.Series(residuals),
+                fitted_values=pd.Series(fitted_values),
+            ),
+            self._test_normality(
+                residuals=pd.Series(residuals),
+                significance_level=significance_level,
+            ),
+            self._test_homoscedasticity(
+                residuals=pd.Series(residuals),
+                design_matrix=pd.DataFrame(
+                    diagnostic_design
+                ),
+                significance_level=significance_level,
+            ),
+            self._test_independence(
+                residuals=pd.Series(residuals),
+            ),
+            self._test_influential_observations(
+                fitted_model=diagnostic_model,
+            ),
+        ]
+
+        vif_frame = pd.DataFrame(
+            transformed_X,
+            columns=transformed_feature_names,
+        )
+
+        vif_frame = self._remove_constant_transformed_columns(
+            vif_frame
+        )
+
+        vif_results = self._calculate_vif(
+            vif_frame
+        )
+
+        assumption_results.append(
+            self._build_multicollinearity_result(
+                vif_results
+            )
+        )
+
+        suitability_score = self._calculate_score(
+            assumption_results
+        )
+
+        overall_status = self._overall_status(
+            suitability_score=suitability_score,
+            assumptions=assumption_results,
+        )
+
+        recommendations = self._build_recommendations(
+            assumption_results=assumption_results,
+            vif_results=vif_results,
+        )
+
+        warnings = [
+            "BLUE diagnostics were calculated from the exact trained "
+            f"{algorithm.replace('_', ' ')} model."
+        ]
+
+        if diagnostic_model.rsquared >= 0.98:
+            warnings.append(
+                "The trained linear model has an unusually high R². "
+                "Review the retained predictors for possible target leakage."
+            )
+
+        return BLUEReport(
+            target=target,
+            rows_analyzed=len(X),
+            features_analyzed=vif_frame.shape[1],
+            overall_status=overall_status,
+            suitability_score=suitability_score,
+            features_used=feature_columns,
+            excluded_features=[],
+            assumptions=assumption_results,
+            vif_results=vif_results,
+            recommendations=recommendations,
+            warnings=warnings,
+        )
+
+    def _extract_transformed_features(
+        self,
+        pipeline,
+        X: pd.DataFrame,
+    ) -> tuple[np.ndarray, list[str]]:
+        if hasattr(pipeline, "steps") and len(pipeline.steps) > 1:
+            transformer = pipeline[:-1]
+            transformed = transformer.transform(X)
+
+            if hasattr(transformed, "toarray"):
+                transformed = transformed.toarray()
+
+            transformed_array = np.asarray(
+                transformed,
+                dtype=float,
+            )
+
+            feature_names = []
+
+            if hasattr(
+                transformer,
+                "get_feature_names_out",
+            ):
+                try:
+                    feature_names = list(
+                        transformer.get_feature_names_out()
+                    )
+                except Exception:
+                    feature_names = []
+
+        else:
+            transformed_array = np.asarray(
+                X,
+                dtype=float,
+            )
+            feature_names = list(X.columns)
+
+        if not feature_names:
+            feature_names = [
+                f"feature_{index}"
+                for index in range(
+                    transformed_array.shape[1]
+                )
+            ]
+
+        feature_names = [
+            self._clean_transformed_feature_name(
+                feature
+            )
+            for feature in feature_names
+        ]
+
+        return transformed_array, feature_names
+
+
+    def _clean_transformed_feature_name(
+        self,
+        feature: str,
+    ) -> str:
+        feature = str(feature)
+
+        prefixes = (
+            "numeric__",
+            "categorical__",
+            "num__",
+            "cat__",
+            "remainder__",
+        )
+
+        for prefix in prefixes:
+            if feature.startswith(prefix):
+                return feature[len(prefix):]
+
+        return feature
+
+
+    def _remove_constant_transformed_columns(
+        self,
+        frame: pd.DataFrame,
+    ) -> pd.DataFrame:
+        retained = [
+            column
+            for column in frame.columns
+            if frame[column].nunique(dropna=True) > 1
+        ]
+
+        return frame[retained].copy()
     def _test_linearity(
         self,
         residuals: pd.Series,

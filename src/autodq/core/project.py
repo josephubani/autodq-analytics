@@ -1307,14 +1307,8 @@ class AutoDQ:
         significance_level: float = 0.05,
         leakage_threshold: float = 0.98,
         exclude_features: list[str] | None = None,
-):
-        source = source.lower().strip()
-
-        if source != "data":
-            raise ValueError(
-                "BLUE currently supports source='data'. "
-                "Trained linear-model diagnostics will be added next."
-            )
+    ):
+        source_normalized = source.lower().strip()
 
         if self.state.target is None:
             raise ValueError(
@@ -1336,22 +1330,44 @@ class AutoDQ:
 
             active_df = self.state.data
 
-        self.state.blue_report = self.blue_engine.analyze(
-            df=active_df,
-            target=self.state.target,
-            max_features=max_features,
-            significance_level=significance_level,
-            exclude_leakage=exclude_leakage,
-            leakage_threshold=leakage_threshold,
-            exclude_features=exclude_features,
-        )
+        if source_normalized == "data":
+            self.state.blue_report = self.blue_engine.analyze(
+                df=active_df,
+                target=self.state.target,
+                max_features=max_features,
+                significance_level=significance_level,
+                exclude_leakage=exclude_leakage,
+                leakage_threshold=leakage_threshold,
+                exclude_features=exclude_features,
+            )
+
+        elif source_normalized == "trained_model":
+            if self.state.model_report is None:
+                raise ValueError(
+                    "Train a linear model before using "
+                    "source='trained_model'."
+                )
+
+            self.state.blue_report = (
+                self.blue_engine.analyze_trained_model(
+                    model_report=self.state.model_report,
+                    df=active_df,
+                    target=self.state.target,
+                    significance_level=significance_level,
+                )
+            )
+
+        else:
+            raise ValueError(
+                "source must be either 'data' or 'trained_model'."
+            )
 
         self.session.log(
             step="blue",
-            message="Leakage-safe BLUE regression diagnostics completed.",
+            message="BLUE regression diagnostics completed.",
             metadata={
                 "target": self.state.blue_report.target,
-                "source": source,
+                "source": source_normalized,
                 "score": self.state.blue_report.suitability_score,
                 "status": self.state.blue_report.overall_status,
                 "features_used": self.state.blue_report.features_used,
@@ -1362,8 +1378,7 @@ class AutoDQ:
             },
         )
 
-        return self.state.blue_report
-        
+        return self.state.blue_report  
 
     def show_blue(self) -> None:
         if self.state.blue_report is None:

@@ -248,6 +248,20 @@ project.model(
 
 project.show_model()
 
+project.blue(
+
+    source="trained_model",
+
+    use_engineered=True,
+
+)
+
+project.show_blue()
+
+project.visualize_blue()
+
+project.interpret_blue_visuals()
+
 
 
 # 19. PREDICTION
