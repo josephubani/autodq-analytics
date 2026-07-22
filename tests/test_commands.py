@@ -254,6 +254,115 @@ class ADQLTests(unittest.TestCase):
         )
         self.assertIn("AutoDQ_Prediction", run.data.columns)
 
+    def test_extended_adql_manages_datasets_features_and_gallery(self):
+        project = self._project(target="Revenue")
+        costs_path = self.root / "costs.csv"
+        pd.DataFrame(
+            {
+                "Region": ["North", "South", "West"],
+                "RegionalCost": [10.0, 20.0, 30.0],
+            }
+        ).to_csv(costs_path, index=False)
+        chart_dir = self.root / "charts"
+
+        run = project.query(
+            f"""
+            ADD DATASET costs FROM "{costs_path}";
+            MERGE main WITH costs AS joined ON Region HOW left;
+            FEATURE CREATE PriceSquared METHOD square COLUMN Price;
+            VISUALIZE bar X Region Y Revenue TITLE "Revenue by Region";
+            GALLERY CUSTOMIZE bar_Region_by_Revenue_current SUBTITLE "ADQL managed" THEME dark;
+            GALLERY SAVE TO "{chart_dir}" FORMAT png;
+            LIST DATASETS;
+            """,
+            auto_display=False,
+        )
+
+        self.assertTrue(run.success)
+        self.assertIn("PriceSquared", project.state.engineered_data.columns)
+        self.assertEqual(
+            project.get_visualization("bar_Region_by_Revenue_current").style.subtitle,
+            "ADQL managed",
+        )
+        self.assertTrue(any(chart_dir.glob("*.png")))
+        self.assertIn("joined", set(run.data["name"]))
+
+    def test_extended_adql_cleaning_review_and_audit(self):
+        project = self._project()
+        audit_path = self.root / "audit.json"
+        run = project.query(
+            f"""
+            KNOWLEDGE;
+            REVIEW;
+            EDIT ROW 3 CHANGES '{{"Units": 10}}' REASON "Verified value";
+            DOMAIN ADD Revenue MIN 0 DESCRIPTION "Revenue cannot be negative";
+            DOMAIN VALIDATE;
+            OUTLIERS REVIEW COLUMNS Revenue IQR 1.5;
+            CLEANING PREVIEW MAX_ROWS 2;
+            AUDIT EXPORT TO "{audit_path}";
+            """,
+            auto_display=False,
+        )
+
+        self.assertTrue(run.success)
+        self.assertEqual(
+            project.state.cleaning_review.working_data.loc[3, "Units"],
+            10,
+        )
+        self.assertTrue(audit_path.is_file())
+        self.assertGreater(project.state.cleaning_review.audit_count, 0)
+
+    def test_extended_adql_model_persistence_workspace_and_intelligence(self):
+        project = self._project(target="Revenue")
+        model_path = self.root / "saved-model"
+        workspace_root = self.root / "workspaces"
+        run = project.query(
+            f"""
+            WORKSPACE CREATE sales_review ROOT "{workspace_root}";
+            CORRELATION MIN_ABS 0.2;
+            READINESS;
+            FEATURES;
+            BLUE MAX_FEATURES 4;
+            BLUE VISUALIZE APPEND true;
+            BLUE INTERPRET;
+            BLUE PRESCRIBE;
+            MODEL USING decision_tree_regressor USE_ENGINEERED false;
+            MODEL SAVE TO "{model_path}";
+            MODEL LOAD FROM "{model_path}";
+            WORKSPACE SAVE INCLUDE_MODEL true;
+            WORKSPACE INFO;
+            """,
+            auto_display=False,
+        )
+
+        self.assertTrue(run.success)
+        self.assertTrue((model_path / "manifest.json").is_file())
+        self.assertEqual(run.value["name"], "sales_review")
+        self.assertEqual(project.workspace_name, "sales_review")
+        self.assertIsNotNone(project.state.model_report)
+        self.assertIsNotNone(project.state.blue_report)
+        self.assertTrue(project.state.blue_report.prescriptions)
+
+    def test_extended_adql_explain_and_shap_plot(self):
+        project = self._project(target="Revenue")
+        run = project.query(
+            """
+            MODEL USING decision_tree_regressor USE_ENGINEERED false;
+            PREDICT CONFIDENCE 0.9;
+            EXPLAIN MAX_ROWS 5 USE_ENGINEERED false;
+            SHAP CHART bar;
+            """,
+            auto_display=False,
+        )
+
+        self.assertTrue(run.success)
+        self.assertIsNotNone(project.state.explainability_report)
+        self.assertEqual(
+            project.state.explainability_report.explanation_count,
+            5,
+        )
+        self.assertTrue(hasattr(run.value, "savefig"))
+
     def test_auto_review_and_partial_approval_commands(self):
         project = self._project()
         auto = project.query(

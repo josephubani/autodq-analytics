@@ -265,6 +265,7 @@ class ADQLCell:
     source: str
     start_line: int
     end_line: int
+    kind: str = "code"
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -272,6 +273,7 @@ class ADQLCell:
             "title": self.title,
             "start_line": self.start_line,
             "end_line": self.end_line,
+            "kind": self.kind,
             "source": self.source,
         }
 

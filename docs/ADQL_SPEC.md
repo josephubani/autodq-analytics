@@ -1,4 +1,4 @@
-# AutoDQ Analytics Domain Query Language (ADQL) v1
+# AutoDQ Analytics Domain Query Language (ADQL) v2
 
 ADQL is a standalone, safe language for querying AutoDQ data and running
 explicit AutoDQ workflow operations. A `.adql` file can replace a notebook for
@@ -75,6 +75,16 @@ notebook behavior:
 autodq run analysis.adql --through-cell 3
 ```
 
+Markdown cells use a typed cell marker and contain ordinary Markdown rather
+than ADQL statements:
+
+```adql
+# %% [markdown] Business context
+# Regional revenue review
+
+This analysis compares revenue and transaction volume by region.
+```
+
 ### VS Code
 
 AutoDQ includes its own VS Code extension for `.adql` files:
@@ -85,7 +95,11 @@ autodq vscode install
 
 Restart VS Code after installation. Opening a `.adql` file then provides ADQL
 syntax highlighting, named cells, Run File, Run through Cell, Run Cell Only,
-and a notebook editor with cell outputs. The extension searches upward from
+and a notebook editor with rich cell outputs. The notebook kernel retains one
+AutoDQ project per open document, so later cells reuse data, models, cleaning
+decisions, and charts created by earlier cells. The first executed code cell
+automatically bootstraps required preceding cells. Use **ADQL: Restart
+Session** from the Command Palette to clear that state. The extension searches upward from
 the `.adql` file and automatically detects the nearest `.venv/bin/autodq`.
 The VS Code setting `autodq.commandPath` can override that executable when
 needed.
@@ -154,7 +168,7 @@ All non-aggregate columns must appear in `GROUP BY` when an aggregate is used.
 
 ### Conditions
 
-ADQL v1 supports conditions joined with `AND`:
+ADQL v2 supports conditions joined with `AND`:
 
 - `=`, `!=`, `<`, `<=`, `>`, `>=`
 - `IN (...)`, `NOT IN (...)`
@@ -172,7 +186,7 @@ ORDER BY Revenue DESC
 LIMIT 25;
 ```
 
-`OR` is intentionally not available in v1. Use `IN (...)` or separate queries.
+`OR` is intentionally not available in v2. Use `IN (...)` or separate queries.
 
 ## Workflow commands
 
@@ -228,6 +242,78 @@ MODEL TARGET Revenue USING decision_tree_regressor
     USE_ENGINEERED false TEST_SIZE 0.2;
 
 PREDICT CONFIDENCE 0.95 UNCERTAINTY true;
+
+EXPLAIN MAX_ROWS 20 USE_ENGINEERED true;
+SHAP CHART summary;
+SHAP CHART waterfall ROW 0 SAVE "charts/row-0-shap.png";
+
+MODEL SAVE TO "models/revenue-model" OVERWRITE;
+MODEL LOAD FROM "models/revenue-model";
+```
+
+### Workspaces and multiple datasets
+
+```adql
+WORKSPACE CREATE sales_review ROOT ".autodq/workspaces";
+WORKSPACE SAVE INCLUDE_MODEL true;
+WORKSPACE INFO;
+WORKSPACE LIST ROOT ".autodq/workspaces";
+
+ADD DATASET costs FROM "costs.csv";
+LIST DATASETS;
+USE DATASET costs;
+MERGE main WITH costs AS sales_with_costs ON Product HOW left;
+CONCAT january,february AS q1_sales AXIS 0;
+```
+
+### Interactive cleaning and domain review
+
+```adql
+KNOWLEDGE;
+REVIEW;
+APPROVE 1,2;
+REJECT 3 REASON "Business owner rejected this action";
+CLEANING PREVIEW ACTIONS 1,2 MAX_ROWS 5;
+
+EDIT ROW 17 CHANGES '{"Region": "East", "Revenue": 1250}'
+    REASON "Corrected from source system";
+DOMAIN ADD Revenue MIN 0 NULLABLE false;
+DOMAIN ADD Region ALLOWED "North,South,East,West";
+DOMAIN VALIDATE;
+OUTLIERS REVIEW COLUMNS Revenue,Profit IQR 1.5;
+OUTLIERS TREAT COLUMN Revenue STRATEGY clip REASON "Reviewed IQR cap";
+CLEANING APPLY;
+AUDIT EXPORT TO "reports/cleaning-audit.json";
+```
+
+### Feature engineering and analytical intelligence
+
+```adql
+CORRELATION MIN_ABS 0.3;
+READINESS;
+FEATURES;
+FEATURE APPLY;
+FEATURE CREATE Margin METHOD difference COLUMNS Revenue,Cost;
+FEATURE CREATE LogRevenue METHOD log COLUMN Revenue;
+FEATURE CREATE RevenueBand METHOD bin COLUMN Revenue
+    BINS "0,1000,5000,10000" LABELS "Low,Medium,High";
+```
+
+### BLUE diagnostics and visualization gallery
+
+```adql
+BLUE MAX_FEATURES 12 SIGNIFICANCE 0.05;
+BLUE VISUALIZE APPEND true;
+BLUE INTERPRET;
+BLUE PRESCRIBE;
+
+GALLERY LIST;
+GALLERY GET bar_Region_by_Revenue_current;
+GALLERY CUSTOMIZE bar_Region_by_Revenue_current
+    TITLE "Regional revenue" THEME journal DPI 300;
+GALLERY SAVE TO "charts" FORMAT png;
+GALLERY REMOVE bar_Region_by_Revenue_current;
+GALLERY CLEAR;
 ```
 
 ### Dashboard and report export

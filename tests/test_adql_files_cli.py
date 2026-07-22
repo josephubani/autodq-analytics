@@ -16,7 +16,7 @@ from autodq import (
     ADQLValidationError,
     AutoDQ,
 )
-from autodq.cli import main
+from autodq.cli import _dataframe_html, _value_html, main
 from autodq.vscode import extension_path, install_extension
 
 
@@ -62,6 +62,31 @@ ORDER BY total_revenue DESC;
         )
         self.assertIn("DATASET", document.cell(1).source)
         self.assertIn("SELECT", document.cell(3).source)
+
+    def test_markdown_cells_are_preserved_and_skipped_by_execution(self):
+        markdown = self.root / "markdown.adql"
+        markdown.write_text(
+            """#!/usr/bin/env autodq
+# %% [Dataset]
+DATASET "sales.csv" TARGET Revenue;
+# %% [markdown] Analysis notes
+# Sales analysis
+
+This cell is rendered as Markdown and is not ADQL code.
+# %% [Rows]
+HEAD 2;
+""",
+            encoding="utf-8",
+        )
+        document = ADQLCellParser().read(markdown)
+        result = ADQLFileRunner().run(markdown)
+
+        self.assertEqual(document.cell(2).kind, "markdown")
+        self.assertEqual(document.cell(2).title, "Analysis notes")
+        self.assertIn("This cell is rendered", document.cell(2).source)
+        self.assertTrue(result.success)
+        self.assertEqual(result.cell_runs[1].result.statement_count, 0)
+        self.assertEqual(len(result.data), 2)
 
     def test_standalone_file_runs_all_cells_relative_to_its_location(self):
         result = ADQLFileRunner().run(self.script)
@@ -233,6 +258,80 @@ DIAGNOSE;
         self.assertIn("Data Quality Diagnosis", html_outputs[1])
         self.assertIn("Quality score", html_outputs[1])
 
+    def test_notebook_json_renders_other_structured_reports(self):
+        reports = self.root / "reports.adql"
+        reports.write_text(
+            """#!/usr/bin/env autodq
+# %% [Dataset]
+DATASET "sales.csv" TARGET Revenue;
+# %% [Statistics]
+STATISTICS;
+""",
+            encoding="utf-8",
+        )
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            exit_code = main(
+                ["run", str(reports), "--through-cell", "2", "--notebook-json"]
+            )
+
+        payload = json.loads(stdout.getvalue())
+        markup = next(
+            item["data"]
+            for item in payload["outputs"]
+            if item["mime"] == "text/html"
+        )
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("Statistics", markup)
+        self.assertIn("Descriptive", markup)
+
+    def test_notebook_dataframe_preview_limits_rows_and_columns(self):
+        frame = pd.DataFrame(
+            {
+                f"column_{column}": range(40)
+                for column in range(25)
+            }
+        )
+
+        markup = _dataframe_html(frame, limit=5, column_limit=3)
+
+        self.assertIn("Showing 5 of 40 rows", markup)
+        self.assertIn("showing 3 of 25 columns", markup)
+        self.assertIn("Output truncated", markup)
+        self.assertIn("column_2", markup)
+        self.assertNotIn("column_3", markup)
+        self.assertEqual(markup.count("<tr"), 6)
+
+    def test_notebook_structured_preview_replaces_oversized_rich_html(self):
+        class OversizedReport:
+            def to_html(self):
+                return "<div>" + ("unbounded-output " * 2_000) + "</div>"
+
+            def to_dict(self):
+                return {
+                    "summary": "available",
+                    "records": [
+                        {"row": index, "details": "x" * 1_000}
+                        for index in range(100)
+                    ],
+                }
+
+        markup = _value_html(
+            "review",
+            OversizedReport(),
+            item_limit=5,
+            character_limit=2_000,
+        )
+
+        self.assertIn("Review", markup)
+        self.assertIn("Summary", markup)
+        self.assertIn("Output truncated", markup)
+        self.assertIn("additional item(s) omitted", markup)
+        self.assertNotIn("unbounded-output", markup)
+        self.assertLess(len(markup), 10_000)
+
     def test_vscode_extension_is_bundled_and_installable(self):
         source = extension_path()
         package = json.loads(
@@ -248,11 +347,51 @@ DIAGNOSE;
             "autodq-adql-notebook",
         )
         self.assertIn("ADQLNotebookSerializer", extension)
-        self.assertIn("--through-cell", extension)
-        self.assertIn("--notebook-json", extension)
+        self.assertIn("ADQLKernelSession", extension)
+        self.assertIn("['kernel', notebook.uri.fsPath]", extension)
+        self.assertIn("NotebookCellKind.Markup", extension)
         self.assertIn("new vscode.NotebookCellOutputItem", extension)
         self.assertNotIn("NotebookCellOutputItem.png", extension)
+        self.assertIn("notebook.maxOutputRows", extension)
+        self.assertIn("notebook.maxOutputCharacters", extension)
+        self.assertEqual(package["version"], "0.2.1")
+        self.assertEqual(
+            package["contributes"]["configuration"]["properties"]
+            ["autodq.notebook.maxOutputRows"]["default"],
+            25,
+        )
         self.assertTrue((installed / "package.json").is_file())
+
+    def test_persistent_kernel_bootstraps_once_and_retains_project(self):
+        process = subprocess.Popen(
+            [sys.executable, "-m", "autodq", "kernel", str(self.script)],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+        try:
+            process.stdin.write(json.dumps({"id": 1, "cell": 2}) + "\n")
+            process.stdin.flush()
+            first = json.loads(process.stdout.readline())
+            process.stdin.write(json.dumps({"id": 2, "cell": 3}) + "\n")
+            process.stdin.flush()
+            second = json.loads(process.stdout.readline())
+        finally:
+            if process.stdin:
+                process.stdin.write(json.dumps({"action": "shutdown"}) + "\n")
+                process.stdin.flush()
+            process.wait(timeout=15)
+            for stream in (process.stdin, process.stdout, process.stderr):
+                if stream:
+                    stream.close()
+
+        self.assertTrue(first["success"])
+        self.assertEqual(first["session"]["executed_cells"], [1, 2])
+        self.assertTrue(second["success"])
+        self.assertEqual(second["session"]["executed_cells"], [1, 2, 3])
+        self.assertEqual(second["cell"]["number"], 3)
 
     def test_cli_import_does_not_eagerly_load_matplotlib(self):
         process = subprocess.run(

@@ -74,6 +74,8 @@ class ADQLValidator:
                 )
 
         elif statement.kind == "MODEL":
+            if parameters.get("action") in {"save", "load"}:
+                return
             test_size = parameters.get("test_size")
 
             if test_size is not None and not 0 < test_size < 1:
@@ -95,6 +97,58 @@ class ADQLValidator:
                 raise ADQLValidationError(
                     "LOW_CONFIDENCE must be between 0 and 1."
                 )
+
+        elif statement.kind == "EXPLAIN":
+            if parameters.get("max_rows", 1) < 1:
+                raise ADQLValidationError("EXPLAIN MAX_ROWS must be positive.")
+
+        elif statement.kind == "SHAP":
+            if parameters.get("row", 0) < 0:
+                raise ADQLValidationError("SHAP ROW cannot be negative.")
+            if parameters.get("chart", "summary").lower() not in {
+                "summary", "bar", "beeswarm", "waterfall", "dependence"
+            }:
+                raise ADQLValidationError("Unsupported SHAP chart type.")
+
+        elif statement.kind == "ADD":
+            suffix = Path(parameters["dataset_path"]).suffix.lower()
+            if suffix not in {".csv", ".xlsx", ".xls"}:
+                raise ADQLValidationError(
+                    "ADD DATASET path must end with .csv, .xlsx, or .xls."
+                )
+
+        elif statement.kind == "OUTLIERS":
+            multiplier = parameters.get("iqr_multiplier")
+            if multiplier is not None and multiplier <= 0:
+                raise ADQLValidationError("OUTLIERS IQR must be positive.")
+
+        elif statement.kind == "CORRELATION":
+            threshold = parameters.get("min_abs_correlation")
+            if threshold is not None and not 0 <= threshold <= 1:
+                raise ADQLValidationError(
+                    "CORRELATION MIN_ABS must be between 0 and 1."
+                )
+
+        elif statement.kind == "BLUE":
+            if parameters.get("max_features", 1) < 1:
+                raise ADQLValidationError("BLUE MAX_FEATURES must be positive.")
+            significance = parameters.get("significance_level")
+            if significance is not None and not 0 < significance < 1:
+                raise ADQLValidationError(
+                    "BLUE SIGNIFICANCE must be between 0 and 1."
+                )
+
+        elif statement.kind == "AUDIT":
+            if Path(parameters["output"]).suffix.lower() not in {".json", ".csv"}:
+                raise ADQLValidationError(
+                    "AUDIT EXPORT output must end with .json or .csv."
+                )
+
+        elif statement.kind == "GALLERY":
+            if parameters.get("format", "png").lower() not in {
+                "png", "svg", "pdf", "jpg", "jpeg"
+            }:
+                raise ADQLValidationError("Unsupported GALLERY export format.")
 
         elif statement.kind == "DASHBOARD":
             output = parameters.get("output")

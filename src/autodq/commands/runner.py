@@ -48,7 +48,7 @@ class ADQLFileRunner:
     ):
         """Validate a standalone ADQL file without running it."""
         document = self.inspect(path)
-        script = self.parser.parse(document.source)
+        script = self._document_script(document)
         self.validator.validate(script)
         self._standalone_dataset(script, document.path, dataset=dataset)
         return document
@@ -67,7 +67,7 @@ class ADQLFileRunner:
     ) -> ADQLFileResult:
         """Run a self-contained ADQL file and return its project and outputs."""
         document = self.inspect(path)
-        script = self.parser.parse(document.source)
+        script = self._document_script(document)
         self.validator.validate(script)
         dataset_path, declared_target = self._standalone_dataset(
             script,
@@ -113,7 +113,7 @@ class ADQLFileRunner:
             raise ValueError("Use either cell or through_cell, not both.")
 
         document = document or self.inspect(path)
-        full_script = self.parser.parse(document.source)
+        full_script = self._document_script(document)
         self.validator.validate(full_script)
         selected_cells = self._select_cells(
             document,
@@ -127,7 +127,7 @@ class ADQLFileRunner:
         )
 
         for document_cell in selected_cells:
-            if not self.cell_parser._has_executable_source(
+            if document_cell.kind == "markdown" or not self.cell_parser._has_executable_source(
                 document_cell.source
             ):
                 empty_run = ADQLRunResult(
@@ -288,3 +288,18 @@ class ADQLFileRunner:
     @staticmethod
     def _cell_source_name(path: Path, number: int) -> str:
         return f"{path.resolve()}#cell={number}"
+
+    def _document_script(self, document):
+        source = "\n".join(
+            cell.source
+            for cell in document.cells
+            if cell.kind == "code"
+            and self.cell_parser._has_executable_source(cell.source)
+        )
+
+        if not source.strip():
+            raise ADQLValidationError(
+                "An ADQL document must contain at least one executable code cell."
+            )
+
+        return self.parser.parse(source)

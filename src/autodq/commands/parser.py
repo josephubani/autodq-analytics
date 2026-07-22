@@ -9,10 +9,14 @@ from autodq.commands.errors import ADQLSyntaxError
 from autodq.commands.grammar import (
     AGGREGATE_FUNCTIONS,
     AUTO_OPTIONS,
+    BLUE_OPTIONS,
     DASHBOARD_OPTIONS,
     DATA_SOURCES,
+    EXPLAIN_OPTIONS,
+    GALLERY_STYLE_OPTIONS,
     MODEL_OPTIONS,
     PREDICT_OPTIONS,
+    SHAP_OPTIONS,
     SIMPLE_COMMANDS,
     SUPPORTED_COMMANDS,
     VISUALIZE_OPTIONS,
@@ -95,6 +99,24 @@ class ADQLParser:
             )
             return {"dataset_path": arguments[0], **options}
 
+        if kind == "CLEANING":
+            if not arguments or arguments[0].upper() not in {"PREVIEW", "APPLY"}:
+                raise ADQLSyntaxError("CLEANING requires PREVIEW or APPLY.")
+            action = arguments[0].lower()
+            if action == "apply":
+                if len(arguments) != 1:
+                    raise ADQLSyntaxError("CLEANING APPLY does not accept arguments.")
+                return {"action": action}
+            options = self._parse_options(
+                arguments[1:],
+                {"ACTIONS": "action_ids", "MAX_ROWS": "max_rows"},
+            )
+            if "action_ids" in options:
+                options["action_ids"] = self._integer_list(
+                    options["action_ids"], option="ACTIONS"
+                )
+            return {"action": action, **self._coerce_options(options)}
+
         if kind in SIMPLE_COMMANDS:
             if arguments:
                 raise ADQLSyntaxError(f"{kind} does not accept arguments.")
@@ -128,6 +150,23 @@ class ADQLParser:
             return self._coerce_options(defaults)
 
         if kind == "MODEL":
+            if arguments and arguments[0].upper() in {"SAVE", "LOAD"}:
+                action = arguments[0].lower()
+                keyword = "TO" if action == "save" else "FROM"
+                options = self._parse_options(
+                    arguments[1:],
+                    {
+                        keyword: "path",
+                        "OVERWRITE": "overwrite",
+                    },
+                    flags={"OVERWRITE"},
+                )
+                if "path" not in options:
+                    raise ADQLSyntaxError(
+                        f"MODEL {action.upper()} requires {keyword} followed by a path."
+                    )
+                return {"action": action, **self._coerce_options(options)}
+
             return self._coerce_options(
                 self._parse_options(arguments, MODEL_OPTIONS)
             )
@@ -136,6 +175,102 @@ class ADQLParser:
             return self._coerce_options(
                 self._parse_options(arguments, PREDICT_OPTIONS)
             )
+
+        if kind == "EXPLAIN":
+            return self._coerce_options(
+                self._parse_options(arguments, EXPLAIN_OPTIONS)
+            )
+
+        if kind == "SHAP":
+            return self._coerce_options(
+                self._parse_options(arguments, SHAP_OPTIONS)
+            )
+
+        if kind == "WORKSPACE":
+            return self._parse_workspace(arguments)
+
+        if kind == "ADD":
+            if len(arguments) < 4 or arguments[0].upper() != "DATASET":
+                raise ADQLSyntaxError(
+                    "ADD syntax is ADD DATASET name FROM path [OVERWRITE]."
+                )
+            options = self._parse_options(
+                arguments[2:],
+                {"FROM": "dataset_path", "OVERWRITE": "overwrite"},
+                flags={"OVERWRITE"},
+            )
+            if "dataset_path" not in options:
+                raise ADQLSyntaxError("ADD DATASET requires FROM followed by a path.")
+            return {
+                "entity": "dataset",
+                "name": arguments[1],
+                **self._coerce_options(options),
+            }
+
+        if kind == "LIST":
+            if len(arguments) != 1 or arguments[0].upper() not in {
+                "DATASETS", "WORKSPACES", "VISUALIZATIONS"
+            }:
+                raise ADQLSyntaxError(
+                    "LIST requires DATASETS, WORKSPACES, or VISUALIZATIONS."
+                )
+            return {"entity": arguments[0].lower()}
+
+        if kind == "MERGE":
+            return self._parse_merge(arguments)
+
+        if kind == "CONCAT":
+            return self._parse_concat(arguments)
+
+        if kind == "EDIT":
+            if len(arguments) < 4 or arguments[0].upper() != "ROW":
+                raise ADQLSyntaxError(
+                    "EDIT syntax is EDIT ROW index CHANGES '{...}' [REASON text]."
+                )
+            options = self._parse_options(
+                arguments[2:],
+                {"CHANGES": "changes", "REASON": "reason"},
+            )
+            if "changes" not in options:
+                raise ADQLSyntaxError("EDIT ROW requires CHANGES.")
+            return {
+                "row_index": self._literal(arguments[1]),
+                "changes": self._mapping(options["changes"], option="CHANGES"),
+                **({"reason": options["reason"]} if "reason" in options else {}),
+            }
+
+        if kind == "DOMAIN":
+            return self._parse_domain(arguments)
+
+        if kind == "OUTLIERS":
+            return self._parse_outliers(arguments)
+
+        if kind == "AUDIT":
+            if not arguments or arguments[0].upper() != "EXPORT":
+                raise ADQLSyntaxError("AUDIT syntax is AUDIT EXPORT TO path.")
+            options = self._parse_options(arguments[1:], {"TO": "output"})
+            if "output" not in options:
+                raise ADQLSyntaxError("AUDIT EXPORT requires TO followed by a path.")
+            return {"action": "export", **options}
+
+        if kind == "CORRELATION":
+            return self._coerce_options(
+                self._parse_options(arguments, {"MIN_ABS": "min_abs_correlation"})
+            )
+
+        if kind in {"READINESS", "FEATURES"}:
+            if arguments:
+                raise ADQLSyntaxError(f"{kind} does not accept arguments.")
+            return {}
+
+        if kind == "FEATURE":
+            return self._parse_feature(arguments)
+
+        if kind == "BLUE":
+            return self._parse_blue(arguments)
+
+        if kind == "GALLERY":
+            return self._parse_gallery(arguments)
 
         if kind == "DASHBOARD":
             return self._coerce_options(
@@ -281,6 +416,302 @@ class ADQLParser:
             }
 
         raise ADQLSyntaxError(f"Parser is not implemented for {kind}.")
+
+    def _parse_workspace(self, arguments: list[str]) -> dict[str, Any]:
+        if not arguments:
+            raise ADQLSyntaxError(
+                "WORKSPACE requires CREATE, OPEN, SAVE, INFO, or LIST."
+            )
+
+        action = arguments[0].lower()
+        rest = arguments[1:]
+
+        if action == "create":
+            if not rest:
+                raise ADQLSyntaxError("WORKSPACE CREATE requires a name.")
+            options = self._parse_options(
+                rest[1:],
+                {"ROOT": "workspace_root", "TARGET": "target"},
+            )
+            return {"action": action, "name": rest[0], **options}
+
+        if action == "open":
+            if not rest:
+                raise ADQLSyntaxError("WORKSPACE OPEN requires a name or path.")
+            options = self._parse_options(
+                rest[1:],
+                {"ROOT": "workspace_root", "LOAD_MODEL": "load_model"},
+            )
+            return {
+                "action": action,
+                "name_or_path": rest[0],
+                **self._coerce_options(options),
+            }
+
+        if action == "save":
+            options = self._parse_options(
+                rest,
+                {
+                    "MODEL_NAME": "model_name",
+                    "INCLUDE_MODEL": "include_model",
+                },
+            )
+            return {"action": action, **self._coerce_options(options)}
+
+        if action == "info":
+            if rest:
+                raise ADQLSyntaxError("WORKSPACE INFO does not accept arguments.")
+            return {"action": action}
+
+        if action == "list":
+            options = self._parse_options(rest, {"ROOT": "workspace_root"})
+            return {"action": action, **options}
+
+        raise ADQLSyntaxError(
+            "WORKSPACE requires CREATE, OPEN, SAVE, INFO, or LIST."
+        )
+
+    def _parse_merge(self, arguments: list[str]) -> dict[str, Any]:
+        if not arguments:
+            raise ADQLSyntaxError(
+                "MERGE syntax is MERGE left WITH right AS output ON column."
+            )
+        options = self._parse_options(
+            arguments[1:],
+            {
+                "WITH": "right",
+                "AS": "output_name",
+                "HOW": "how",
+                "ON": "on",
+                "LEFT_ON": "left_on",
+                "RIGHT_ON": "right_on",
+                "VALIDATE": "validate",
+                "SUFFIXES": "suffixes",
+                "MAKE_ACTIVE": "make_active",
+            },
+        )
+        if "right" not in options:
+            raise ADQLSyntaxError("MERGE requires WITH followed by a dataset.")
+        for key in ("on", "left_on", "right_on"):
+            if key in options and "," in str(options[key]):
+                options[key] = self._string_list(options[key], option=key)
+        if "suffixes" in options:
+            suffixes = self._string_list(options["suffixes"], option="SUFFIXES")
+            if len(suffixes) != 2:
+                raise ADQLSyntaxError("MERGE SUFFIXES requires exactly two values.")
+            options["suffixes"] = tuple(suffixes)
+        return {
+            "left": arguments[0],
+            **self._coerce_options(options),
+        }
+
+    def _parse_concat(self, arguments: list[str]) -> dict[str, Any]:
+        if not arguments:
+            raise ADQLSyntaxError(
+                "CONCAT syntax is CONCAT first,second AS output."
+            )
+        datasets = self._string_list(arguments[0], option="CONCAT")
+        if len(datasets) < 2:
+            raise ADQLSyntaxError("CONCAT requires at least two datasets.")
+        options = self._parse_options(
+            arguments[1:],
+            {
+                "AS": "output_name",
+                "AXIS": "axis",
+                "IGNORE_INDEX": "ignore_index",
+                "JOIN": "join",
+                "MAKE_ACTIVE": "make_active",
+            },
+        )
+        return {"datasets": datasets, **self._coerce_options(options)}
+
+    def _parse_domain(self, arguments: list[str]) -> dict[str, Any]:
+        if not arguments:
+            raise ADQLSyntaxError("DOMAIN requires ADD or VALIDATE.")
+        action = arguments[0].lower()
+
+        if action == "validate":
+            if len(arguments) != 1:
+                raise ADQLSyntaxError("DOMAIN VALIDATE does not accept arguments.")
+            return {"action": action}
+
+        if action != "add" or len(arguments) < 3:
+            raise ADQLSyntaxError(
+                "DOMAIN ADD requires a column and at least one constraint."
+            )
+        options = self._parse_options(
+            arguments[2:],
+            {
+                "MIN": "min_value",
+                "MAX": "max_value",
+                "ALLOWED": "allowed_values",
+                "PATTERN": "pattern",
+                "NULLABLE": "nullable",
+                "UNIQUE": "unique",
+                "DESCRIPTION": "description",
+            },
+        )
+        for key in ("min_value", "max_value"):
+            if key in options:
+                options[key] = self._literal(options[key])
+        if "allowed_values" in options:
+            options["allowed_values"] = [
+                self._literal(item)
+                for item in self._split_top_level(options["allowed_values"], ",")
+            ]
+        options = self._coerce_options(options)
+        return {"action": action, "column": arguments[1], **options}
+
+    def _parse_outliers(self, arguments: list[str]) -> dict[str, Any]:
+        if not arguments:
+            raise ADQLSyntaxError("OUTLIERS requires REVIEW or TREAT.")
+        action = arguments[0].lower()
+
+        if action == "review":
+            options = self._parse_options(
+                arguments[1:],
+                {"COLUMNS": "columns", "IQR": "iqr_multiplier"},
+            )
+            if "columns" in options:
+                options["columns"] = self._string_list(
+                    options["columns"], option="COLUMNS"
+                )
+            return {"action": action, **self._coerce_options(options)}
+
+        if action == "treat":
+            options = self._parse_options(
+                arguments[1:],
+                {
+                    "COLUMN": "column",
+                    "STRATEGY": "strategy",
+                    "LOWER": "lower_bound",
+                    "UPPER": "upper_bound",
+                    "REASON": "reason",
+                    "IQR": "iqr_multiplier",
+                },
+            )
+            if "column" not in options:
+                raise ADQLSyntaxError("OUTLIERS TREAT requires COLUMN.")
+            return {"action": action, **self._coerce_options(options)}
+
+        raise ADQLSyntaxError("OUTLIERS requires REVIEW or TREAT.")
+
+    def _parse_feature(self, arguments: list[str]) -> dict[str, Any]:
+        if not arguments:
+            raise ADQLSyntaxError("FEATURE requires CREATE or APPLY.")
+        action = arguments[0].lower()
+
+        if action == "apply":
+            options = self._parse_options(arguments[1:], {"NAMES": "features"})
+            if "features" in options:
+                options["features"] = self._string_list(
+                    options["features"], option="NAMES"
+                )
+            return {"action": action, **options}
+
+        if action != "create" or len(arguments) < 2:
+            raise ADQLSyntaxError("FEATURE CREATE requires a feature name.")
+        options = self._parse_options(
+            arguments[2:],
+            {
+                "METHOD": "method",
+                "COLUMN": "column",
+                "COLUMNS": "columns",
+                "EXPRESSION": "expression",
+                "BINS": "bins",
+                "LABELS": "labels",
+                "USE_ENGINEERED": "use_engineered",
+            },
+        )
+        if "method" not in options:
+            raise ADQLSyntaxError("FEATURE CREATE requires METHOD.")
+        if "columns" in options:
+            options["columns"] = self._string_list(options["columns"], option="COLUMNS")
+        if "bins" in options:
+            try:
+                options["bins"] = [float(item) for item in self._string_list(options["bins"], option="BINS")]
+            except ValueError as error:
+                raise ADQLSyntaxError("FEATURE BINS must be numeric.") from error
+        if "labels" in options:
+            options["labels"] = self._string_list(options["labels"], option="LABELS")
+        return {
+            "action": action,
+            "name": arguments[1],
+            **self._coerce_options(options),
+        }
+
+    def _parse_blue(self, arguments: list[str]) -> dict[str, Any]:
+        if arguments and arguments[0].upper() in {
+            "VISUALIZE", "INTERPRET", "PRESCRIBE"
+        }:
+            action = arguments[0].lower()
+            rest = arguments[1:]
+            if action == "visualize":
+                options = self._parse_options(
+                    rest,
+                    {
+                        "APPEND": "append",
+                        "ALLOW_DUPLICATES": "allow_duplicates",
+                    },
+                )
+                return {"action": action, **self._coerce_options(options)}
+            if rest:
+                raise ADQLSyntaxError(f"BLUE {action.upper()} does not accept arguments.")
+            return {"action": action}
+
+        return {
+            "action": "analyze",
+            **self._coerce_options(self._parse_options(arguments, BLUE_OPTIONS)),
+        }
+
+    def _parse_gallery(self, arguments: list[str]) -> dict[str, Any]:
+        if not arguments:
+            raise ADQLSyntaxError(
+                "GALLERY requires LIST, GET, CUSTOMIZE, SAVE, REMOVE, or CLEAR."
+            )
+        action = arguments[0].lower()
+        rest = arguments[1:]
+
+        if action == "list":
+            options = self._parse_options(
+                rest,
+                {
+                    "TYPE": "chart_type",
+                    "STAGE": "stage",
+                    "RECOMMENDED": "recommended",
+                },
+            )
+            return {"action": action, **self._coerce_options(options)}
+
+        if action in {"get", "remove"}:
+            if len(rest) != 1:
+                raise ADQLSyntaxError(f"GALLERY {action.upper()} requires a chart ID.")
+            return {"action": action, "chart_id": rest[0]}
+
+        if action == "customize":
+            if not rest:
+                raise ADQLSyntaxError("GALLERY CUSTOMIZE requires a chart ID.")
+            options = self._parse_options(rest[1:], GALLERY_STYLE_OPTIONS)
+            return {
+                "action": action,
+                "chart_id": rest[0],
+                **self._coerce_options(options),
+            }
+
+        if action == "save":
+            options = self._parse_options(
+                rest, {"TO": "output_dir", "FORMAT": "format"}
+            )
+            return {"action": action, **options}
+
+        if action == "clear":
+            if rest:
+                raise ADQLSyntaxError("GALLERY CLEAR does not accept arguments.")
+            return {"action": action}
+
+        raise ADQLSyntaxError(
+            "GALLERY requires LIST, GET, CUSTOMIZE, SAVE, REMOVE, or CLEAR."
+        )
 
     def _parse_select(self, raw: str) -> dict[str, Any]:
         body = re.sub(r"^\s*SELECT\b", "", raw, count=1, flags=re.I).strip()
@@ -599,17 +1030,35 @@ class ADQLParser:
             "legend",
             "display",
             "append",
+            "load_model",
+            "include_model",
+            "make_active",
+            "ignore_index",
+            "nullable",
+            "unique",
+            "allow_duplicates",
+            "transparent",
         }
         integer_options = {
             "random_state",
             "dpi",
             "max_charts",
             "max_preview_rows",
+            "max_rows",
+            "row",
+            "axis",
+            "max_features",
         }
         float_options = {
             "test_size",
             "confidence_level",
             "low_confidence_threshold",
+            "min_abs_correlation",
+            "iqr_multiplier",
+            "lower_bound",
+            "upper_bound",
+            "significance_level",
+            "leakage_threshold",
         }
         list_options = {"exclude_features", "chart_ids"}
         coerced = {}
@@ -880,6 +1329,24 @@ class ADQLParser:
             return float(value)
 
         return value
+
+    @staticmethod
+    def _mapping(value: Any, *, option: str) -> dict[str, Any]:
+        try:
+            parsed = ast.literal_eval(str(value))
+        except (SyntaxError, ValueError) as error:
+            raise ADQLSyntaxError(
+                f"{option} must be a quoted dictionary, for example "
+                "'{\"Revenue\": 120}'."
+            ) from error
+
+        if not isinstance(parsed, dict) or not parsed:
+            raise ADQLSyntaxError(f"{option} must be a non-empty dictionary.")
+
+        if any(not isinstance(key, str) or not key for key in parsed):
+            raise ADQLSyntaxError(f"{option} keys must be column names.")
+
+        return parsed
 
     @staticmethod
     def _key(value: str) -> str:

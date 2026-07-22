@@ -10,7 +10,7 @@ class ADQLCellParser:
     """Split a plain-text ADQL document into notebook-style cells."""
 
     CELL_MARKER = re.compile(
-        r"^\s*(?:#|--)\s*%%(?:\s*\[(.*?)\]|\s+(.*?))?\s*$"
+        r"^\s*(?:#|--)\s*%%(?:\s*\[(.*?)\])?(?:\s+(.*?))?\s*$"
     )
 
     def read(self, path: str | Path) -> ADQLDocument:
@@ -54,8 +54,15 @@ class ADQLCellParser:
             match = self.CELL_MARKER.match(line.rstrip("\r\n"))
 
             if match is not None:
-                title = (match.group(1) or match.group(2) or "").strip()
-                markers.append((index, title))
+                tag = (match.group(1) or "").strip()
+                trailing = (match.group(2) or "").strip()
+                kind = "markdown" if tag.casefold() == "markdown" else "code"
+                title = (
+                    trailing
+                    if tag.casefold() in {"markdown", "code"}
+                    else tag or trailing
+                )
+                markers.append((index, title, kind))
 
         if not markers:
             return [
@@ -83,7 +90,7 @@ class ADQLCellParser:
                 )
             )
 
-        for marker_index, (line_index, title) in enumerate(markers):
+        for marker_index, (line_index, title, kind) in enumerate(markers):
             next_line = (
                 markers[marker_index + 1][0]
                 if marker_index + 1 < len(markers)
@@ -97,6 +104,7 @@ class ADQLCellParser:
                     source="".join(lines[line_index + 1 : next_line]),
                     start_line=line_index + 1,
                     end_line=max(line_index + 1, next_line),
+                    kind=kind,
                 )
             )
 

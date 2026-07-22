@@ -4,6 +4,7 @@ SUPPORTED_COMMANDS = {
     "SELECT",
     "DATASET",
     "LOAD",
+    "KNOWLEDGE",
     "PROFILE",
     "STATISTICS",
     "INTERPRET",
@@ -16,11 +17,29 @@ SUPPORTED_COMMANDS = {
     "REJECT",
     "CLEAN",
     "VALIDATE",
+    "CLEANING",
     "AUTO",
     "VISUALIZE",
     "MODEL",
     "PREDICT",
+    "EXPLAIN",
+    "SHAP",
     "DASHBOARD",
+    "WORKSPACE",
+    "ADD",
+    "LIST",
+    "MERGE",
+    "CONCAT",
+    "EDIT",
+    "DOMAIN",
+    "OUTLIERS",
+    "AUDIT",
+    "CORRELATION",
+    "READINESS",
+    "FEATURES",
+    "FEATURE",
+    "BLUE",
+    "GALLERY",
     "REPORT",
     "EXPORT",
     "SET",
@@ -34,6 +53,7 @@ SUPPORTED_COMMANDS = {
 
 SIMPLE_COMMANDS = {
     "LOAD",
+    "KNOWLEDGE",
     "PROFILE",
     "STATISTICS",
     "INTERPRET",
@@ -141,6 +161,45 @@ PREDICT_OPTIONS = {
     "LOW_CONFIDENCE_THRESHOLD": "low_confidence_threshold",
 }
 
+EXPLAIN_OPTIONS = {
+    "MAX_ROWS": "max_rows",
+    "USE_ENGINEERED": "use_engineered",
+}
+
+SHAP_OPTIONS = {
+    "CHART": "chart",
+    "ROW": "row",
+    "FEATURE": "feature",
+    "SAVE": "save",
+}
+
+BLUE_OPTIONS = {
+    "SOURCE": "source",
+    "USE_ENGINEERED": "use_engineered",
+    "EXCLUDE_LEAKAGE": "exclude_leakage",
+    "MAX_FEATURES": "max_features",
+    "SIGNIFICANCE": "significance_level",
+    "LEAKAGE_THRESHOLD": "leakage_threshold",
+    "EXCLUDE": "exclude_features",
+}
+
+GALLERY_STYLE_OPTIONS = {
+    "TITLE": "title",
+    "SUBTITLE": "subtitle",
+    "X_LABEL": "x_label",
+    "Y_LABEL": "y_label",
+    "THEME": "theme",
+    "COLOR": "color",
+    "PALETTE": "palette",
+    "FIGSIZE": "figsize",
+    "DPI": "dpi",
+    "GRID": "grid",
+    "LEGEND": "legend",
+    "LEGEND_POSITION": "legend_position",
+    "TEMPLATE": "template",
+    "TRANSPARENT": "transparent",
+}
+
 DASHBOARD_OPTIONS = {
     "TITLE": "title",
     "SUBTITLE": "subtitle",
@@ -192,8 +251,19 @@ COMMAND_HELP = [
     },
     {
         "command": "MODEL",
-        "syntax": "MODEL TARGET Revenue USING linear_regression",
-        "description": "Train a model through the project API.",
+        "syntax": (
+            "MODEL TARGET Revenue USING linear_regression; "
+            "MODEL SAVE TO model.autodq; MODEL LOAD FROM model.autodq"
+        ),
+        "description": "Train, save, or load an AutoDQ model.",
+    },
+    {
+        "command": "EXPLAIN / SHAP",
+        "syntax": (
+            "EXPLAIN MAX_ROWS 20; SHAP CHART summary; "
+            "SHAP CHART waterfall ROW 0"
+        ),
+        "description": "Explain the active model and render SHAP plots.",
     },
     {
         "command": "PREDICT",
@@ -212,6 +282,48 @@ COMMAND_HELP = [
         "command": "AUTO",
         "syntax": "AUTO MODE review|clean|full [VISUALIZE true|false]",
         "description": "Run project.auto() with explicit allowlisted options.",
+    },
+    {
+        "command": "WORKSPACE / ADD / LIST / MERGE / CONCAT",
+        "syntax": (
+            "WORKSPACE CREATE sales ROOT .autodq/workspaces; "
+            "ADD DATASET costs FROM costs.csv; LIST DATASETS; "
+            "MERGE main WITH costs AS joined ON Product"
+        ),
+        "description": "Manage workspaces and multiple datasets.",
+    },
+    {
+        "command": "EDIT / DOMAIN / OUTLIERS / AUDIT",
+        "syntax": (
+            "EDIT ROW 3 CHANGES '{\"Revenue\": 120}'; "
+            "DOMAIN ADD Revenue MIN 0; DOMAIN VALIDATE; "
+            "OUTLIERS REVIEW COLUMNS Revenue; AUDIT EXPORT TO audit.json"
+        ),
+        "description": "Perform traceable manual cleaning and domain review.",
+    },
+    {
+        "command": "KNOWLEDGE / CLEANING",
+        "syntax": (
+            "KNOWLEDGE; CLEANING PREVIEW ACTIONS 1,2 MAX_ROWS 5; "
+            "CLEANING APPLY"
+        ),
+        "description": "Apply domain knowledge or inspect/apply review changes.",
+    },
+    {
+        "command": "CORRELATION / READINESS / FEATURES / FEATURE",
+        "syntax": (
+            "CORRELATION MIN_ABS 0.3; READINESS; FEATURES; "
+            "FEATURE CREATE Margin METHOD difference COLUMNS Revenue,Cost"
+        ),
+        "description": "Run analytical intelligence and feature engineering.",
+    },
+    {
+        "command": "BLUE / GALLERY",
+        "syntax": (
+            "BLUE; BLUE VISUALIZE; BLUE INTERPRET; BLUE PRESCRIBE; "
+            "GALLERY LIST; GALLERY SAVE TO charts FORMAT png"
+        ),
+        "description": "Run BLUE diagnostics and manage reusable charts.",
     },
     {
         "command": "REPORT / EXPORT",

@@ -128,6 +128,7 @@ class ADQLExecutor:
 
         simple = {
             "LOAD": project.load,
+            "KNOWLEDGE": project.apply_knowledge,
             "PROFILE": project.profile,
             "STATISTICS": project.statistics,
             "INTERPRET": project.interpret,
@@ -147,6 +148,20 @@ class ADQLExecutor:
                 "value": None if isinstance(value, pd.DataFrame) else value,
                 "total_rows": len(value) if isinstance(value, pd.DataFrame) else None,
                 "message": f"{kind.title()} completed through the project API.",
+            }
+
+        if kind == "CLEANING":
+            action = parameters.pop("action")
+            value = (
+                project.cleaning_preview(**parameters)
+                if action == "preview"
+                else project.apply_cleaning_review()
+            )
+            return {
+                "data": value if isinstance(value, pd.DataFrame) else None,
+                "value": None if isinstance(value, pd.DataFrame) else value,
+                "total_rows": len(value) if isinstance(value, pd.DataFrame) else None,
+                "message": f"Cleaning {action} completed.",
             }
 
         if kind == "AUTO":
@@ -174,6 +189,25 @@ class ADQLExecutor:
             }
 
         if kind == "MODEL":
+            action = parameters.pop("action", "train")
+
+            if action == "save":
+                value = project.save_model(
+                    parameters["path"],
+                    overwrite=parameters.get("overwrite", False),
+                )
+                return {
+                    "value": value,
+                    "message": f"Saved the active model to {value.path}.",
+                }
+
+            if action == "load":
+                value = project.load_model(parameters["path"])
+                return {
+                    "value": value,
+                    "message": f"Loaded model from {parameters['path']}.",
+                }
+
             target = parameters.pop("target", None)
 
             if target is not None:
@@ -199,6 +233,172 @@ class ADQLExecutor:
                     f"{report.algorithm}."
                 ),
             }
+
+        if kind == "EXPLAIN":
+            value = project.explain(**parameters)
+            return {
+                "value": value,
+                "message": (
+                    f"Generated {value.explanation_count} model explanation(s) "
+                    f"using {value.method}."
+                ),
+            }
+
+        if kind == "SHAP":
+            parameters.setdefault("chart", "summary")
+            parameters["display"] = False
+            value = project.visualize_shap(**parameters)
+            return {
+                "value": value,
+                "message": f"Generated the {parameters['chart']} SHAP plot.",
+            }
+
+        if kind == "WORKSPACE":
+            return self._execute_workspace(project, parameters)
+
+        if kind == "ADD":
+            data = project.add_dataset(
+                name=parameters["name"],
+                dataset_path=parameters["dataset_path"],
+                overwrite=parameters.get("overwrite", False),
+            )
+            return {
+                "data": data,
+                "total_rows": len(data),
+                "message": (
+                    f"Added dataset {parameters['name']} with {len(data):,} rows."
+                ),
+            }
+
+        if kind == "LIST":
+            return self._execute_list(project, parameters["entity"])
+
+        if kind == "MERGE":
+            data = project.merge_datasets(**parameters)
+            return {
+                "data": data,
+                "total_rows": len(data),
+                "message": (
+                    f"Merged {parameters['left']} with {parameters['right']} "
+                    f"into {parameters.get('output_name') or 'merged'}."
+                ),
+            }
+
+        if kind == "CONCAT":
+            data = project.concat_datasets(**parameters)
+            return {
+                "data": data,
+                "total_rows": len(data),
+                "message": (
+                    f"Concatenated {len(parameters['datasets'])} datasets "
+                    f"into {parameters.get('output_name', 'concatenated')}."
+                ),
+            }
+
+        if kind == "EDIT":
+            value = project.edit_row(**parameters)
+            data = pd.DataFrame([value]) if isinstance(value, dict) else None
+            return {
+                "data": data,
+                "value": None if data is not None else value,
+                "total_rows": 1 if data is not None else None,
+                "message": f"Updated review row {parameters['row_index']}.",
+            }
+
+        if kind == "DOMAIN":
+            action = parameters.pop("action")
+            value = (
+                project.add_domain_rule(**parameters)
+                if action == "add"
+                else project.validate_domain()
+            )
+            return {
+                "value": value,
+                "message": (
+                    f"Added domain rule for {parameters['column']}."
+                    if action == "add"
+                    else f"Validated domain rules with {value.violation_count} violation(s)."
+                ),
+            }
+
+        if kind == "OUTLIERS":
+            action = parameters.pop("action")
+            if action == "review":
+                value = project.review_outliers(**parameters)
+                message = f"Found {value.outlier_count} reviewed outlier(s)."
+            else:
+                changed = project.treat_outliers(**parameters)
+                value = {"changed_rows": changed, **parameters}
+                message = f"Treated {changed} outlier row(s)."
+            return {"value": value, "message": message}
+
+        if kind == "AUDIT":
+            value = project.export_cleaning_audit(parameters["output"])
+            return {
+                "value": value,
+                "message": f"Exported the cleaning audit trail to {value}.",
+            }
+
+        if kind == "CORRELATION":
+            value = project.correlation(**parameters)
+            return {
+                "value": value,
+                "message": (
+                    f"Generated {value.relationship_count} correlation relationship(s)."
+                ),
+            }
+
+        if kind == "READINESS":
+            value = project.ml_readiness()
+            return {
+                "value": value,
+                "message": f"ML readiness score: {value.score}.",
+            }
+
+        if kind == "FEATURES":
+            value = project.features()
+            return {
+                "value": value,
+                "message": (
+                    f"Generated {value.recommendation_count} feature recommendation(s)."
+                ),
+            }
+
+        if kind == "FEATURE":
+            action = parameters.pop("action")
+            data = (
+                project.create_feature(**parameters)
+                if action == "create"
+                else project.apply_features(**parameters)
+            )
+            return {
+                "data": data,
+                "total_rows": len(data),
+                "message": (
+                    f"Created feature {parameters['name']}."
+                    if action == "create"
+                    else "Applied feature engineering recommendations."
+                ),
+            }
+
+        if kind == "BLUE":
+            action = parameters.pop("action")
+            operations = {
+                "analyze": project.blue,
+                "visualize": project.visualize_blue,
+                "interpret": project.interpret_blue_visuals,
+                "prescribe": project.prescribe_blue,
+            }
+            if action == "visualize":
+                parameters.setdefault("display", False)
+            value = operations[action](**parameters)
+            return {
+                "value": value,
+                "message": f"BLUE {action} completed.",
+            }
+
+        if kind == "GALLERY":
+            return self._execute_gallery(project, parameters)
 
         if kind == "DASHBOARD":
             parameters.setdefault("auto_display", False)
@@ -347,6 +547,139 @@ class ADQLExecutor:
             }
 
         raise RuntimeError(f"Execution is not implemented for {kind}.")
+
+    def _execute_workspace(self, project, parameters) -> dict[str, Any]:
+        parameters = dict(parameters)
+        action = parameters.pop("action")
+
+        if action == "create":
+            created = type(project).create_workspace(
+                name=parameters["name"],
+                dataset_path=str(project.dataset_path),
+                target=parameters.get("target", project.target),
+                workspace_root=parameters.get(
+                    "workspace_root", ".autodq/workspaces"
+                ),
+            )
+            self._adopt_project(project, created)
+            value = project.workspace_info()
+            message = f"Created and activated workspace {value['name']}."
+        elif action == "open":
+            opened = type(project).open_workspace(
+                parameters["name_or_path"],
+                workspace_root=parameters.get(
+                    "workspace_root", ".autodq/workspaces"
+                ),
+                load_model=parameters.get("load_model", True),
+            )
+            self._adopt_project(project, opened)
+            value = project.workspace_info()
+            message = f"Opened workspace {value['name']}."
+        elif action == "save":
+            value = project.save_workspace(**parameters)
+            message = f"Saved workspace {value['name']}."
+        elif action == "info":
+            value = project.workspace_info()
+            message = f"Workspace information for {value['name']}."
+        else:
+            rows = type(project).list_workspaces(
+                parameters.get("workspace_root", ".autodq/workspaces")
+            )
+            data = self._records_frame(rows)
+            return {
+                "data": data,
+                "total_rows": len(data),
+                "message": f"Found {len(data)} workspace(s).",
+            }
+
+        return {"value": value, "message": message}
+
+    def _execute_list(self, project, entity: str) -> dict[str, Any]:
+        if entity == "datasets":
+            rows = project.dataset_manager.entries()
+            data = self._records_frame(rows)
+        elif entity == "workspaces":
+            rows = type(project).list_workspaces()
+            data = self._records_frame(rows)
+        else:
+            data = self._visualization_frame(project.visualization_gallery.charts)
+
+        return {
+            "data": data,
+            "total_rows": len(data),
+            "message": f"Returned {len(data)} {entity}.",
+        }
+
+    def _execute_gallery(self, project, parameters) -> dict[str, Any]:
+        parameters = dict(parameters)
+        action = parameters.pop("action")
+
+        if action == "list":
+            charts = project.filter_visualizations(**parameters)
+            data = self._visualization_frame(charts)
+            return {
+                "data": data,
+                "total_rows": len(data),
+                "message": f"Returned {len(data)} gallery chart(s).",
+            }
+
+        if action == "get":
+            value = project.get_visualization(parameters["chart_id"])
+            message = f"Loaded gallery chart {value.chart_id}."
+        elif action == "customize":
+            chart_id = parameters.pop("chart_id")
+            value = project.customize_visualization(chart_id, **parameters)
+            message = f"Customized gallery chart {chart_id}."
+        elif action == "save":
+            value = project.save_visualizations(**parameters)
+            message = f"Saved {len(value)} gallery chart(s)."
+        elif action == "remove":
+            value = project.remove_visualization(parameters["chart_id"])
+            message = f"Removed gallery chart {parameters['chart_id']}."
+        else:
+            project.clear_visualizations()
+            value = {"chart_count": 0}
+            message = "Cleared the visualization gallery."
+
+        return {"value": value, "message": message}
+
+    @staticmethod
+    def _adopt_project(project, replacement) -> None:
+        """Keep the runner's project identity while replacing its state."""
+        project.__dict__.clear()
+        project.__dict__.update(replacement.__dict__)
+
+    @staticmethod
+    def _records_frame(rows) -> pd.DataFrame:
+        records = []
+
+        for item in rows:
+            if hasattr(item, "to_dict"):
+                records.append(item.to_dict())
+            elif isinstance(item, dict):
+                records.append(item)
+            else:
+                records.append({"value": str(item)})
+
+        return pd.DataFrame(records)
+
+    @staticmethod
+    def _visualization_frame(charts) -> pd.DataFrame:
+        return pd.DataFrame(
+            [
+                {
+                    "chart_id": chart.chart_id,
+                    "title": chart.title,
+                    "chart_type": chart.chart_type,
+                    "stage": chart.stage,
+                    "recommended": chart.recommended,
+                }
+                for chart in charts
+            ],
+            columns=[
+                "chart_id", "title", "chart_type", "stage", "recommended"
+            ],
+        )
 
     def _execute_select(self, project, parameters) -> dict[str, Any]:
         source_name = parameters["source"]
@@ -667,23 +1000,30 @@ class ADQLExecutor:
             return resolved
 
         path_options = {
-            "DATASET": "dataset_path",
-            "DASHBOARD": "output",
-            "REPORT": "output",
-            "EXPORT": "output",
-            "VISUALIZE": "save",
+            "DATASET": ("dataset_path",),
+            "DASHBOARD": ("output",),
+            "REPORT": ("output",),
+            "EXPORT": ("output",),
+            "VISUALIZE": ("save",),
+            "MODEL": ("path",),
+            "SHAP": ("save",),
+            "ADD": ("dataset_path",),
+            "AUDIT": ("output",),
+            "WORKSPACE": ("workspace_root",),
+            "GALLERY": ("output_dir",),
         }
-        option = path_options.get(kind)
 
-        if option is None or resolved.get(option) is None:
-            return resolved
+        for option in path_options.get(kind, ()):
+            if resolved.get(option) is None:
+                continue
 
-        path = Path(resolved[option]).expanduser()
+            path = Path(resolved[option]).expanduser()
 
-        if not path.is_absolute():
-            path = base_path / path
+            if not path.is_absolute():
+                path = base_path / path
 
-        resolved[option] = str(path.resolve())
+            resolved[option] = str(path.resolve())
+
         return resolved
 
     @staticmethod

@@ -2,7 +2,7 @@
   "name": "adql",
   "displayName": "AutoDQ ADQL",
   "description": "ADQL language support and executable notebook cells for AutoDQ.",
-  "version": "0.1.0",
+  "version": "0.2.1",
   "publisher": "autodq",
   "license": "MIT",
   "engines": {
@@ -58,6 +58,10 @@
       {
         "command": "autodq.adql.runCellOnly",
         "title": "ADQL: Run Cell Only"
+      },
+      {
+        "command": "autodq.adql.restartKernel",
+        "title": "ADQL: Restart Session"
       }
     ],
     "menus": {
@@ -76,6 +80,20 @@
           "type": "string",
           "default": "",
           "description": "Optional path to the AutoDQ command. Empty searches upward from the .adql file for .venv before using PATH."
+        },
+        "autodq.notebook.maxOutputRows": {
+          "type": "integer",
+          "default": 25,
+          "minimum": 5,
+          "maximum": 500,
+          "description": "Maximum rows or collection items shown in an ADQL notebook output preview. Complete results remain available to later statements and exports."
+        },
+        "autodq.notebook.maxOutputCharacters": {
+          "type": "integer",
+          "default": 12000,
+          "minimum": 2000,
+          "maximum": 200000,
+          "description": "Maximum characters shown for each structured ADQL notebook output preview."
         }
       }
     }
