@@ -1,38 +1,17 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Any
-
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
 
-
-@dataclass(slots=True)
-class BLUEDiagnosticChart:
-    """
-    Visualization specification compatible with AutoDQ's
-    visualization gallery and Matplotlib renderer.
-    """
-
-    chart_id: str
-    chart_type: str
-    title: str
-    description: str
-    stage: str
-    data: list[dict[str, Any]]
-    x: str | None = None
-    y: str | None = None
-    column: str | None = None
+from autodq.visualization.models import (
+    VisualizationReport,
+    VisualizationSpec,
+)
 
 
-@dataclass(slots=True)
-class BLUEVisualizationReport:
-    charts: list[BLUEDiagnosticChart]
-
-    @property
-    def chart_count(self) -> int:
-        return len(self.charts)
+BLUEDiagnosticChart = VisualizationSpec
+BLUEVisualizationReport = VisualizationReport
 
 
 class BLUEVisualizer:

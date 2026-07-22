@@ -45,6 +45,7 @@ from autodq.blue.engine import BLUEEngine
 from autodq.renderers.console.blue import ConsoleBLUERenderer
 from autodq.visualization.gallery import VisualizationGallery
 from autodq.visualization.notebook_renderer import (NotebookVisualizationRenderer,)
+from autodq.visualization.models import VisualizationReport
 from autodq.blue.visualizer import (BLUEVisualizationReport,BLUEVisualizer,)
 from autodq.blue.visual_interpreter import (BLUEVisualInterpreter,)
 from autodq.blue.prescriptions import BLUEPrescriptionEngine
@@ -675,6 +676,22 @@ class AutoDQ:
         append: bool = True,
         display: bool = True,
         allow_duplicates: bool = False,
+        title: str | None = None,
+        subtitle: str | None = None,
+        x_label: str | None = None,
+        y_label: str | None = None,
+        theme: str | None = None,
+        color: str | None = None,
+        palette: str | list[str] | tuple[str, ...] | None = None,
+        figsize: tuple[float, float] | None = None,
+        dpi: int | None = None,
+        grid: bool | None = None,
+        legend: bool | None = None,
+        legend_position: str | None = None,
+        template: str | None = None,
+        transparent: bool | None = None,
+        save: str | None = None,
+        save_format: str | None = None,
     ):
         if self.state.data is None:
             self.load()
@@ -717,23 +734,42 @@ class AutoDQ:
             validation_report=self.state.validation_report,
         )
 
+        if title is not None and new_report.chart_count != 1:
+            raise ValueError(
+                "A custom title can only be applied when one chart is "
+                "generated. Customize gallery charts by chart_id instead."
+            )
+
+        for generated_chart in new_report.charts:
+            generated_chart.customize(
+                title=title,
+                subtitle=subtitle,
+                x_label=x_label,
+                y_label=y_label,
+                theme=theme,
+                color=color,
+                palette=palette,
+                figsize=figsize,
+                dpi=dpi,
+                grid=grid,
+                legend=legend,
+                legend_position=legend_position,
+                template=template,
+                transparent=transparent,
+            )
+
         if not append:
             self.visualization_gallery.clear()
 
         added_charts = self.visualization_gallery.add_report(
             new_report,
             allow_duplicates=allow_duplicates,
+            replace_existing=True,
         )
 
-        self.state.visualization_report = new_report
-
-        if hasattr(
-            self.state.visualization_report,
-            "charts",
-        ):
-            self.state.visualization_report.charts = (
-                self.visualization_gallery.charts
-            )
+        self.state.visualization_report = (
+            self.visualization_gallery.to_report()
+        )
 
         if display and added_charts:
             display_report = self._build_visualization_subset(
@@ -744,6 +780,24 @@ class AutoDQ:
             self.notebook_visualization_renderer.render(
                 display_report
             )
+
+        saved_paths = []
+
+        if save is not None and added_charts:
+            if len(added_charts) == 1 and Path(save).suffix:
+                saved_paths = [
+                    added_charts[0].save(
+                        save,
+                        format=save_format,
+                    )
+                ]
+            else:
+                saved_paths = VisualizationReport(
+                    charts=added_charts
+                ).save(save, format=save_format or "png")
+
+        self.state.visualization_report.auto_display = False
+        new_report.auto_display = False
 
         self.session.log(
             step="visualize",
@@ -756,19 +810,12 @@ class AutoDQ:
                     self.visualization_gallery.chart_count
                 ),
                 "displayed_in_notebook": display,
+                "saved_paths": [str(path) for path in saved_paths],
             },
         )
 
         return new_report
 
-    def show_visualizations(self) -> None:
-        if self.state.visualization_report is None:
-            self.visualize()
-
-        if self.state.visualization_report is not None:
-            ConsoleVisualizationRenderer.render(self.state.visualization_report)
-            
-            
     def head(self, n: int = 5) -> pd.DataFrame:
         if self.state.data is None:
             self.load()
@@ -1763,14 +1810,14 @@ class AutoDQ:
             return subset
         
         
-    def list_visualizations(self) -> None:
+    def list_visualizations(self) -> list:
         print("\n=== AutoDQ Visualization Gallery ===\n")
 
         charts = self.visualization_gallery.charts
 
         if not charts:
             print("No visualizations stored.")
-            return
+            return []
 
         for index, chart in enumerate(
             charts,
@@ -1792,6 +1839,79 @@ class AutoDQ:
                 f"   Stage: "
                 f"{getattr(chart, 'stage', 'N/A')}"
             )
+
+        return charts
+
+    def get_visualization(self, chart_id: str):
+        """Return a reusable chart from the visualization gallery."""
+        return self.visualization_gallery.get(chart_id)
+
+    def filter_visualizations(
+        self,
+        *,
+        chart_type: str | None = None,
+        stage: str | None = None,
+        recommended: bool | None = None,
+    ) -> list:
+        """Filter gallery charts without changing the gallery."""
+        return self.visualization_gallery.filter(
+            chart_type=chart_type,
+            stage=stage,
+            recommended=recommended,
+        )
+
+    def customize_visualization(
+        self,
+        chart_id: str,
+        **options,
+    ):
+        """Customize a retained chart and return the reusable object."""
+        chart = self.visualization_gallery.customize(
+            chart_id,
+            **options,
+        )
+        self.session.log(
+            step="customize_visualization",
+            message="Visualization styling updated.",
+            metadata={
+                "chart_id": chart_id,
+                "options": sorted(options),
+            },
+        )
+        return chart
+
+    def save_visualizations(
+        self,
+        output_dir: str | None = None,
+        *,
+        format: str = "png",
+    ) -> list[Path]:
+        """Export the visualization gallery, using workspace storage."""
+        if not self.visualization_gallery.charts:
+            raise ValueError("Visualization gallery is empty.")
+
+        if output_dir is None:
+            if self.workspace is not None:
+                destination = self.workspace.visualizations_dir
+            else:
+                destination = Path(".autodq/visualizations")
+        else:
+            destination = Path(output_dir)
+
+        paths = self.visualization_gallery.save(
+            destination,
+            format=format,
+        )
+        self.session.log(
+            step="save_visualizations",
+            message="Visualization gallery exported.",
+            metadata={
+                "output_dir": str(destination),
+                "format": format,
+                "charts": len(paths),
+            },
+        )
+        return paths
 
     def remove_visualization(
         self,
@@ -1833,26 +1953,30 @@ class AutoDQ:
 
         print("\nVisualization gallery cleared.")
 
-    def show_visualizations(self) -> None:
+    def show_visualizations(self):
         if self.state.visualization_report is None:
             print("\nNo visualizations available.")
-            return
+            return None
 
         if not self.visualization_gallery.charts:
             print("\nVisualization gallery is empty.")
-            return
+            return None
 
         self.state.visualization_report.charts = (
             self.visualization_gallery.charts
         )
+        self.state.visualization_report.auto_display = False
 
-        self.notebook_visualization_renderer.render(
-            self.state.visualization_report
-        )
+        if self.notebook_visualization_renderer.is_notebook():
+            self.notebook_visualization_renderer.render(
+                self.state.visualization_report
+            )
+        else:
+            ConsoleVisualizationRenderer.render(
+                self.state.visualization_report
+            )
 
-        ConsoleVisualizationRenderer.render(
-            self.state.visualization_report
-        )
+        return self.state.visualization_report
     def visualize_blue(
         self,
         display: bool = True,
@@ -1886,14 +2010,11 @@ class AutoDQ:
         added_charts = self.visualization_gallery.add_report(
             blue_visualization_report,
             allow_duplicates=allow_duplicates,
+            replace_existing=True,
         )
 
         self.state.visualization_report = (
-            blue_visualization_report
-        )
-
-        self.state.visualization_report.charts = (
-            self.visualization_gallery.charts
+            self.visualization_gallery.to_report()
         )
 
         if display and added_charts:
@@ -1904,6 +2025,9 @@ class AutoDQ:
             self.notebook_visualization_renderer.render(
                 display_report
             )
+
+        self.state.visualization_report.auto_display = False
+        blue_visualization_report.auto_display = False
 
         self.session.log(
             step="visualize_blue",
