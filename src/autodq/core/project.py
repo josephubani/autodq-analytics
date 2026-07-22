@@ -48,6 +48,7 @@ from autodq.visualization.notebook_renderer import (NotebookVisualizationRendere
 from autodq.blue.visualizer import (BLUEVisualizationReport,BLUEVisualizer,)
 from autodq.blue.visual_interpreter import (BLUEVisualInterpreter,)
 from autodq.blue.prescriptions import BLUEPrescriptionEngine
+from autodq.explainability.shap_visualizer import SHAPVisualizer
 
 
 class AutoDQ:
@@ -104,34 +105,39 @@ class AutoDQ:
 
     def load(self) -> pd.DataFrame:
         if self.dataset_manager.exists("main"):
-            self.state.data = (
-            self.dataset_manager.get_data("main").copy()
-        )
+            self.state.data = self.dataset_manager.get_data(
+                "main"
+            ).copy()
         else:
             self.state.data = load_dataset(
-            self.state.dataset_path
-        )
-
-        self.dataset_manager.add(
-            name="main",
-            dataset_path=self.state.dataset_path,
-            data=self.state.data,
-            is_primary=True,
-        )
+                self.state.dataset_path
+            )
+            self.dataset_manager.add(
+                name="main",
+                dataset_path=self.state.dataset_path,
+                data=self.state.data,
+                is_primary=True,
+            )
 
         self.session.log(
-        step="load",
-        message="Dataset loaded successfully.",
-        metadata={
-            "rows": len(self.state.data),
-            "columns": len(self.state.data.columns),
-        },
-    )
+            step="load",
+            message="Dataset loaded successfully.",
+            metadata={
+                "rows": len(self.state.data),
+                "columns": len(self.state.data.columns),
+            },
+        )
 
         return self.state.data
 
     def change_dataset(self, dataset_path: str) -> pd.DataFrame:
         self.state.reset_all(dataset_path)
+        self.dataset_manager.add(
+            name="main",
+            dataset_path=self.state.dataset_path,
+            is_primary=True,
+            overwrite=True,
+        )
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
         self.session.log(
@@ -869,7 +875,7 @@ class AutoDQ:
             final_exclusions.extend(leakage_candidates)
             final_exclusions = sorted(set(final_exclusions))
 
-            self.state.model_report = self.ml_engine.train(
+        self.state.model_report = self.ml_engine.train(
             df=active_df,
             target=self.state.target,
             algorithm=algorithm,
@@ -1125,6 +1131,91 @@ class AutoDQ:
                 print(
                     f"  Explanation: {row.explanation}"
                 )
+                
+                
+    def visualize_shap(
+        self,
+        chart: str = "summary",
+        row: int = 0,
+        feature: str | None = None,
+        save: str | None = None,
+        display: bool = True,
+    ):
+        """
+        Generate a SHAP visualization from the latest explainability report.
+
+        Supported chart types:
+        - summary
+        - beeswarm
+        - bar
+        - waterfall
+        - dependence
+
+        Parameters
+        ----------
+        chart:
+            Type of SHAP visualization to generate.
+
+        row:
+            Row position used for waterfall plots.
+
+        feature:
+            Feature name used for dependence plots.
+
+        save:
+            Optional file path for saving the visualization.
+
+        display:
+            Whether to display the visualization immediately.
+
+        Returns
+        -------
+        Any
+            The generated matplotlib figure or plot result.
+        """
+        if self.state.explainability_report is None:
+            self.explain()
+
+        report = self.state.explainability_report
+
+        if report is None:
+            raise RuntimeError(
+                "Explainability report could not be generated."
+            )
+
+        visualizer = SHAPVisualizer(report)
+
+        chart_normalized = chart.lower().strip()
+        result = visualizer.plot(
+            chart=chart_normalized,
+            row=row,
+            feature=feature,
+            save=save,
+            show=display,
+        )
+
+        self.session.log(
+            step="visualize_shap",
+            message="SHAP visualization generated.",
+            metadata={
+                "chart": chart_normalized,
+                "row": (
+                    row
+                    if chart_normalized == "waterfall"
+                    else None
+                ),
+                "feature": (
+                    feature
+                    if chart_normalized == "dependence"
+                    else None
+                ),
+                "saved_to": save,
+                "displayed_in_notebook": display,
+            },
+        )
+
+        return result
+                    
 
     def add_dataset(
         self,

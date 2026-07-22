@@ -9,6 +9,7 @@ from autodq.explainability.models import (
     ExplainabilityReport,
     FeatureContribution,
     RowExplanation,
+    SHAPArtifacts,
 )
 
 
@@ -144,23 +145,43 @@ class ExplainabilityEngine:
                 index=explain_df.index,
             )
 
-            method, shap_values, base_values = self._calculate_shap_values(
+            method, explainer, explanation = self._calculate_shap_values(
                 shap_module=shap,
                 estimator=estimator,
                 transformed_data=transformed_frame,
                 algorithm=model_report.algorithm,
+            )
+
+            shap_values = explanation.values
+            base_values = explanation.base_values
+            output_index = self._resolve_output_index(
+                shap_values=shap_values,
                 problem_type=model_report.problem_type,
             )
 
             normalized_values = self._normalize_shap_values(
                 shap_values=shap_values,
                 problem_type=model_report.problem_type,
+                output_index=output_index,
             )
 
             normalized_base_values = self._normalize_base_values(
                 base_values=base_values,
                 row_count=len(transformed_frame),
                 problem_type=model_report.problem_type,
+                output_index=output_index,
+            )
+
+            normalized_explanation = shap.Explanation(
+                values=normalized_values,
+                base_values=normalized_base_values,
+                data=transformed_frame.to_numpy(),
+                feature_names=feature_names,
+            )
+
+            output_name = self._resolve_output_name(
+                estimator=estimator,
+                output_index=output_index,
             )
 
             global_features = self._build_global_features(
@@ -197,6 +218,16 @@ class ExplainabilityEngine:
                 global_features=global_features,
                 warnings=warnings,
                 feature_names=feature_names,
+                shap_artifacts=SHAPArtifacts(
+                    shap_values=normalized_values,
+                    explanation=normalized_explanation,
+                    explainer=explainer,
+                    transformed_data=transformed_frame,
+                    feature_names=feature_names,
+                    row_ids=list(explain_df.index),
+                    output_index=output_index,
+                    output_name=output_name,
+                ),
             )
 
         except Exception as error:
@@ -294,7 +325,6 @@ class ExplainabilityEngine:
         estimator,
         transformed_data: pd.DataFrame,
         algorithm: str,
-        problem_type: str,
     ) -> tuple[str, Any, Any]:
         algorithm_lower = (algorithm or "").lower()
 
@@ -307,8 +337,8 @@ class ExplainabilityEngine:
 
             return (
                 "shap_tree_explainer",
-                explanation.values,
-                explanation.base_values,
+                explainer,
+                explanation,
             )
 
         if any(
@@ -323,26 +353,57 @@ class ExplainabilityEngine:
 
             return (
                 "shap_linear_explainer",
-                explanation.values,
-                explanation.base_values,
+                explainer,
+                explanation,
             )
 
         explainer = shap_module.Explainer(
-            estimator,
+            estimator.predict,
             transformed_data,
         )
         explanation = explainer(transformed_data)
 
         return (
             "shap_general_explainer",
-            explanation.values,
-            explanation.base_values,
+            explainer,
+            explanation,
         )
+
+    def _resolve_output_index(
+        self,
+        shap_values,
+        problem_type: str,
+    ) -> int | None:
+        values = np.asarray(shap_values)
+
+        if values.ndim != 3:
+            return None
+
+        if problem_type == "classification":
+            return 1 if values.shape[2] > 1 else 0
+
+        return 0
+
+    def _resolve_output_name(
+        self,
+        estimator,
+        output_index: int | None,
+    ):
+        if output_index is None:
+            return None
+
+        classes = getattr(estimator, "classes_", None)
+
+        if classes is None or output_index >= len(classes):
+            return output_index
+
+        return self._safe_value(classes[output_index])
 
     def _normalize_shap_values(
         self,
         shap_values,
         problem_type: str,
+        output_index: int | None = None,
     ) -> np.ndarray:
         values = np.asarray(shap_values)
 
@@ -350,11 +411,17 @@ class ExplainabilityEngine:
             return values
 
         if values.ndim == 3:
-            if problem_type == "classification":
-                class_index = 1 if values.shape[2] > 1 else 0
-                return values[:, :, class_index]
-
-            return values[:, :, 0]
+            selected_output = (
+                output_index
+                if output_index is not None
+                else (
+                    1
+                    if problem_type == "classification"
+                    and values.shape[2] > 1
+                    else 0
+                )
+            )
+            return values[:, :, selected_output]
 
         raise ValueError(
             f"Unsupported SHAP value dimensions: {values.shape}"
@@ -365,6 +432,7 @@ class ExplainabilityEngine:
         base_values,
         row_count: int,
         problem_type: str,
+        output_index: int | None = None,
     ) -> np.ndarray:
         values = np.asarray(base_values)
 
@@ -380,10 +448,14 @@ class ExplainabilityEngine:
 
         if values.ndim == 2:
             class_index = (
-                1
-                if problem_type == "classification"
-                and values.shape[1] > 1
-                else 0
+                output_index
+                if output_index is not None
+                else (
+                    1
+                    if problem_type == "classification"
+                    and values.shape[1] > 1
+                    else 0
+                )
             )
             return values[:, class_index].astype(float)
 
@@ -578,7 +650,7 @@ class ExplainabilityEngine:
         return estimator.predict(
             transformed_frame.iloc[
                 [row_position]
-            ]
+            ].to_numpy()
         )[0]
 
     def _build_explanation_text(

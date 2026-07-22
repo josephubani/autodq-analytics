@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -69,6 +71,24 @@ class RowExplanation:
 
 
 @dataclass(slots=True)
+class SHAPArtifacts:
+    """
+    Internal SHAP objects reused for visualizations.
+
+    These are intentionally excluded from report serialization.
+    """
+
+    shap_values: Any | None = None
+    explanation: Any | None = None
+    explainer: Any | None = None
+    transformed_data: Any | None = None
+    feature_names: list[str] = field(default_factory=list)
+    row_ids: list[Any] = field(default_factory=list)
+    output_index: int | None = None
+    output_name: Any | None = None
+
+
+@dataclass(slots=True)
 class ExplainabilityReport:
     """
     Structured explainability output for AutoDQ.
@@ -80,6 +100,11 @@ class ExplainabilityReport:
     global_features: list[FeatureContribution] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     feature_names: list[str] = field(default_factory=list)
+    shap_artifacts: SHAPArtifacts | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+    )
     generated_at: datetime = field(default_factory=datetime.now)
 
     @property
@@ -90,12 +115,17 @@ class ExplainabilityReport:
     def global_feature_count(self) -> int:
         return len(self.global_features)
 
+    @property
+    def has_shap_artifacts(self) -> bool:
+        return self.shap_artifacts is not None
+
     def to_dict(self) -> dict:
         return {
             "algorithm": self.algorithm,
             "method": self.method,
             "explanation_count": self.explanation_count,
             "global_feature_count": self.global_feature_count,
+            "has_shap_artifacts": self.has_shap_artifacts,
             "feature_names": self.feature_names,
             "warnings": self.warnings,
             "row_explanations": [
