@@ -51,6 +51,7 @@ from autodq.blue.visual_interpreter import (BLUEVisualInterpreter,)
 from autodq.blue.prescriptions import BLUEPrescriptionEngine
 from autodq.explainability.shap_visualizer import SHAPVisualizer
 from autodq.persistence.engine import ModelPersistenceEngine
+from autodq.review.engine import CleaningReviewEngine
 from autodq.workspaces.manager import WorkspaceManager
 from autodq.workspaces.models import WorkspaceContext
 
@@ -88,6 +89,7 @@ class AutoDQ:
         self.blue_visual_interpreter = BLUEVisualInterpreter()
         self.blue_prescription_engine = BLUEPrescriptionEngine()
         self.model_persistence_engine = ModelPersistenceEngine()
+        self.cleaning_review_engine = CleaningReviewEngine()
         self.workspace_manager: WorkspaceManager | None = None
         self.workspace: WorkspaceContext | None = None
 
@@ -277,6 +279,18 @@ class AutoDQ:
                     )
                     active_model = bundle.path
 
+        audit_entries = 0
+
+        if self.state.cleaning_review is not None:
+            audit_path = (
+                self.workspace.logs_dir / "cleaning_audit.json"
+            )
+            self.state.cleaning_review.export_audit(audit_path)
+            audit_entries = self.state.cleaning_review.audit_count
+            self.workspace.manifest.metadata["cleaning_audit"] = (
+                "logs/cleaning_audit.json"
+            )
+
         self.session.log(
             step="save_workspace",
             message="AutoDQ workspace saved.",
@@ -284,6 +298,7 @@ class AutoDQ:
                 "workspace": self.workspace.manifest.workspace_id,
                 "datasets": len(self.dataset_manager.entries()),
                 "model_saved": active_model is not None,
+                "cleaning_audit_entries": audit_entries,
             },
         )
         self.workspace = self.workspace_manager.save(
@@ -535,6 +550,8 @@ class AutoDQ:
 
         engine = DecisionEngine()
         self.state.decision_plan = engine.build_plan(self.state.recommendations)
+        self.state.cleaning_review = None
+        self.state.domain_validation_report = None
 
         self.session.log(
             step="decide",
@@ -565,18 +582,210 @@ class AutoDQ:
 
         return self.state.preview_report
 
-    def approve_all(self) -> None:
+    def review_cleaning(
+        self,
+        use_knowledge: bool = True,
+        refresh: bool = False,
+        auto_display: bool = True,
+    ):
+        """Start or return the interactive cleaning review session."""
+        if self.state.cleaning_review is not None and not refresh:
+            self.state.cleaning_review.auto_display = auto_display
+            return self.state.cleaning_review
+
+        if self.state.data is None:
+            self.load()
+
         if self.state.decision_plan is None:
             self.decide()
 
-        for action in self.state.decision_plan.actions:
-            action.status = "approved"
+        if self.state.preview_report is None:
+            self.preview()
 
+        knowledge_rules = {}
+
+        if use_knowledge:
+            if self.state.knowledge_rules is None:
+                self.apply_knowledge()
+
+            knowledge_rules = self.state.knowledge_rules or {}
+
+        review = self.cleaning_review_engine.create_review(
+            df=self.state.data,
+            decision_plan=self.state.decision_plan,
+            preview_report=self.state.preview_report,
+            knowledge_rules=knowledge_rules,
+            auto_display=auto_display,
+        )
+        self.state.cleaning_review = review
+        self.state.domain_validation_report = review.domain_report
+
+        self.session.log(
+            step="review_cleaning",
+            message="Interactive cleaning review started.",
+            metadata={
+                "actions": review.action_count,
+                "domain_rules": len(review.domain_rules),
+                "outliers": (
+                    review.outlier_report.outlier_count
+                    if review.outlier_report is not None
+                    else 0
+                ),
+            },
+        )
+        return review
+
+    def approve(self, action_ids):
+        """Approve one action ID or a collection of action IDs."""
+        review = self.review_cleaning(auto_display=False)
+        review.approve(action_ids)
+        self.session.log(
+            step="approve",
+            message="Selected cleaning actions approved.",
+            metadata={"action_ids": action_ids},
+        )
+        return review
+
+    def reject(self, action_ids, reason: str | None = None):
+        """Reject one action ID or a collection of action IDs."""
+        review = self.review_cleaning(auto_display=False)
+        review.reject(action_ids, reason=reason)
+        self.session.log(
+            step="reject",
+            message="Selected cleaning actions rejected.",
+            metadata={"action_ids": action_ids, "reason": reason},
+        )
+        return review
+
+    def approve_all(self):
+        review = self.review_cleaning(auto_display=False)
+        review.approve_all()
         self.session.log(
             step="approve",
             message="All decision actions approved.",
-            metadata={"approved_actions": self.state.decision_plan.action_count},
+            metadata={"approved_actions": review.action_count},
         )
+        return review
+
+    def cleaning_preview(self, action_ids=None, max_rows: int = 5):
+        """Preview selected actions without modifying review data."""
+        review = self.review_cleaning(auto_display=False)
+        return review.preview(action_ids=action_ids, max_rows=max_rows)
+
+    def edit_row(
+        self,
+        row_index,
+        changes: dict,
+        reason: str | None = None,
+    ):
+        """Edit one review row and record every changed cell."""
+        review = self.review_cleaning(auto_display=False)
+        row = review.edit_row(row_index, changes, reason=reason)
+        self.session.log(
+            step="manual_row_edit",
+            message="A row was manually edited during cleaning review.",
+            metadata={
+                "row_index": row_index,
+                "columns": list(changes),
+                "reason": reason,
+            },
+        )
+        return row
+
+    def add_domain_rule(self, column: str, **constraints):
+        """Add a range, allowed-value, pattern, null, or uniqueness rule."""
+        review = self.review_cleaning(auto_display=False)
+        rule = review.add_domain_rule(column, **constraints)
+        self.state.domain_validation_report = None
+        self.session.log(
+            step="domain_rule",
+            message="A custom domain rule was added.",
+            metadata={"rule_id": rule.rule_id, "column": column},
+        )
+        return rule
+
+    def validate_domain(self):
+        """Validate the review data against all active domain rules."""
+        review = self.review_cleaning(auto_display=False)
+        report = review.validate_domain()
+        self.state.domain_validation_report = report
+        self.session.log(
+            step="validate_domain",
+            message="Domain validation completed.",
+            metadata={
+                "rules": report.rule_count,
+                "violations": report.violation_count,
+                "invalid_rows": report.invalid_row_count,
+            },
+        )
+        return report
+
+    def review_outliers(
+        self,
+        columns: list[str] | str | None = None,
+        iqr_multiplier: float = 1.5,
+    ):
+        """Return row-level IQR outliers for interactive review."""
+        review = self.review_cleaning(auto_display=False)
+        report = review.review_outliers(
+            columns=columns,
+            iqr_multiplier=iqr_multiplier,
+        )
+        self.session.log(
+            step="review_outliers",
+            message="Outliers prepared for manual review.",
+            metadata={
+                "outliers": report.outlier_count,
+                "columns": report.columns,
+            },
+        )
+        return report
+
+    def treat_outliers(
+        self,
+        column: str,
+        strategy: str = "clip",
+        **options,
+    ) -> int:
+        """Treat reviewed outliers while preserving cell-level audit data."""
+        review = self.review_cleaning(auto_display=False)
+        changed = review.treat_outliers(
+            column=column,
+            strategy=strategy,
+            **options,
+        )
+        self.session.log(
+            step="treat_outliers",
+            message="Reviewed outliers were treated.",
+            metadata={
+                "column": column,
+                "strategy": strategy,
+                "changes": changed,
+            },
+        )
+        return changed
+
+    def export_cleaning_audit(self, output: str | None = None):
+        """Export the cleaning audit trail as JSON or CSV."""
+        review = self.review_cleaning(auto_display=False)
+
+        if output is None:
+            if self.workspace is None:
+                raise ValueError(
+                    "output is required for projects outside a workspace."
+                )
+
+            output = str(
+                self.workspace.logs_dir / "cleaning_audit.json"
+            )
+
+        path = review.export_audit(output)
+        self.session.log(
+            step="export_cleaning_audit",
+            message="Cleaning audit trail exported.",
+            metadata={"output": str(path), "entries": review.audit_count},
+        )
+        return path
 
     def clean(self):
         if self.state.data is None:
@@ -585,13 +794,32 @@ class AutoDQ:
         if self.state.decision_plan is None:
             self.decide()
 
+        review = self.state.cleaning_review
+        source_data = (
+            review.working_data
+            if review is not None
+            else self.state.data
+        )
+        decision_plan = (
+            review.decision_plan
+            if review is not None
+            else self.state.decision_plan
+        )
         cleaned_data, cleaning_report = self.cleaning_engine.clean(
-            df=self.state.data,
-            decision_plan=self.state.decision_plan,
+            df=source_data,
+            decision_plan=decision_plan,
         )
 
         self.state.cleaned_data = cleaned_data
         self.state.cleaning_report = cleaning_report
+
+        if review is not None:
+            self.cleaning_review_engine.finalize_cleaning(
+                review,
+                cleaned_data=cleaned_data,
+                cleaning_report=cleaning_report,
+            )
+            self.state.domain_validation_report = review.domain_report
 
         self.session.log(
             step="clean",
@@ -605,6 +833,10 @@ class AutoDQ:
         )
 
         return self.state.cleaned_data
+
+    def apply_cleaning_review(self):
+        """Apply reviewed manual changes and approved cleaning actions."""
+        return self.clean()
 
     def validate_cleaning(self):
         if self.state.data is None:

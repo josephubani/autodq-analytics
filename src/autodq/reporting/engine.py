@@ -41,6 +41,8 @@ class ReportingEngine:
             decision_plan=state.decision_plan,
             preview=state.preview_report,
             cleaning=state.cleaning_report,
+            cleaning_review=state.cleaning_review,
+            domain_validation=state.domain_validation_report,
             validation=state.validation_report,
             visualizations=state.visualization_report,
             rendered_visualizations=rendered_visualizations,

@@ -19,6 +19,8 @@ class AutoDQReport:
     decision_plan: object | None = None
     preview: object | None = None
     cleaning: object | None = None
+    cleaning_review: object | None = None
+    domain_validation: object | None = None
     validation: object | None = None
 
     visualizations: object | None = None

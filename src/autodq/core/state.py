@@ -21,6 +21,8 @@ class AutoDQState:
     statistics_report = None
     interpretation_report = None
     cleaning_report = None
+    cleaning_review = None
+    domain_validation_report = None
     validation_report = None
     visualization_report = None
     correlation_report = None
@@ -46,6 +48,8 @@ class AutoDQState:
         self.statistics_report = None
         self.interpretation_report = None
         self.cleaning_report = None
+        self.cleaning_review = None
+        self.domain_validation_report = None
         self.cleaned_data = None
         self.validation_report = None
         self.visualization_report = None

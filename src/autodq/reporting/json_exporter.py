@@ -40,6 +40,14 @@ class JSONExporter:
                 report.cleaning.to_dict()
                 if report.cleaning else None,
 
+            "cleaning_review":
+                report.cleaning_review.to_dict()
+                if report.cleaning_review else None,
+
+            "domain_validation":
+                report.domain_validation.to_dict()
+                if report.domain_validation else None,
+
             "validation":
                 report.validation.to_dict()
                 if report.validation else None,
