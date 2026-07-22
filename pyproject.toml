@@ -12,6 +12,7 @@ dependencies = [
     "pandas",
     "numpy",
     "scikit-learn",
+    "joblib",
     "matplotlib",
     "seaborn",
     "openpyxl",

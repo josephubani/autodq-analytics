@@ -49,6 +49,9 @@ from autodq.blue.visualizer import (BLUEVisualizationReport,BLUEVisualizer,)
 from autodq.blue.visual_interpreter import (BLUEVisualInterpreter,)
 from autodq.blue.prescriptions import BLUEPrescriptionEngine
 from autodq.explainability.shap_visualizer import SHAPVisualizer
+from autodq.persistence.engine import ModelPersistenceEngine
+from autodq.workspaces.manager import WorkspaceManager
+from autodq.workspaces.models import WorkspaceContext
 
 
 class AutoDQ:
@@ -83,6 +86,9 @@ class AutoDQ:
         self.blue_visualizer = BLUEVisualizer()
         self.blue_visual_interpreter = BLUEVisualInterpreter()
         self.blue_prescription_engine = BLUEPrescriptionEngine()
+        self.model_persistence_engine = ModelPersistenceEngine()
+        self.workspace_manager: WorkspaceManager | None = None
+        self.workspace: WorkspaceContext | None = None
 
         self.session = AutoDQSession(dataset_path=str(self.state.dataset_path))
         self.dataset_manager.add(
@@ -103,11 +109,208 @@ class AutoDQ:
     def data(self):
         return self.state.data
 
+    @property
+    def workspace_name(self) -> str | None:
+        if self.workspace is None:
+            return None
+
+        return self.workspace.manifest.name
+
+    @classmethod
+    def create_workspace(
+        cls,
+        name: str,
+        dataset_path: str,
+        target: str | None = None,
+        workspace_root: str = ".autodq/workspaces",
+    ) -> "AutoDQ":
+        """Create an isolated workspace and return its AutoDQ project."""
+        manager = WorkspaceManager(workspace_root)
+        context = manager.create(
+            name=name,
+            dataset_path=dataset_path,
+            target=target,
+        )
+        active_dataset = next(
+            item
+            for item in context.manifest.datasets
+            if item.name == context.manifest.active_dataset
+        )
+        project = cls(
+            str(manager.dataset_path(context, active_dataset)),
+            target=target,
+        )
+        project.workspace_manager = manager
+        project.workspace = context
+        project.session.log(
+            step="create_workspace",
+            message="AutoDQ workspace created.",
+            metadata={
+                "workspace": context.manifest.workspace_id,
+                "path": str(context.path),
+            },
+        )
+        project.save_workspace(include_model=False)
+        return project
+
+    @classmethod
+    def open_workspace(
+        cls,
+        name_or_path: str,
+        workspace_root: str = ".autodq/workspaces",
+        load_model: bool = True,
+    ) -> "AutoDQ":
+        """Restore datasets, session history, and a saved model."""
+        manager = WorkspaceManager(workspace_root)
+        context = manager.open(name_or_path)
+        active_dataset = next(
+            item
+            for item in context.manifest.datasets
+            if item.name == context.manifest.active_dataset
+        )
+        active_path = manager.dataset_path(context, active_dataset)
+        project = cls(
+            str(active_path),
+            target=context.manifest.target,
+        )
+        project.workspace_manager = manager
+        project.workspace = context
+        project.dataset_manager.clear()
+
+        for dataset in context.manifest.datasets:
+            dataset_path = manager.dataset_path(context, dataset)
+            project.dataset_manager.add(
+                name=dataset.name,
+                dataset_path=dataset_path,
+                data=manager.load_dataset(context, dataset),
+                is_primary=(
+                    dataset.name == context.manifest.active_dataset
+                ),
+            )
+
+        primary = project.dataset_manager.primary()
+
+        if primary is None:
+            raise ValueError("Workspace has no active dataset.")
+
+        project.state.dataset_path = Path(primary.path)
+        project.state.data = primary.data.copy()
+        session_data = manager.load_session(context)
+
+        if session_data is not None:
+            project.session = AutoDQSession.from_dict(session_data)
+
+        model_path = manager.model_path(context)
+
+        if load_model and model_path is not None:
+            project.load_model(str(model_path))
+
+        project.session.log(
+            step="open_workspace",
+            message="AutoDQ workspace restored.",
+            metadata={
+                "workspace": context.manifest.workspace_id,
+                "datasets": len(context.manifest.datasets),
+                "model_loaded": bool(load_model and model_path),
+            },
+        )
+        return project
+
+    @classmethod
+    def list_workspaces(
+        cls,
+        workspace_root: str = ".autodq/workspaces",
+    ):
+        """List valid AutoDQ workspaces under a workspace root."""
+        return WorkspaceManager(workspace_root).list()
+
+    def save_workspace(
+        self,
+        model_name: str = "active_model",
+        include_model: bool = True,
+    ) -> dict:
+        """Persist all datasets, session history, and the active model."""
+        if self.workspace_manager is None or self.workspace is None:
+            raise RuntimeError(
+                "This project is not attached to a workspace. Create it "
+                "with AutoDQ.create_workspace() first."
+            )
+
+        primary = self.dataset_manager.primary()
+
+        if primary is None:
+            raise ValueError("Workspace has no primary dataset to save.")
+
+        if self.state.data is not None:
+            primary.data = self.state.data.copy()
+
+        active_model = self.workspace_manager.model_path(self.workspace)
+
+        if include_model and self.state.model_report is not None:
+            if self.state.model_bundle is None:
+                destination = self.workspace_manager.model_destination(
+                    self.workspace,
+                    model_name,
+                )
+                bundle = self.save_model(
+                    str(destination),
+                    overwrite=True,
+                )
+                active_model = bundle.path
+            else:
+                bundle_path = self.state.model_bundle.path.resolve()
+                models_dir = self.workspace.models_dir.resolve()
+
+                if bundle_path.is_relative_to(models_dir):
+                    active_model = bundle_path
+                else:
+                    destination = (
+                        self.workspace_manager.model_destination(
+                            self.workspace,
+                            model_name,
+                        )
+                    )
+                    bundle = self.save_model(
+                        str(destination),
+                        overwrite=True,
+                    )
+                    active_model = bundle.path
+
+        self.session.log(
+            step="save_workspace",
+            message="AutoDQ workspace saved.",
+            metadata={
+                "workspace": self.workspace.manifest.workspace_id,
+                "datasets": len(self.dataset_manager.entries()),
+                "model_saved": active_model is not None,
+            },
+        )
+        self.workspace = self.workspace_manager.save(
+            context=self.workspace,
+            dataset_entries=self.dataset_manager.entries(),
+            target=self.state.target,
+            session=self.session.to_dict(),
+            active_model=active_model,
+        )
+        return self.workspace_info()
+
+    def workspace_info(self) -> dict:
+        """Return the active workspace manifest and local path."""
+        if self.workspace is None:
+            raise RuntimeError("This project is not attached to a workspace.")
+
+        info = self.workspace.manifest.to_dict()
+        info["path"] = str(self.workspace.path)
+        return info
+
     def load(self) -> pd.DataFrame:
-        if self.dataset_manager.exists("main"):
-            self.state.data = self.dataset_manager.get_data(
-                "main"
-            ).copy()
+        primary = self.dataset_manager.primary()
+
+        if primary is not None:
+            self.state.data = primary.data.copy()
+
+            if primary.path is not None:
+                self.state.dataset_path = Path(primary.path)
         else:
             self.state.data = load_dataset(
                 self.state.dataset_path
@@ -883,6 +1086,10 @@ class AutoDQ:
             random_state=random_state,
             exclude_features=final_exclusions,
         )
+        self.state.model_bundle = None
+        self.state.prediction_report = None
+        self.state.prediction_data = None
+        self.state.explainability_report = None
 
         self.session.log(
             step="model",
@@ -959,9 +1166,64 @@ class AutoDQ:
             self.model()
 
         ConsoleModelRenderer.render(self.state.model_report) 
+
+    def save_model(
+        self,
+        output: str,
+        overwrite: bool = False,
+    ):
+        """Save the trained model and its metadata as a model bundle."""
+        if self.state.model_report is None:
+            raise ValueError(
+                "No trained model available. Run project.model() first."
+            )
+
+        bundle = self.model_persistence_engine.save(
+            model_report=self.state.model_report,
+            destination=output,
+            overwrite=overwrite,
+        )
+        self.state.model_bundle = bundle
+
+        self.session.log(
+            step="save_model",
+            message="Trained model bundle saved.",
+            metadata={
+                "output": str(bundle.path),
+                "algorithm": bundle.manifest.algorithm,
+                "format_version": bundle.manifest.format_version,
+            },
+        )
+
+        return bundle
+
+    def load_model(self, source: str):
+        """Load a trusted AutoDQ model bundle into this project."""
+        bundle = self.model_persistence_engine.load(source)
+        report = bundle.model_report
+
+        self.state.target = report.target
+        self.state.model_report = report
+        self.state.model_bundle = bundle
+        self.state.prediction_report = None
+        self.state.prediction_data = None
+        self.state.explainability_report = None
+
+        self.session.log(
+            step="load_model",
+            message="Trained model bundle loaded.",
+            metadata={
+                "source": str(bundle.path),
+                "target": report.target,
+                "algorithm": report.algorithm,
+                "format_version": bundle.manifest.format_version,
+            },
+        )
+
+        return report
         
         
-    def predict(self, data=None):
+    def predict(self, data=None, strict_schema: bool = False):
         if self.state.model_report is None:
             self.model()
 
@@ -981,6 +1243,7 @@ class AutoDQ:
             model_report=self.state.model_report,
             data=active_df,
             target=self.state.target,
+            strict_schema=strict_schema,
         )
 
         self.state.prediction_data = prediction_data

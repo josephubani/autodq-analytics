@@ -196,6 +196,10 @@ class MLEngine:
             model_object=pipeline,
             preprocessing_object=preprocessor,
             feature_columns=list(X.columns),
+            feature_dtypes={
+                column: str(X[column].dtype)
+                for column in X.columns
+            },
         )
 
     def _build_model_comparison(

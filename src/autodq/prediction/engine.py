@@ -16,6 +16,7 @@ class PredictionEngine:
         model_report,
         data=None,
         target: str | None = None,
+        strict_schema: bool = False,
     ) -> tuple[pd.DataFrame, PredictionReport]:
         if model_report is None:
             raise ValueError("No trained model available. Run project.model() first.")
@@ -41,6 +42,11 @@ class PredictionEngine:
         else:
             X = df.copy()
 
+        X, schema_warnings = self._align_schema(
+            X=X,
+            model_report=model_report,
+            strict_schema=strict_schema,
+        )
         predictions = pipeline.predict(X)
 
         output_df = df.copy()
@@ -98,10 +104,80 @@ class PredictionEngine:
             problem_type=model_report.problem_type,
             algorithm=model_report.algorithm,
             predictions=results[:100],
-            warnings=[],
+            warnings=schema_warnings,
         )
 
         return output_df, report
+
+    def _align_schema(
+        self,
+        X: pd.DataFrame,
+        model_report,
+        strict_schema: bool,
+    ) -> tuple[pd.DataFrame, list[str]]:
+        expected_columns = list(
+            getattr(model_report, "feature_columns", [])
+        )
+
+        if not expected_columns:
+            return X, []
+
+        missing_columns = [
+            column
+            for column in expected_columns
+            if column not in X.columns
+        ]
+
+        if missing_columns:
+            raise ValueError(
+                "Prediction data is missing required model features: "
+                f"{missing_columns}"
+            )
+
+        extra_columns = [
+            column
+            for column in X.columns
+            if column not in expected_columns
+        ]
+        schema_warnings = []
+
+        if extra_columns and strict_schema:
+            raise ValueError(
+                "Prediction data contains unexpected features: "
+                f"{extra_columns}"
+            )
+
+        if extra_columns:
+            schema_warnings.append(
+                "Ignored unexpected prediction features: "
+                f"{extra_columns}"
+            )
+
+        expected_dtypes = getattr(
+            model_report,
+            "feature_dtypes",
+            {},
+        )
+        dtype_changes = []
+
+        for column in expected_columns:
+            expected_dtype = expected_dtypes.get(column)
+            actual_dtype = str(X[column].dtype)
+
+            if expected_dtype and expected_dtype != actual_dtype:
+                dtype_changes.append(
+                    f"{column}: expected {expected_dtype}, "
+                    f"received {actual_dtype}"
+                )
+
+        if dtype_changes:
+            schema_warnings.append(
+                "Prediction feature dtypes differ from training: "
+                + "; ".join(dtype_changes)
+            )
+
+        return X[expected_columns].copy(), schema_warnings
+
     def _top_features(self, model_report, limit: int = 3) -> list[str]:
         if not model_report.feature_importance:
             return []

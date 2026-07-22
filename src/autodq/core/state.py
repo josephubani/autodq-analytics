@@ -28,6 +28,7 @@ class AutoDQState:
     feature_report = None
     engineered_data = None
     model_report = None
+    model_bundle = None
     prediction_report = None
     prediction_data = None 
     explainability_report = None
@@ -53,6 +54,7 @@ class AutoDQState:
         self.feature_report = None
         self.engineered_data = None
         self.model_report = None
+        self.model_bundle = None
         self.prediction_report = None
         self.prediction_data = None
         self.explainability_report = None

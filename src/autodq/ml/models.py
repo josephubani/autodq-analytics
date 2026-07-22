@@ -90,6 +90,7 @@ class ModelReport:
     model_object: object | None = None
     preprocessing_object: object | None = None
     feature_columns: list[str] = field(default_factory=list)
+    feature_dtypes: dict[str, str] = field(default_factory=dict)
     generated_at: datetime = field(default_factory=datetime.now)
     model_comparison: list[ModelComparisonResult] = field(default_factory=list)
 
@@ -115,6 +116,7 @@ class ModelReport:
             ],
             "recommendations": self.recommendations,
             "feature_columns": self.feature_columns,
+            "feature_dtypes": self.feature_dtypes,
             "prediction_count": self.prediction_count,
             "feature_count": self.feature_count,
             "generated_at": self.generated_at.isoformat(),
