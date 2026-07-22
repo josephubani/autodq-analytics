@@ -5,6 +5,7 @@ import pandas as pd
 from autodq.auto.engine import AutoEngine
 from autodq.auto.models import AutoRunConfig
 from autodq.cleaning.engine import CleaningEngine
+from autodq.dashboard.engine import DashboardEngine
 from autodq.core.session import AutoDQSession
 from autodq.core.state import AutoDQState
 from autodq.decision.engine import DecisionEngine
@@ -93,6 +94,7 @@ class AutoDQ:
         self.model_persistence_engine = ModelPersistenceEngine()
         self.cleaning_review_engine = CleaningReviewEngine()
         self.auto_engine = AutoEngine()
+        self.dashboard_engine = DashboardEngine()
         self.workspace_manager: WorkspaceManager | None = None
         self.workspace: WorkspaceContext | None = None
 
@@ -1101,6 +1103,115 @@ class AutoDQ:
         )
 
         return new_report
+
+    def dashboard(
+        self,
+        output: str | None = None,
+        *,
+        title: str = "AutoDQ Analytics Dashboard",
+        subtitle: str | None = None,
+        theme: str = "light",
+        stage: str = "best",
+        chart_ids: list[str] | tuple[str, ...] | None = None,
+        max_charts: int | None = 12,
+        max_preview_rows: int = 20,
+        include_charts: bool = True,
+        include_data_preview: bool = True,
+        refresh: bool = False,
+        overwrite: bool = False,
+        auto_display: bool = True,
+    ):
+        """Build a notebook-ready dashboard and optionally export HTML.
+
+        The dashboard reuses every available project artifact, including
+        cleaning review, automation, model, prediction, and uncertainty
+        results. Missing profile, diagnosis, and automatic visualizations are
+        prepared on demand.
+        """
+        if chart_ids is not None and not include_charts:
+            raise ValueError(
+                "chart_ids cannot be used when include_charts is False."
+            )
+
+        self.dashboard_engine.validate_options(
+            theme=theme,
+            stage=stage,
+            max_charts=max_charts if include_charts else 0,
+            max_preview_rows=max_preview_rows,
+        )
+
+        output_path = Path(output).expanduser() if output is not None else None
+
+        if output_path is not None and output_path.suffix.lower() != ".html":
+            raise ValueError("Dashboard output must end with .html.")
+
+        if self.state.data is None:
+            self.load()
+
+        if refresh or self.state.profile_report is None:
+            self.profile()
+
+        if refresh or self.state.diagnosis_report is None:
+            self.diagnose()
+
+        if include_charts and (
+            refresh or self.state.visualization_report is None
+        ):
+            visualization_stage = str(stage).lower().strip()
+
+            if visualization_stage == "best":
+                if self.state.engineered_data is not None:
+                    visualization_stage = "engineered"
+                elif self.state.cleaned_data is not None:
+                    visualization_stage = "cleaned"
+                else:
+                    visualization_stage = "current"
+
+            self.visualize(
+                chart="auto",
+                stage=visualization_stage,
+                append=not refresh,
+                display=False,
+            )
+
+        dashboard = self.dashboard_engine.build(
+            state=self.state,
+            session=self.session,
+            title=title,
+            subtitle=subtitle,
+            theme=theme,
+            stage=stage,
+            chart_ids=chart_ids,
+            max_charts=max_charts if include_charts else 0,
+            max_preview_rows=max_preview_rows,
+            include_data_preview=include_data_preview,
+            auto_display=auto_display,
+        )
+
+        if output_path is not None:
+            if not output_path.is_absolute() and self.workspace is not None:
+                output_path = self.workspace.reports_dir / output_path
+
+            dashboard.save(output_path, overwrite=overwrite)
+
+        self.state.dashboard_report = dashboard
+        self.session.log(
+            step="dashboard",
+            message="Interactive analytics dashboard generated.",
+            metadata={
+                "stage": dashboard.stage,
+                "metrics": dashboard.metric_count,
+                "charts": dashboard.chart_count,
+                "preview_rows": dashboard.preview_row_count,
+                "theme": dashboard.theme,
+                "output": (
+                    str(dashboard.path)
+                    if dashboard.path is not None
+                    else None
+                ),
+            },
+        )
+        return dashboard
 
     def head(self, n: int = 5) -> pd.DataFrame:
         if self.state.data is None:

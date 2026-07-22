@@ -18,6 +18,7 @@ from autodq.review import (
     DomainValidationReport,
     OutlierReviewReport,
 )
+from autodq.dashboard import Dashboard, DashboardEngine, DashboardMetric
 
 __all__ = [
     "AutoDQ",
@@ -26,6 +27,9 @@ __all__ = [
     "AutoRunResult",
     "AutoStageResult",
     "CleaningReview",
+    "Dashboard",
+    "DashboardEngine",
+    "DashboardMetric",
     "DomainRule",
     "DomainValidationReport",
     "OutlierReviewReport",

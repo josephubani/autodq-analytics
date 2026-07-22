@@ -22,6 +22,7 @@ class AutoDQReport:
     cleaning_review: object | None = None
     domain_validation: object | None = None
     automation: object | None = None
+    dashboard: object | None = None
     validation: object | None = None
 
     visualizations: object | None = None

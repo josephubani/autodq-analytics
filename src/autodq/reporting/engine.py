@@ -44,6 +44,7 @@ class ReportingEngine:
             cleaning_review=state.cleaning_review,
             domain_validation=state.domain_validation_report,
             automation=state.auto_run_report,
+            dashboard=state.dashboard_report,
             validation=state.validation_report,
             visualizations=state.visualization_report,
             rendered_visualizations=rendered_visualizations,

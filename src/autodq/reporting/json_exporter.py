@@ -56,6 +56,10 @@ class JSONExporter:
                 report.automation.to_dict()
                 if report.automation else None,
 
+            "dashboard":
+                report.dashboard.to_dict()
+                if report.dashboard else None,
+
             "validation":
                 report.validation.to_dict()
                 if report.validation else None,
