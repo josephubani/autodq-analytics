@@ -1262,6 +1262,20 @@ th {{
         rows = []
 
         for item in prediction.predictions[:20]:
+            if prediction.problem_type == "regression":
+                uncertainty_detail = (
+                    f"[{self._format_prediction_value(item.lower_bound)}, "
+                    f"{self._format_prediction_value(item.upper_bound)}]"
+                    if item.lower_bound is not None
+                    else "N/A"
+                )
+            else:
+                uncertainty_detail = (
+                    f"Uncertainty: {self._format_percent(item.uncertainty)}"
+                    if item.uncertainty is not None
+                    else "N/A"
+                )
+
             rows.append(
                 f"""
                 <tr>
@@ -1272,10 +1286,34 @@ th {{
                     <td>{item.absolute_error}</td>
                     <td>{item.percent_error}</td>
                     <td>{self._format_percent(item.confidence)}</td>
+                    <td>{uncertainty_detail}</td>
                     <td>{", ".join(item.top_features) if item.top_features else "-"}</td>
                 </tr>
                 """
             )
+
+        method = (
+            prediction.uncertainty_method.replace("_", " ").title()
+            if prediction.uncertainty_method
+            else "Unavailable"
+        )
+
+        if prediction.problem_type == "regression":
+            uncertainty_metric = (
+                f"{prediction.empirical_coverage:.2%}"
+                if prediction.empirical_coverage is not None
+                else "N/A"
+            )
+            uncertainty_caption = "Observed interval coverage"
+            uncertainty_column = "Prediction Interval"
+        else:
+            uncertainty_metric = (
+                f"{prediction.mean_confidence:.2f}%"
+                if prediction.mean_confidence is not None
+                else "N/A"
+            )
+            uncertainty_caption = "Mean probability confidence"
+            uncertainty_column = "Uncertainty"
 
         return f"""
         <div class="section card">
@@ -1305,6 +1343,18 @@ th {{
                     <div class="metric">{prediction.problem_type}</div>
                     <div class="metric-small">ML task</div>
                 </div>
+
+                <div class="card">
+                    <h3>Uncertainty Method</h3>
+                    <div class="metric">{method}</div>
+                    <div class="metric-small">{prediction.calibration_size} calibration rows</div>
+                </div>
+
+                <div class="card">
+                    <h3>Uncertainty Summary</h3>
+                    <div class="metric">{uncertainty_metric}</div>
+                    <div class="metric-small">{uncertainty_caption}</div>
+                </div>
             </div>
 
             <table class="prediction-table">
@@ -1316,6 +1366,7 @@ th {{
                     <th>Abs Error</th>
                     <th>% Error</th>
                     <th>Confidence</th>
+                    <th>{uncertainty_column}</th>
                     <th>Most Important Features</th>
                 </tr>
                 {"".join(rows)}

@@ -5,9 +5,12 @@ from autodq.visualization import (
     VisualizationSpec,
     VisualizationStyle,
 )
+from autodq.uncertainty import UncertaintyCalibration, UncertaintyEngine
 
 __all__ = [
     "AutoDQ",
+    "UncertaintyCalibration",
+    "UncertaintyEngine",
     "VisualizationGallery",
     "VisualizationReport",
     "VisualizationSpec",

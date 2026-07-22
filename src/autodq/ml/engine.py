@@ -7,6 +7,7 @@ from autodq.ml.model_selector import ModelSelector
 from autodq.ml.models import ModelComparisonResult, ModelReport
 from autodq.ml.preprocessing import MLPreprocessor
 from autodq.ml.trainer import ModelTrainer
+from autodq.uncertainty.engine import UncertaintyEngine
 
 
 class MLEngine:
@@ -24,6 +25,7 @@ class MLEngine:
         self.preprocessor = MLPreprocessor()
         self.trainer = ModelTrainer()
         self.evaluator = ModelEvaluator()
+        self.uncertainty_engine = UncertaintyEngine()
 
     def train(
         self,
@@ -184,6 +186,18 @@ class MLEngine:
             metrics=metrics,
             feature_importance=feature_importance,
         )
+        uncertainty_calibration = self.uncertainty_engine.calibrate(
+            pipeline=pipeline,
+            X_calibration=X_test,
+            y_calibration=y_test,
+            predictions=y_pred,
+            problem_type=problem_type,
+        )
+        recommendations.extend(
+            self._uncertainty_recommendations(
+                uncertainty_calibration
+            )
+        )
 
         return ModelReport(
             target=target,
@@ -200,6 +214,7 @@ class MLEngine:
                 column: str(X[column].dtype)
                 for column in X.columns
             },
+            uncertainty_calibration=uncertainty_calibration,
         )
 
     def _build_model_comparison(
@@ -316,3 +331,31 @@ class MLEngine:
                 )
 
         return recommendations
+
+    def _uncertainty_recommendations(self, calibration) -> list[str]:
+        if calibration is None:
+            return [
+                "Prediction uncertainty is unavailable for this model."
+            ]
+
+        if calibration.problem_type == "regression":
+            return [
+                "Regression intervals use holdout conformal calibration "
+                f"with {calibration.calibration_size} observations."
+            ]
+
+        calibration_error = calibration.metrics.get(
+            "expected_calibration_error"
+        )
+
+        if calibration_error is not None and calibration_error > 0.1:
+            return [
+                "Classifier probabilities may be poorly calibrated "
+                f"(ECE={calibration_error:.3f}); interpret confidence "
+                "with caution."
+            ]
+
+        return [
+            "Classification uncertainty uses predicted class "
+            "probabilities, probability margins, and entropy."
+        ]

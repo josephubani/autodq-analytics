@@ -1270,7 +1270,20 @@ class AutoDQ:
         return report
         
         
-    def predict(self, data=None, strict_schema: bool = False):
+    def predict(
+        self,
+        data=None,
+        strict_schema: bool = False,
+        uncertainty: bool = True,
+        confidence_level: float = 0.9,
+        low_confidence_threshold: float = 0.6,
+    ):
+        """Generate predictions with optional calibrated uncertainty.
+
+        Regression models return conformal prediction intervals.
+        Classification models return class probabilities, probability
+        confidence, margin, entropy, and a low-confidence flag.
+        """
         if self.state.model_report is None:
             self.model()
 
@@ -1291,6 +1304,9 @@ class AutoDQ:
             data=active_df,
             target=self.state.target,
             strict_schema=strict_schema,
+            uncertainty=uncertainty,
+            confidence_level=confidence_level,
+            low_confidence_threshold=low_confidence_threshold,
         )
 
         self.state.prediction_data = prediction_data
@@ -1303,6 +1319,15 @@ class AutoDQ:
                 "prediction_count": prediction_report.prediction_count,
                 "algorithm": prediction_report.algorithm,
                 "target": prediction_report.target,
+                "uncertainty_available": (
+                    prediction_report.uncertainty_available
+                ),
+                "uncertainty_method": (
+                    prediction_report.uncertainty_method
+                ),
+                "confidence_level": (
+                    prediction_report.confidence_level
+                ),
             },
         )
 

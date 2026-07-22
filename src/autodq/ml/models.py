@@ -2,6 +2,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
 
+from autodq.uncertainty.models import UncertaintyCalibration
+
 
 @dataclass(slots=True)
 class ModelMetrics:
@@ -93,6 +95,7 @@ class ModelReport:
     feature_dtypes: dict[str, str] = field(default_factory=dict)
     generated_at: datetime = field(default_factory=datetime.now)
     model_comparison: list[ModelComparisonResult] = field(default_factory=list)
+    uncertainty_calibration: UncertaintyCalibration | None = None
 
     @property
     def prediction_count(self) -> int:
@@ -123,4 +126,9 @@ class ModelReport:
             "model_comparison": [
                  item.to_dict() for item in self.model_comparison
              ],
+            "uncertainty_calibration": (
+                self.uncertainty_calibration.to_dict()
+                if self.uncertainty_calibration is not None
+                else None
+            ),
         }

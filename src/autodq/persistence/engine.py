@@ -23,6 +23,7 @@ from autodq.ml.models import (
     ModelReport,
 )
 from autodq.persistence.models import ModelBundle, ModelManifest
+from autodq.uncertainty.models import UncertaintyCalibration
 
 
 class ModelPersistenceEngine:
@@ -286,6 +287,9 @@ class ModelPersistenceEngine:
             feature_dtypes=dict(manifest.feature_dtypes),
             generated_at=generated_at,
             model_comparison=comparisons,
+            uncertainty_calibration=UncertaintyCalibration.from_dict(
+                report_data.get("uncertainty_calibration")
+            ),
         )
 
     def _restore_metrics(self, data: dict[str, Any]) -> ModelMetrics:
