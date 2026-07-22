@@ -1,4 +1,8 @@
 import json
+from datetime import date, datetime
+from pathlib import Path
+
+import numpy as np
 
 
 class JSONExporter:
@@ -48,6 +52,10 @@ class JSONExporter:
                 report.domain_validation.to_dict()
                 if report.domain_validation else None,
 
+            "automation":
+                report.automation.to_dict()
+                if report.automation else None,
+
             "validation":
                 report.validation.to_dict()
                 if report.validation else None,
@@ -63,4 +71,24 @@ class JSONExporter:
 
         with open(path,"w") as f:
 
-            json.dump(payload,f,indent=4)
+            json.dump(
+                payload,
+                f,
+                indent=4,
+                default=self._json_default,
+            )
+
+    @staticmethod
+    def _json_default(value):
+        if isinstance(value, np.generic):
+            return value.item()
+
+        if isinstance(value, (datetime, date, Path)):
+            return str(value)
+
+        if hasattr(value, "to_dict"):
+            return value.to_dict()
+
+        raise TypeError(
+            f"Object of type {type(value).__name__} is not JSON serializable"
+        )

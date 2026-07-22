@@ -1,4 +1,10 @@
 from autodq.core.project import AutoDQ
+from autodq.auto import (
+    AutoRunConfig,
+    AutoRunError,
+    AutoRunResult,
+    AutoStageResult,
+)
 from autodq.visualization import (
     VisualizationGallery,
     VisualizationReport,
@@ -15,6 +21,10 @@ from autodq.review import (
 
 __all__ = [
     "AutoDQ",
+    "AutoRunConfig",
+    "AutoRunError",
+    "AutoRunResult",
+    "AutoStageResult",
     "CleaningReview",
     "DomainRule",
     "DomainValidationReport",

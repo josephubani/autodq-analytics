@@ -26,6 +26,27 @@ class ColumnStatistics:
     skewness: float | None = None
     kurtosis: float | None = None
 
+    def to_dict(self) -> dict:
+        return {
+            "column": self.column,
+            "count": self.count,
+            "missing": self.missing,
+            "missing_percent": self.missing_percent,
+            "mean": self.mean,
+            "median": self.median,
+            "mode": self.mode,
+            "minimum": self.minimum,
+            "maximum": self.maximum,
+            "variance": self.variance,
+            "std": self.std,
+            "value_range": self.value_range,
+            "iqr": self.iqr,
+            "mad": self.mad,
+            "coefficient_variation": self.coefficient_variation,
+            "skewness": self.skewness,
+            "kurtosis": self.kurtosis,
+        }
+
 
 @dataclass(slots=True)
 class DistributionInsight:
@@ -40,6 +61,16 @@ class DistributionInsight:
     explanation: str
     confidence: float
 
+    def to_dict(self) -> dict:
+        return {
+            "column": self.column,
+            "distribution_type": self.distribution_type,
+            "skewness_level": self.skewness_level,
+            "tail_risk": self.tail_risk,
+            "explanation": self.explanation,
+            "confidence": self.confidence,
+        }
+
 
 @dataclass(slots=True)
 class StatisticsSummary:
@@ -52,6 +83,14 @@ class StatisticsSummary:
     datetime_columns: int
     analyzed_columns: int
 
+    def to_dict(self) -> dict:
+        return {
+            "numeric_columns": self.numeric_columns,
+            "categorical_columns": self.categorical_columns,
+            "datetime_columns": self.datetime_columns,
+            "analyzed_columns": self.analyzed_columns,
+        }
+
 
 @dataclass(slots=True)
 class StatisticsReport:
@@ -63,3 +102,21 @@ class StatisticsReport:
     distributions: dict[str, DistributionInsight] = field(default_factory=dict)
     summary: StatisticsSummary | None = None
     generated_at: datetime = field(default_factory=datetime.now)
+
+    def to_dict(self) -> dict:
+        return {
+            "descriptive": {
+                column: item.to_dict()
+                for column, item in self.descriptive.items()
+            },
+            "distributions": {
+                column: item.to_dict()
+                for column, item in self.distributions.items()
+            },
+            "summary": (
+                self.summary.to_dict()
+                if self.summary is not None
+                else None
+            ),
+            "generated_at": self.generated_at.isoformat(),
+        }

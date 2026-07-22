@@ -2,6 +2,8 @@ from pathlib import Path
 
 import pandas as pd
 
+from autodq.auto.engine import AutoEngine
+from autodq.auto.models import AutoRunConfig
 from autodq.cleaning.engine import CleaningEngine
 from autodq.core.session import AutoDQSession
 from autodq.core.state import AutoDQState
@@ -90,6 +92,7 @@ class AutoDQ:
         self.blue_prescription_engine = BLUEPrescriptionEngine()
         self.model_persistence_engine = ModelPersistenceEngine()
         self.cleaning_review_engine = CleaningReviewEngine()
+        self.auto_engine = AutoEngine()
         self.workspace_manager: WorkspaceManager | None = None
         self.workspace: WorkspaceContext | None = None
 
@@ -348,6 +351,57 @@ class AutoDQ:
         )
 
         return self.state.data
+
+    def auto(
+        self,
+        mode: str = "review",
+        *,
+        approve_all: bool | None = None,
+        apply_cleaning: bool | None = None,
+        visualize: bool = True,
+        apply_features: bool = False,
+        train_model: bool | None = None,
+        generate_predictions: bool | None = None,
+        explain_model: bool | None = None,
+        algorithm: str = "auto",
+        test_size: float = 0.2,
+        random_state: int = 42,
+        report_output: str | None = None,
+        report_style: str = "executive",
+        save_workspace: bool = False,
+        refresh: bool = False,
+        continue_on_error: bool = False,
+        raise_on_error: bool = False,
+        auto_display: bool = True,
+    ):
+        """Run the AutoDQ workflow with safe, traceable presets.
+
+        ``mode='review'`` prepares analysis and cleaning decisions without
+        changing data. ``mode='clean'`` approves and applies executable
+        cleaning actions. ``mode='full'`` also models, predicts, and
+        explains when a target is available.
+        """
+        config = AutoRunConfig.from_options(
+            mode=mode,
+            approve_all=approve_all,
+            apply_cleaning=apply_cleaning,
+            visualize=visualize,
+            apply_features=apply_features,
+            train_model=train_model,
+            generate_predictions=generate_predictions,
+            explain_model=explain_model,
+            algorithm=algorithm,
+            test_size=test_size,
+            random_state=random_state,
+            report_output=report_output,
+            report_style=report_style,
+            save_workspace=save_workspace,
+            refresh=refresh,
+            continue_on_error=continue_on_error,
+            raise_on_error=raise_on_error,
+            auto_display=auto_display,
+        )
+        return self.auto_engine.run(self, config)
 
     def change_dataset(self, dataset_path: str) -> pd.DataFrame:
         self.state.reset_all(dataset_path)
@@ -1278,8 +1332,13 @@ class AutoDQ:
         if self.state.feature_report is None:
             self.features()
 
+        active_df = (
+            self.state.cleaned_data
+            if self.state.cleaned_data is not None
+            else self.state.data
+        )
         self.state.engineered_data = self.feature_engine.apply(
-            df=self.state.data,
+            df=active_df,
             feature_report=self.state.feature_report,
             selected_features=features,
         )
@@ -1287,7 +1346,7 @@ class AutoDQ:
         added_columns = [
             column
             for column in self.state.engineered_data.columns
-            if column not in self.state.data.columns
+            if column not in active_df.columns
         ]
 
         self.session.log(
