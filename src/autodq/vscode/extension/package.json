@@ -75,7 +75,7 @@
         "autodq.commandPath": {
           "type": "string",
           "default": "",
-          "description": "Optional path to the AutoDQ command. Empty automatically detects the workspace .venv before using PATH."
+          "description": "Optional path to the AutoDQ command. Empty searches upward from the .adql file for .venv before using PATH."
         }
       }
     }

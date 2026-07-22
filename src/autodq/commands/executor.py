@@ -110,11 +110,12 @@ class ADQLExecutor:
                 project.set_target(target)
 
             return {
-                "data": data,
                 "total_rows": len(data),
                 "value": {
                     "dataset_path": str(project.dataset_path),
                     "target": project.target,
+                    "rows": len(data),
+                    "columns": len(data.columns),
                 },
                 "message": (
                     f"Loaded standalone dataset {project.dataset_path} "

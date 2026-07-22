@@ -3,18 +3,12 @@ from pathlib import Path
 from autodq.models.report import AutoDQReport
 from autodq.reporting.html_exporter import HTMLExporter
 from autodq.reporting.json_exporter import JSONExporter
-from autodq.visualization.renderers.matplotlib_renderer import (
-    MatplotlibVisualizationRenderer,
-)
 
 
 class ReportingEngine:
     """
     Builds and exports complete AutoDQ reports.
     """
-
-    def __init__(self):
-        self.visual_renderer = MatplotlibVisualizationRenderer()
 
     def build_report(
         self,
@@ -25,7 +19,11 @@ class ReportingEngine:
         output_dir = Path(output_dir)
         chart_dir = output_dir / "charts"
 
-        rendered_visualizations = self.visual_renderer.render_report(
+        from autodq.visualization.renderers.matplotlib_renderer import (
+            MatplotlibVisualizationRenderer,
+        )
+
+        rendered_visualizations = MatplotlibVisualizationRenderer().render_report(
             visualization_report=state.visualization_report,
             output_dir=chart_dir,
         )

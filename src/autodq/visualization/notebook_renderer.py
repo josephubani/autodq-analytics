@@ -4,10 +4,6 @@ import base64
 import html
 from pathlib import Path
 
-from autodq.visualization.renderers.matplotlib_renderer import (
-    MatplotlibVisualizationRenderer,
-)
-
 
 class NotebookVisualizationRenderer:
     """Render responsive, self-contained visualization cards in notebooks."""
@@ -83,7 +79,18 @@ class NotebookVisualizationRenderer:
     """
 
     def __init__(self):
-        self.renderer = MatplotlibVisualizationRenderer()
+        self._renderer = None
+
+    @property
+    def renderer(self):
+        if self._renderer is None:
+            from autodq.visualization.renderers.matplotlib_renderer import (
+                MatplotlibVisualizationRenderer,
+            )
+
+            self._renderer = MatplotlibVisualizationRenderer()
+
+        return self._renderer
 
     def render(
         self,

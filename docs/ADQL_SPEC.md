@@ -85,9 +85,10 @@ autodq vscode install
 
 Restart VS Code after installation. Opening a `.adql` file then provides ADQL
 syntax highlighting, named cells, Run File, Run through Cell, Run Cell Only,
-and a notebook editor with cell outputs. The extension automatically detects
-`.venv/bin/autodq` in the open workspace. The VS Code setting
-`autodq.commandPath` can override that executable when needed.
+and a notebook editor with cell outputs. The extension searches upward from
+the `.adql` file and automatically detects the nearest `.venv/bin/autodq`.
+The VS Code setting `autodq.commandPath` can override that executable when
+needed.
 
 ## Python API
 

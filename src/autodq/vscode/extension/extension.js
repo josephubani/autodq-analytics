@@ -1,6 +1,7 @@
 const vscode = require('vscode');
 const path = require('path');
 const fs = require('fs');
+const os = require('os');
 const { execFile } = require('child_process');
 
 const CELL_MARKER = /^\s*(?:#|--)\s*%%(?:\s*\[(.*?)\]|\s+(.*?))?\s*$/;
@@ -50,14 +51,24 @@ function commandPath(resource) {
     return configured;
   }
 
-  const folder = resource && vscode.workspace.getWorkspaceFolder(resource);
-  if (folder) {
-    const candidates = process.platform === 'win32'
-      ? [path.join(folder.uri.fsPath, '.venv', 'Scripts', 'autodq.exe')]
-      : [path.join(folder.uri.fsPath, '.venv', 'bin', 'autodq')];
-    const localCommand = candidates.find((candidate) => fs.existsSync(candidate));
-    if (localCommand) {
-      return localCommand;
+  if (resource && resource.fsPath) {
+    let directory = path.dirname(resource.fsPath);
+
+    while (true) {
+      const candidate = process.platform === 'win32'
+        ? path.join(directory, '.venv', 'Scripts', 'autodq.exe')
+        : path.join(directory, '.venv', 'bin', 'autodq');
+
+      if (fs.existsSync(candidate)) {
+        return candidate;
+      }
+
+      const parent = path.dirname(directory);
+      if (parent === directory) {
+        break;
+      }
+
+      directory = parent;
     }
   }
 
@@ -137,19 +148,78 @@ async function executeNotebookCells(cells, notebook) {
     const cellNumber = notebook.getCells().findIndex((item) => item === cell) + 1;
     execution.start(Date.now());
     execution.executionOrder = cellNumber;
+    execution.replaceOutput([
+      new vscode.NotebookCellOutput([
+        vscode.NotebookCellOutputItem.text('Running ADQL cell…', 'text/plain')
+      ])
+    ]);
 
     await new Promise((resolve) => {
-      const args = ['run', notebook.uri.fsPath, '--through-cell', String(cellNumber)];
-      const child = execFile(commandPath(notebook.uri), args, { cwd: path.dirname(notebook.uri.fsPath) }, (error, stdout, stderr) => {
-        const output = [stdout, stderr].filter(Boolean).join('\n').trim();
-        execution.replaceOutput([
-          new vscode.NotebookCellOutput([
-            vscode.NotebookCellOutputItem.text(output || (error ? String(error) : 'ADQL cell completed.'), 'text/plain')
-          ])
-        ]);
-        execution.end(!error, Date.now());
-        resolve();
-      });
+      const args = ['run', notebook.uri.fsPath, '--through-cell', String(cellNumber), '--notebook-json'];
+      const matplotlibCache = process.env.MPLCONFIGDIR || path.join(os.homedir(), '.cache', 'autodq', 'matplotlib');
+      fs.mkdirSync(matplotlibCache, { recursive: true });
+      const environment = {
+        ...process.env,
+        MPLBACKEND: 'Agg',
+        MPLCONFIGDIR: matplotlibCache
+      };
+      const child = execFile(
+        commandPath(notebook.uri),
+        args,
+        {
+          cwd: path.dirname(notebook.uri.fsPath),
+          env: environment,
+          maxBuffer: 10 * 1024 * 1024,
+          timeout: 120000
+        },
+        async (error, stdout, stderr) => {
+          let succeeded = false;
+
+          try {
+            let payload;
+
+            try {
+              payload = JSON.parse(stdout);
+            } catch (_) {
+              const output = [stdout, stderr, error && String(error)].filter(Boolean).join('\n').trim();
+              payload = {
+                success: false,
+                outputs: [{ mime: 'text/plain', data: output || 'ADQL execution failed.' }]
+              };
+            }
+
+            const outputs = (payload.outputs || []).map((item) => {
+              const outputItem = item.mime === 'image/png'
+                ? new vscode.NotebookCellOutputItem(Buffer.from(item.data, 'base64'), 'image/png')
+                : vscode.NotebookCellOutputItem.text(item.data || '', item.mime || 'text/plain');
+
+              return new vscode.NotebookCellOutput([outputItem], item.metadata || {});
+            });
+
+            if (!outputs.length) {
+              outputs.push(new vscode.NotebookCellOutput([
+                vscode.NotebookCellOutputItem.text('ADQL cell completed.', 'text/plain')
+              ]));
+            }
+
+            await execution.replaceOutput(outputs);
+            succeeded = !error && payload.success !== false;
+          } catch (renderError) {
+            console.error('[AutoDQ ADQL] Could not display notebook output.', renderError);
+            await execution.replaceOutput([
+              new vscode.NotebookCellOutput([
+                vscode.NotebookCellOutputItem.text(
+                  `AutoDQ produced output but VS Code could not display it: ${renderError}`,
+                  'text/plain'
+                )
+              ])
+            ]);
+          } finally {
+            execution.end(succeeded, Date.now());
+            resolve();
+          }
+        }
+      );
       execution.token.onCancellationRequested(() => child.kill());
     });
   }

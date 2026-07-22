@@ -1,5 +1,8 @@
 import io
+import base64
 import json
+import subprocess
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -126,6 +129,110 @@ ORDER BY total_revenue DESC;
         self.assertTrue(payload["success"])
         self.assertEqual(payload["cell_count"], 3)
 
+    def test_notebook_json_returns_only_selected_cell_as_rich_html(self):
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "run",
+                    str(self.script),
+                    "--through-cell",
+                    "3",
+                    "--notebook-json",
+                ]
+            )
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["cell"]["number"], 3)
+        self.assertEqual(payload["protocol"], "autodq-notebook-v1")
+        self.assertEqual(
+            [item["mime"] for item in payload["outputs"]],
+            ["text/plain", "text/html"],
+        )
+        self.assertIn("total_revenue", payload["outputs"][1]["data"])
+        self.assertNotIn("Profile completed", stdout.getvalue())
+
+    def test_notebook_json_renders_visualization_as_png(self):
+        visualization = self.root / "visualization.adql"
+        visualization.write_text(
+            """#!/usr/bin/env autodq
+# %% [Dataset]
+DATASET "sales.csv" TARGET Revenue;
+# %% [Chart]
+VISUALIZE bar X Region Y Revenue TITLE "Revenue by Region";
+""",
+            encoding="utf-8",
+        )
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "run",
+                    str(visualization),
+                    "--through-cell",
+                    "2",
+                    "--notebook-json",
+                ]
+            )
+
+        payload = json.loads(stdout.getvalue())
+        image_output = next(
+            item
+            for item in payload["outputs"]
+            if item["mime"] == "image/png"
+        )
+        image = base64.b64decode(image_output["data"])
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(payload["cell"]["number"], 2)
+        self.assertTrue(image.startswith(b"\x89PNG\r\n\x1a\n"))
+        self.assertEqual(
+            image_output["metadata"]["title"],
+            "Revenue by Region",
+        )
+
+    def test_notebook_json_renders_profile_and_diagnosis_reports(self):
+        quality = self.root / "quality.adql"
+        quality.write_text(
+            """#!/usr/bin/env autodq
+# %% [Dataset]
+DATASET "sales.csv" TARGET Revenue;
+# %% [Quality]
+PROFILE;
+DIAGNOSE;
+""",
+            encoding="utf-8",
+        )
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "run",
+                    str(quality),
+                    "--through-cell",
+                    "2",
+                    "--notebook-json",
+                ]
+            )
+
+        payload = json.loads(stdout.getvalue())
+        html_outputs = [
+            item["data"]
+            for item in payload["outputs"]
+            if item["mime"] == "text/html"
+        ]
+
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(len(html_outputs), 2)
+        self.assertIn("Dataset Profile", html_outputs[0])
+        self.assertIn("Semantic type", html_outputs[0])
+        self.assertIn("Data Quality Diagnosis", html_outputs[1])
+        self.assertIn("Quality score", html_outputs[1])
+
     def test_vscode_extension_is_bundled_and_installable(self):
         source = extension_path()
         package = json.loads(
@@ -142,7 +249,28 @@ ORDER BY total_revenue DESC;
         )
         self.assertIn("ADQLNotebookSerializer", extension)
         self.assertIn("--through-cell", extension)
+        self.assertIn("--notebook-json", extension)
+        self.assertIn("new vscode.NotebookCellOutputItem", extension)
+        self.assertNotIn("NotebookCellOutputItem.png", extension)
         self.assertTrue((installed / "package.json").is_file())
+
+    def test_cli_import_does_not_eagerly_load_matplotlib(self):
+        process = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                (
+                    "import sys; import autodq.cli; "
+                    "print('matplotlib.pyplot' in sys.modules); "
+                    "print('statsmodels.api' in sys.modules)"
+                ),
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(process.stdout.strip().splitlines(), ["False", "False"])
 
 
 if __name__ == "__main__":

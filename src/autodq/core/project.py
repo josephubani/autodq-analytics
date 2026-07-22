@@ -49,15 +49,10 @@ from autodq.explainability.engine import ExplainabilityEngine
 from autodq.datasets.manager import DatasetManager
 from autodq.datasets.merger import DatasetMerger
 from autodq.renderers.console.datasets import ConsoleDatasetRenderer
-from autodq.blue.engine import BLUEEngine
 from autodq.renderers.console.blue import ConsoleBLUERenderer
 from autodq.visualization.gallery import VisualizationGallery
 from autodq.visualization.notebook_renderer import (NotebookVisualizationRenderer,)
 from autodq.visualization.models import VisualizationReport
-from autodq.blue.visualizer import (BLUEVisualizationReport,BLUEVisualizer,)
-from autodq.blue.visual_interpreter import (BLUEVisualInterpreter,)
-from autodq.blue.prescriptions import BLUEPrescriptionEngine
-from autodq.explainability.shap_visualizer import SHAPVisualizer
 from autodq.persistence.engine import ModelPersistenceEngine
 from autodq.review.engine import CleaningReviewEngine
 from autodq.workspaces.manager import WorkspaceManager
@@ -92,10 +87,10 @@ class AutoDQ:
         self.explainability_engine = ExplainabilityEngine()
         self.dataset_manager = DatasetManager()
         self.dataset_merger = DatasetMerger()
-        self.blue_engine = BLUEEngine()
-        self.blue_visualizer = BLUEVisualizer()
-        self.blue_visual_interpreter = BLUEVisualInterpreter()
-        self.blue_prescription_engine = BLUEPrescriptionEngine()
+        self._blue_engine = None
+        self._blue_visualizer = None
+        self._blue_visual_interpreter = None
+        self._blue_prescription_engine = None
         self.model_persistence_engine = ModelPersistenceEngine()
         self.cleaning_review_engine = CleaningReviewEngine()
         self.auto_engine = AutoEngine()
@@ -129,6 +124,42 @@ class AutoDQ:
     @property
     def data(self):
         return self.state.data
+
+    @property
+    def blue_engine(self):
+        if self._blue_engine is None:
+            from autodq.blue.engine import BLUEEngine
+
+            self._blue_engine = BLUEEngine()
+
+        return self._blue_engine
+
+    @property
+    def blue_visualizer(self):
+        if self._blue_visualizer is None:
+            from autodq.blue.visualizer import BLUEVisualizer
+
+            self._blue_visualizer = BLUEVisualizer()
+
+        return self._blue_visualizer
+
+    @property
+    def blue_visual_interpreter(self):
+        if self._blue_visual_interpreter is None:
+            from autodq.blue.visual_interpreter import BLUEVisualInterpreter
+
+            self._blue_visual_interpreter = BLUEVisualInterpreter()
+
+        return self._blue_visual_interpreter
+
+    @property
+    def blue_prescription_engine(self):
+        if self._blue_prescription_engine is None:
+            from autodq.blue.prescriptions import BLUEPrescriptionEngine
+
+            self._blue_prescription_engine = BLUEPrescriptionEngine()
+
+        return self._blue_prescription_engine
 
     @property
     def workspace_name(self) -> str | None:
@@ -2017,6 +2048,8 @@ class AutoDQ:
                 "Explainability report could not be generated."
             )
 
+        from autodq.explainability.shap_visualizer import SHAPVisualizer
+
         visualizer = SHAPVisualizer(report)
 
         chart_normalized = chart.lower().strip()
@@ -2542,6 +2575,8 @@ class AutoDQ:
         )
 
         if display and added_charts:
+            from autodq.blue.visualizer import BLUEVisualizationReport
+
             display_report = BLUEVisualizationReport(
                 charts=added_charts,
             )
