@@ -1,0 +1,86 @@
+{
+  "name": "adql",
+  "displayName": "AutoDQ ADQL",
+  "description": "ADQL language support and executable notebook cells for AutoDQ.",
+  "version": "0.1.0",
+  "publisher": "autodq",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Data Science",
+    "Notebooks"
+  ],
+  "activationEvents": [
+    "onLanguage:adql",
+    "onNotebook:autodq-adql-notebook"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "adql",
+        "aliases": ["ADQL", "adql"],
+        "extensions": [".adql"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "adql",
+        "scopeName": "source.adql",
+        "path": "./syntaxes/adql.tmLanguage.json"
+      }
+    ],
+    "notebooks": [
+      {
+        "type": "autodq-adql-notebook",
+        "displayName": "AutoDQ ADQL Notebook",
+        "selector": [
+          {
+            "filenamePattern": "*.adql"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "autodq.adql.runFile",
+        "title": "ADQL: Run File"
+      },
+      {
+        "command": "autodq.adql.runThroughCell",
+        "title": "ADQL: Run Through Cell"
+      },
+      {
+        "command": "autodq.adql.runCellOnly",
+        "title": "ADQL: Run Cell Only"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "autodq.adql.runFile",
+          "when": "resourceExtname == .adql",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "AutoDQ ADQL",
+      "properties": {
+        "autodq.commandPath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path to the AutoDQ command. Empty automatically detects the workspace .venv before using PATH."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --check extension.js"
+  }
+}

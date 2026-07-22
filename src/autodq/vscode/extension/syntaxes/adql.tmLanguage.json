@@ -1,0 +1,59 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "ADQL",
+  "scopeName": "source.adql",
+  "patterns": [
+    {"include": "#cell"},
+    {"include": "#comments"},
+    {"include": "#strings"},
+    {"include": "#numbers"},
+    {"include": "#commands"},
+    {"include": "#clauses"},
+    {"include": "#constants"},
+    {"include": "#operators"}
+  ],
+  "repository": {
+    "cell": {
+      "match": "^\\s*(#|--)\\s*%%(?:\\s*\\[(.*?)\\]|\\s+(.*?))?\\s*$",
+      "name": "meta.cell.adql",
+      "captures": {
+        "1": {"name": "punctuation.definition.comment.adql"},
+        "2": {"name": "entity.name.section.adql"},
+        "3": {"name": "entity.name.section.adql"}
+      }
+    },
+    "comments": {
+      "patterns": [
+        {"match": "^#!.*$", "name": "comment.line.shebang.adql"},
+        {"match": "#.*$", "name": "comment.line.number-sign.adql"},
+        {"match": "--.*$", "name": "comment.line.double-dash.adql"}
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {"begin": "\"", "end": "\"", "name": "string.quoted.double.adql", "patterns": [{"match": "\\\\.", "name": "constant.character.escape.adql"}]},
+        {"begin": "'", "end": "'", "name": "string.quoted.single.adql", "patterns": [{"match": "\\\\.", "name": "constant.character.escape.adql"}]}
+      ]
+    },
+    "numbers": {
+      "match": "(?<![A-Za-z_])-?\\b\\d+(?:\\.\\d+)?\\b",
+      "name": "constant.numeric.adql"
+    },
+    "commands": {
+      "match": "(?i)\\b(DATASET|SELECT|LOAD|PROFILE|STATISTICS|INTERPRET|DIAGNOSE|RECOMMEND|DECIDE|PREVIEW|REVIEW|CLEAN|VALIDATE|AUTO|VISUALIZE|MODEL|PREDICT|SHAP|DASHBOARD|REPORT|EXPORT|APPROVE|REJECT|APPROVE_ALL|EDIT|OUTLIERS|DOMAIN|SET|USE|HEAD|DESCRIBE|HELP|HISTORY)\\b",
+      "name": "keyword.control.adql"
+    },
+    "clauses": {
+      "match": "(?i)\\b(FROM|WHERE|GROUP\\s+BY|ORDER\\s+BY|LIMIT|AS|TARGET|USING|SAVE|TO|THEME|TITLE|SUBTITLE|X|Y|X_LABEL|Y_LABEL|FIGSIZE|DPI|PALETTE|GRID|LEGEND|DISPLAY|OVERWRITE|ASC|DESC|DISTINCT)\\b",
+      "name": "keyword.other.adql"
+    },
+    "constants": {
+      "match": "(?i)\\b(TRUE|FALSE|NULL|CURRENT|CLEANED|ENGINEERED|PREDICTIONS|COUNT|SUM|AVG|MIN|MAX|MEDIAN|NUNIQUE)\\b",
+      "name": "constant.language.adql"
+    },
+    "operators": {
+      "match": "(?i)(<=|>=|!=|=|<|>|\\bAND\\b|\\bIN\\b|\\bCONTAINS\\b|\\bIS\\s+NOT\\s+NULL\\b|\\bIS\\s+NULL\\b)",
+      "name": "keyword.operator.adql"
+    }
+  }
+}

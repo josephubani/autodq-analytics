@@ -1,0 +1,301 @@
+# AutoDQ Analytics Domain Query Language (ADQL) v1
+
+ADQL is a standalone, safe language for querying AutoDQ data and running
+explicit AutoDQ workflow operations. A `.adql` file can replace a notebook for
+repeatable analytics while retaining named, executable cells. ADQL does not
+evaluate Python expressions or expose arbitrary object methods.
+
+## Standalone `.adql` files
+
+A self-contained file starts by declaring its dataset. Relative paths are
+resolved from the `.adql` file's own directory, not from the terminal's current
+directory.
+
+```adql
+#!/usr/bin/env autodq
+# %% [Dataset]
+DATASET "../datasets/sample/sales.csv" TARGET Revenue;
+
+# %% [Quality]
+PROFILE;
+DIAGNOSE;
+
+# %% [Analysis]
+SELECT Region, SUM(Revenue) AS total_revenue
+FROM CURRENT
+GROUP BY Region
+ORDER BY total_revenue DESC;
+```
+
+Run the complete file from any terminal:
+
+```bash
+autodq run examples/sales_analysis.adql
+```
+
+The shorter form is equivalent:
+
+```bash
+autodq examples/sales_analysis.adql
+```
+
+On macOS and Linux, a file containing the shown shebang can also be made
+executable once and run directly:
+
+```bash
+chmod +x examples/sales_analysis.adql
+./examples/sales_analysis.adql
+```
+
+Use `autodq validate analysis.adql` to check the entire file without running
+it, and `autodq cells analysis.adql` to list its cells.
+
+### Notebook-style cells
+
+Both marker styles are supported:
+
+```adql
+# %% [Named cell]
+PROFILE;
+
+-- %% [Another cell]
+HEAD 10;
+```
+
+Run one cell in a fresh project initialized from the file's `DATASET`:
+
+```bash
+autodq run analysis.adql --cell 3
+```
+
+Run cells 1 through 3 in one shared project session, which is the usual
+notebook behavior:
+
+```bash
+autodq run analysis.adql --through-cell 3
+```
+
+### VS Code
+
+AutoDQ includes its own VS Code extension for `.adql` files:
+
+```bash
+autodq vscode install
+```
+
+Restart VS Code after installation. Opening a `.adql` file then provides ADQL
+syntax highlighting, named cells, Run File, Run through Cell, Run Cell Only,
+and a notebook editor with cell outputs. The extension automatically detects
+`.venv/bin/autodq` in the open workspace. The VS Code setting
+`autodq.commandPath` can override that executable when needed.
+
+## Python API
+
+```python
+result = project.query("""
+SELECT Region, SUM(Revenue) AS total_revenue
+FROM CURRENT
+WHERE Revenue > 100
+GROUP BY Region
+ORDER BY total_revenue DESC
+LIMIT 10;
+""")
+
+result.data
+```
+
+`project.adql(...)` is an alias for `project.query(...)`.
+
+Execute a UTF-8 cell-based script against an existing project with:
+
+```python
+result = project.run_adql("analysis.adql")
+```
+
+`project.query()` returns an `ADQLRunResult`. `project.run_adql()` and
+`ADQLFileRunner.run()` return an `ADQLFileResult`, with one run per cell and a
+reference to the initialized project. Their most useful attributes are:
+
+- `result.success`
+- `result.cell_runs`
+- `result.latest`
+- `result.data` — DataFrame returned by the final statement
+- `result.value` — structured object returned by the final statement
+- `result.project` — the AutoDQ project created for a standalone file
+
+## SELECT grammar
+
+```text
+SELECT [DISTINCT] expression [, expression ...]
+FROM CURRENT | CLEANED | ENGINEERED | PREDICTIONS
+[WHERE condition [AND condition ...]]
+[GROUP BY column [, column ...]]
+[ORDER BY output_column [ASC | DESC] [, ...]]
+[LIMIT positive_integer]
+```
+
+Column names containing spaces can be wrapped in backticks or quotes.
+
+```adql
+SELECT `Order Date`, Revenue FROM CURRENT LIMIT 20;
+```
+
+### Expressions
+
+- Plain columns: `Region`
+- Aliases: `Region AS sales_region`
+- Wildcard: `*`
+- Aggregates: `COUNT`, `SUM`, `AVG`, `MEAN`, `MIN`, `MAX`, `MEDIAN`, `NUNIQUE`
+- Row count: `COUNT(*)`
+
+All non-aggregate columns must appear in `GROUP BY` when an aggregate is used.
+`ORDER BY` refers to the output name, including aliases.
+
+### Conditions
+
+ADQL v1 supports conditions joined with `AND`:
+
+- `=`, `!=`, `<`, `<=`, `>`, `>=`
+- `IN (...)`, `NOT IN (...)`
+- `IS NULL`, `IS NOT NULL`
+- `CONTAINS`, `STARTS WITH`, `ENDS WITH`
+
+Use quoted strings, numeric values, booleans, or `NULL` literals.
+
+```adql
+SELECT Region, Revenue
+FROM CURRENT
+WHERE Region IN ("North", "South")
+  AND Revenue >= 500
+ORDER BY Revenue DESC
+LIMIT 25;
+```
+
+`OR` is intentionally not available in v1. Use `IN (...)` or separate queries.
+
+## Workflow commands
+
+Statements are case-insensitive. Option values with spaces must be quoted.
+
+```adql
+LOAD;
+PROFILE;
+STATISTICS;
+INTERPRET;
+DIAGNOSE;
+RECOMMEND;
+DECIDE;
+PREVIEW;
+REVIEW;
+APPROVE ALL;
+APPROVE 1,2;
+REJECT 3 REASON "Requires domain review";
+CLEAN;
+VALIDATE;
+```
+
+### Automatic workflow
+
+```adql
+AUTO MODE review VISUALIZE false;
+AUTO MODE clean;
+AUTO MODE full ALGORITHM decision_tree_regressor;
+```
+
+Supported options include `VISUALIZE`, `APPROVE_ALL`, `APPLY_CLEANING`,
+`APPLY_FEATURES`, `TRAIN_MODEL`, `PREDICT`, `EXPLAIN`, `ALGORITHM`,
+`TEST_SIZE`, `RANDOM_STATE`, `REFRESH`, and `CONTINUE_ON_ERROR`.
+
+### Visualization
+
+```adql
+VISUALIZE bar X Region Y Revenue
+    TITLE "Revenue by Region"
+    X_LABEL "Sales region"
+    Y_LABEL "Revenue (CAD)"
+    THEME dark;
+```
+
+The `VISUALIZE` options map to `project.visualize()`, including `COLUMN`,
+`STAGE`, `SUBTITLE`, `COLOR`, `PALETTE`, `FIGSIZE`, `DPI`, `GRID`, `LEGEND`,
+`SAVE`, and `FORMAT`.
+
+### Modeling and prediction uncertainty
+
+```adql
+MODEL TARGET Revenue USING decision_tree_regressor
+    USE_ENGINEERED false TEST_SIZE 0.2;
+
+PREDICT CONFIDENCE 0.95 UNCERTAINTY true;
+```
+
+### Dashboard and report export
+
+```adql
+DASHBOARD TITLE "Sales Analytics"
+    THEME executive
+    SAVE "reports/sales-dashboard.html"
+    OVERWRITE;
+
+REPORT TO "reports/autodq-report.json" OVERWRITE;
+```
+
+### Dataset export
+
+```adql
+EXPORT CURRENT TO "exports/current.csv" OVERWRITE;
+EXPORT CLEANED TO "exports/cleaned.xlsx";
+EXPORT ENGINEERED TO "exports/features.csv";
+EXPORT PREDICTIONS TO "exports/predictions.csv";
+```
+
+Existing files are never replaced unless `OVERWRITE` is explicitly included.
+
+### Other commands
+
+```adql
+SET TARGET Revenue;
+SET TYPE Date datetime;
+USE DATASET main;
+HEAD 10;
+TAIL 10;
+SAMPLE 10 RANDOM_STATE 42;
+HELP;
+HELP MODEL;
+HISTORY LIMIT 10;
+```
+
+## Scripts and comments
+
+Statements are separated with semicolons. `--` and `#` start line comments
+outside quoted values.
+
+```adql
+-- Prepare analysis
+PROFILE;
+DIAGNOSE;
+
+# Return a compact regional summary
+SELECT Region, COUNT(*) AS transactions
+FROM CURRENT
+GROUP BY Region
+ORDER BY transactions DESC;
+```
+
+Use `continue_on_error=True` to execute later statements after a runtime error:
+
+```python
+result = project.query(script, continue_on_error=True)
+```
+
+## Safety and limits
+
+- Commands and options are allowlisted.
+- Python evaluation and arbitrary method calls are not supported.
+- SELECT operates on a copy and never mutates project data.
+- Mutating actions require an explicit workflow command.
+- Existing export files require `OVERWRITE`.
+- A query returns at most 1,000 rows by default.
+- Explicit `LIMIT` supports at most 10,000 rows.
+- Scripts support at most 100 statements and 100,000 source characters.
+- Every executed run is recorded in `project.adql_history` and the session log.

@@ -5,6 +5,11 @@ import pandas as pd
 from autodq.auto.engine import AutoEngine
 from autodq.auto.models import AutoRunConfig
 from autodq.cleaning.engine import CleaningEngine
+from autodq.commands.errors import ADQLExecutionError
+from autodq.commands.executor import ADQLExecutor
+from autodq.commands.parser import ADQLParser
+from autodq.commands.runner import ADQLFileRunner
+from autodq.commands.validator import ADQLValidator
 from autodq.dashboard.engine import DashboardEngine
 from autodq.core.session import AutoDQSession
 from autodq.core.state import AutoDQState
@@ -95,6 +100,14 @@ class AutoDQ:
         self.cleaning_review_engine = CleaningReviewEngine()
         self.auto_engine = AutoEngine()
         self.dashboard_engine = DashboardEngine()
+        self.adql_parser = ADQLParser()
+        self.adql_validator = ADQLValidator()
+        self.adql_executor = ADQLExecutor()
+        self.adql_file_runner = ADQLFileRunner(
+            parser=self.adql_parser,
+            validator=self.adql_validator,
+            executor=self.adql_executor,
+        )
         self.workspace_manager: WorkspaceManager | None = None
         self.workspace: WorkspaceContext | None = None
 
@@ -1212,6 +1225,90 @@ class AutoDQ:
             },
         )
         return dashboard
+
+    def query(
+        self,
+        source: str,
+        *,
+        continue_on_error: bool = False,
+        auto_display: bool = True,
+        source_name: str = "notebook",
+        base_path: str | Path | None = None,
+    ):
+        """Parse, validate, and execute an ADQL statement or script."""
+        script = self.adql_parser.parse(source)
+        self.adql_validator.validate(script)
+
+        try:
+            result = self.adql_executor.execute(
+                self,
+                script,
+                continue_on_error=continue_on_error,
+                auto_display=auto_display,
+                source_name=source_name,
+                base_path=base_path,
+            )
+        except ADQLExecutionError as error:
+            if error.result is not None:
+                self._record_adql_run(error.result)
+
+            raise
+
+        self._record_adql_run(result)
+        return result
+
+    def adql(self, source: str, **options):
+        """Alias for :meth:`query` using ADQL syntax."""
+        return self.query(source, **options)
+
+    def run_adql(
+        self,
+        path: str | Path,
+        *,
+        continue_on_error: bool = False,
+        auto_display: bool = True,
+        cell: int | None = None,
+        through_cell: int | None = None,
+    ):
+        """Execute a UTF-8 ``.adql`` script file."""
+        return self.adql_file_runner.run_with_project(
+            self,
+            path,
+            continue_on_error=continue_on_error,
+            auto_display=auto_display,
+            cell=cell,
+            through_cell=through_cell,
+            raise_on_error=True,
+        )
+
+    @property
+    def adql_history(self) -> list:
+        """Return a copy of the recent ADQL run history."""
+        return list(self.state.adql_history)
+
+    def _record_adql_run(self, result) -> None:
+        self.state.adql_history.append(result)
+
+        if len(self.state.adql_history) > self.adql_executor.MAX_HISTORY:
+            del self.state.adql_history[
+                : -self.adql_executor.MAX_HISTORY
+            ]
+
+        self.session.log(
+            step="adql",
+            message=(
+                "ADQL script completed."
+                if result.success
+                else "ADQL script completed with failures."
+            ),
+            metadata={
+                "source": result.source_name,
+                "statements": result.statement_count,
+                "completed": result.completed_count,
+                "failed": result.failed_count,
+                "duration_seconds": result.duration_seconds,
+            },
+        )
 
     def head(self, n: int = 5) -> pd.DataFrame:
         if self.state.data is None:

@@ -23,6 +23,7 @@ class AutoDQReport:
     domain_validation: object | None = None
     automation: object | None = None
     dashboard: object | None = None
+    adql_history: list | None = None
     validation: object | None = None
 
     visualizations: object | None = None

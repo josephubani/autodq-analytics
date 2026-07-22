@@ -60,6 +60,11 @@ class JSONExporter:
                 report.dashboard.to_dict()
                 if report.dashboard else None,
 
+            "adql_history": [
+                run.to_dict()
+                for run in (report.adql_history or [])
+            ],
+
             "validation":
                 report.validation.to_dict()
                 if report.validation else None,

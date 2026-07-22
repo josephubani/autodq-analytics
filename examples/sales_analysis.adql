@@ -1,0 +1,30 @@
+#!/usr/bin/env autodq
+# %% [Dataset]
+DATASET "../datasets/sample/sales.csv" TARGET Revenue;
+
+# %% [Data quality]
+PROFILE;
+DIAGNOSE;
+
+# %% [Regional analysis]
+SELECT Region,
+       SUM(Revenue) AS total_revenue,
+       AVG(Profit) AS average_profit,
+       COUNT(*) AS transactions
+FROM CURRENT
+WHERE Revenue > 100
+GROUP BY Region
+ORDER BY total_revenue DESC
+LIMIT 10;
+
+# %% [Visualization]
+VISUALIZE bar X Region Y Revenue
+    TITLE "Revenue by Region"
+    THEME executive;
+
+# %% [Dashboard export]
+DASHBOARD TITLE "ADQL Sales Analytics"
+    THEME executive
+    SAVE "../reports/adql-sales-dashboard.html"
+    OVERWRITE
+    DISPLAY false;

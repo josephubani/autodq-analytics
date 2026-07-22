@@ -20,9 +20,18 @@ dependencies = [
     "streamlit"
 ]
 
+[project.scripts]
+autodq = "autodq.cli:main"
+
 [build-system]
 requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"autodq.vscode" = [
+    "extension/*",
+    "extension/syntaxes/*",
+]

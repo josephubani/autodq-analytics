@@ -45,6 +45,7 @@ class ReportingEngine:
             domain_validation=state.domain_validation_report,
             automation=state.auto_run_report,
             dashboard=state.dashboard_report,
+            adql_history=list(state.adql_history),
             validation=state.validation_report,
             visualizations=state.visualization_report,
             rendered_visualizations=rendered_visualizations,

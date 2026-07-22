@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import pandas as pd
@@ -11,6 +11,7 @@ class AutoDQState:
 
     data: pd.DataFrame | None = None
     cleaned_data: pd.DataFrame | None = None
+    adql_history: list = field(default_factory=list)
 
     profile_report: dict | None = None
     diagnosis_report = None
@@ -74,4 +75,5 @@ class AutoDQState:
         self.dataset_path = Path(dataset_path)
         self.data = None
         self.cleaned_data = None
+        self.adql_history.clear()
         self.reset_outputs()
