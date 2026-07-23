@@ -85,6 +85,25 @@ class PackagingTests(unittest.TestCase):
         self.assertNotIn("TWINE_PASSWORD", workflow)
         self.assertNotIn("API_TOKEN", workflow)
 
+    def test_pypi_workflow_has_version_and_approval_gates(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "publish-pypi.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("workflow_dispatch", workflow)
+        self.assertIn("EXPECTED_VERSION", workflow)
+        self.assertIn("environment:\n      name: pypi", workflow)
+        self.assertIn("id-token: write", workflow)
+        self.assertIn("https://pypi.org/p/autodq", workflow)
+        self.assertIn("pypa/gh-action-pypi-publish@release/v1", workflow)
+        self.assertIn("actions/checkout@v6", workflow)
+        self.assertIn("actions/setup-python@v6", workflow)
+        self.assertIn("actions/upload-artifact@v7", workflow)
+        self.assertIn("actions/download-artifact@v8", workflow)
+        self.assertNotIn("test.pypi.org", workflow)
+        self.assertNotIn("TWINE_PASSWORD", workflow)
+        self.assertNotIn("API_TOKEN", workflow)
+
     def test_runtime_dependencies_cover_all_shipped_features(self):
         dependencies = {
             dependency_name(value)

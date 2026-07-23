@@ -20,6 +20,7 @@ Initial alpha release candidate.
 - Automated compatibility matrix configured for Python 3.10–3.13 on Linux,
   macOS, and Windows.
 - Tokenless TestPyPI publishing workflow using GitHub Trusted Publishing.
+- Protected, version-gated production PyPI Trusted Publishing workflow.
 
 ### Release status
 

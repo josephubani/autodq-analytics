@@ -135,6 +135,25 @@ Repeat the import, CLI, ADQL, and `pip check` smoke tests.
 Publishing is irreversible for a given name and version. Only upload after the
 TestPyPI candidate has passed.
 
+### Recommended: GitHub Trusted Publishing
+
+The repository includes `.github/workflows/publish-pypi.yml`. Before the first
+production release, create a pending PyPI Trusted Publisher with:
+
+- PyPI project name: `autodq`
+- GitHub owner: `josephubani`
+- Repository: `autodq-analytics`
+- Workflow: `publish-pypi.yml`
+- Environment: `pypi`
+
+Create a protected GitHub environment named `pypi` and require a reviewer for
+deployment. Run **Publish to PyPI** from the Actions tab and enter the exact
+version from `src/autodq/_version.py`. The workflow rejects a mismatched
+version, reruns every acceptance check, and publishes using short-lived OIDC
+credentials.
+
+### Manual fallback
+
 ```bash
 python -m twine upload dist/*
 git tag -a vVERSION -m "AutoDQ VERSION"

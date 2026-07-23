@@ -36,6 +36,8 @@ REQUIRED_WHEEL_FILES = {
 }
 REQUIRED_SDIST_SUFFIXES = {
     "/.github/workflows/tests.yml",
+    "/.github/workflows/publish-pypi.yml",
+    "/.github/workflows/publish-testpypi.yml",
     "/CHANGELOG.md",
     "/LICENSE",
     "/MANIFEST.in",
