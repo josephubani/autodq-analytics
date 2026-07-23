@@ -65,6 +65,19 @@ class PackagingTests(unittest.TestCase):
         for version in ("3.10", "3.11", "3.12", "3.13"):
             self.assertIn(version, workflow)
 
+    def test_testpypi_workflow_uses_trusted_publishing(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "publish-testpypi.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("workflow_dispatch", workflow)
+        self.assertIn("id-token: write", workflow)
+        self.assertIn("environment:\n      name: testpypi", workflow)
+        self.assertIn("https://test.pypi.org/legacy/", workflow)
+        self.assertIn("pypa/gh-action-pypi-publish@release/v1", workflow)
+        self.assertNotIn("TWINE_PASSWORD", workflow)
+        self.assertNotIn("API_TOKEN", workflow)
+
     def test_runtime_dependencies_cover_all_shipped_features(self):
         dependencies = {
             dependency_name(value)

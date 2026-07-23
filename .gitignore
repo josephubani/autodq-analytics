@@ -6,6 +6,10 @@ __pycache__/
 .venv/
 venv/
 .env
+.env.*
+!.env.example
+.pypirc
+.pypi-token
 .ipynb_checkpoints/
 build/
 dist/

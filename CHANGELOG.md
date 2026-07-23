@@ -19,6 +19,7 @@ Initial alpha release candidate.
 - Command-line tools, bundled VS Code extension and `.adql` icons, wheel and source distributions.
 - Automated compatibility matrix configured for Python 3.10–3.13 on Linux,
   macOS, and Windows.
+- Tokenless TestPyPI publishing workflow using GitHub Trusted Publishing.
 
 ### Release status
 

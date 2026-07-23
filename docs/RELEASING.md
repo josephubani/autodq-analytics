@@ -86,11 +86,37 @@ Do not rely on the source checkout being importable during this check.
 
 ## 6. Upload to TestPyPI
 
-Configure a TestPyPI API token, then run:
+### Recommended: GitHub Trusted Publishing
+
+The repository includes `.github/workflows/publish-testpypi.yml`. It builds,
+tests, inspects, and publishes the distributions without storing an API token.
+
+For the first release, create a pending TestPyPI Trusted Publisher with these
+exact values:
+
+- PyPI project name: `autodq`
+- GitHub owner: `josephubani`
+- Repository: `autodq-analytics`
+- Workflow: `publish-testpypi.yml`
+- Environment: `testpypi`
+
+Commit and push the workflow, create a GitHub environment named `testpypi`,
+then run **Publish to TestPyPI** from the repository's Actions tab. The workflow
+uses short-lived OIDC credentials and does not need a GitHub secret.
+
+### Manual fallback: TestPyPI API token
+
+Create the first TestPyPI token with entire-account scope because the project
+does not exist there yet. Keep the token outside the repository and run:
 
 ```bash
 python -m twine upload --repository testpypi dist/*
 ```
+
+Use `__token__` as the username and paste the complete token, including its
+`pypi-` prefix, when prompted. After the first upload, replace the
+account-scoped token with a project-scoped token if manual publishing is still
+needed. Never commit `.pypirc`, `.pypi-token`, or `.env` credentials.
 
 Install the candidate in another clean environment. The extra index allows
 runtime dependencies to resolve from the main Python Package Index:
