@@ -1,9 +1,13 @@
 import re
 import subprocess
 import sys
-import tomllib
 import unittest
 from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python 3.10
+    import tomli as tomllib
 
 import autodq
 
@@ -52,6 +56,14 @@ class PackagingTests(unittest.TestCase):
         self.assertEqual(project["readme"], "README.md")
         self.assertIn("Repository", project["urls"])
         self.assertIn("Programming Language :: Python :: 3.13", project["classifiers"])
+
+    def test_ci_covers_every_supported_python_version(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "tests.yml"
+        ).read_text(encoding="utf-8")
+
+        for version in ("3.10", "3.11", "3.12", "3.13"):
+            self.assertIn(version, workflow)
 
     def test_runtime_dependencies_cover_all_shipped_features(self):
         dependencies = {
@@ -114,6 +126,7 @@ class PackagingTests(unittest.TestCase):
 
         self.assertIn("recursive-include docs *.md", manifest)
         self.assertIn("recursive-include examples *.adql *.py", manifest)
+        self.assertIn("recursive-include .github *.yml", manifest)
         self.assertIn("recursive-include scripts *.py", manifest)
         self.assertIn("recursive-include tests *.py", manifest)
 

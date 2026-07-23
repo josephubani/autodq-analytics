@@ -1001,6 +1001,7 @@ class ADQLExecutor:
 
         path_options = {
             "DATASET": ("dataset_path",),
+            "AUTO": ("report_output",),
             "DASHBOARD": ("output",),
             "REPORT": ("output",),
             "EXPORT": ("output",),

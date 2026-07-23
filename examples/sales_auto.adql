@@ -1,0 +1,29 @@
+#!/usr/bin/env autodq
+# %% [Dataset]
+DATASET "../datasets/sample/sales.csv" TARGET Revenue;
+# %% [markdown] Automatic sales workflow
+This notebook delegates profiling, diagnosis, cleaning, feature preparation,
+modeling, prediction, explainability, visualization, and reporting to
+`project.auto()` while retaining the complete result in the ADQL session.
+# %% [Automatic workflow]
+AUTO MODE full
+    VISUALIZE true
+    APPLY_FEATURES true
+    ALGORITHM random_forest_regressor
+    TEST_SIZE 0.20
+    RANDOM_STATE 42
+    REPORT "../reports/adql-sales-auto-report.html"
+    REPORT_STYLE executive
+    CONTINUE_ON_ERROR true;
+# %% [Prediction review]
+SELECT Transaction_ID,
+       Region,
+       Revenue,
+       AutoDQ_Prediction,
+       AutoDQ_Prediction_Lower,
+       AutoDQ_Prediction_Upper
+FROM PREDICTIONS
+ORDER BY AutoDQ_Prediction DESC
+LIMIT 25;
+# %% [Cell 5]
+

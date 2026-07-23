@@ -39,9 +39,12 @@ python -m pip install -e ".[dev]"
 python -m unittest discover -s tests
 autodq --version
 autodq validate examples/sales_analysis.adql
+autodq validate examples/sales_auto.adql
 ```
 
 All tests and commands must complete successfully before building artifacts.
+The GitHub Actions compatibility job repeats this suite on Python 3.10, 3.11,
+3.12, and 3.13 across Linux, macOS, and Windows.
 
 ## 4. Build and inspect the distributions
 

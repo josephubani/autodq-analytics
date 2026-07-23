@@ -214,12 +214,42 @@ VALIDATE;
 ```adql
 AUTO MODE review VISUALIZE false;
 AUTO MODE clean;
-AUTO MODE full ALGORITHM decision_tree_regressor;
+AUTO MODE full
+    APPLY_FEATURES true
+    ALGORITHM decision_tree_regressor
+    REPORT "reports/automatic.html"
+    CONTINUE_ON_ERROR true;
 ```
 
-Supported options include `VISUALIZE`, `APPROVE_ALL`, `APPLY_CLEANING`,
-`APPLY_FEATURES`, `TRAIN_MODEL`, `PREDICT`, `EXPLAIN`, `ALGORITHM`,
-`TEST_SIZE`, `RANDOM_STATE`, `REFRESH`, and `CONTINUE_ON_ERROR`.
+`AUTO` calls `project.auto()` through the same allowlisted execution layer as
+other ADQL statements. Its result is retained in project state and appears in
+VS Code as a collapsible workflow summary containing stage statuses, timing,
+failures, and next actions.
+
+| Option | Value | Purpose |
+| --- | --- | --- |
+| `MODE` | `review`, `clean`, `full` | Select the safe workflow preset. |
+| `VISUALIZE` | Boolean | Generate recommended visualizations. |
+| `APPROVE_ALL` | Boolean | Override automatic approval behavior. |
+| `APPLY_CLEANING` | Boolean | Apply approved cleaning actions. |
+| `APPLY_FEATURES` | Boolean | Apply recommended feature engineering. |
+| `TRAIN_MODEL` | Boolean | Train a model when a target is available. |
+| `PREDICT` | Boolean | Generate model predictions. |
+| `EXPLAIN` | Boolean | Generate model explanations. |
+| `ALGORITHM` | Name | Choose `auto` or a supported model algorithm. |
+| `TEST_SIZE` | Number | Set the evaluation fraction between 0 and 1. |
+| `RANDOM_STATE` | Integer | Make supported operations reproducible. |
+| `REPORT` / `REPORT_OUTPUT` | `.html` or `.json` path | Export the automatic report relative to the `.adql` file. |
+| `REPORT_STYLE` | Name | Select the report presentation style. |
+| `SAVE_WORKSPACE` | Boolean | Persist an attached workspace after the run. |
+| `REFRESH` | Boolean | Recompute stages instead of reusing project state. |
+| `CONTINUE_ON_ERROR` | Boolean | Continue after a failed automatic stage. |
+| `RAISE_ON_ERROR` | Boolean | Raise immediately with the partial automatic result. |
+
+`review` is the default and does not alter the dataset. `clean` approves and
+applies executable cleaning actions. `full` also enables modeling, prediction,
+and explainability. Use `CONTINUE_ON_ERROR true` for exploratory notebooks
+where later independent stages should still run.
 
 ### Visualization
 

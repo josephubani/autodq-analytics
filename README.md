@@ -115,6 +115,25 @@ VISUALIZE bar X Region Y Revenue
     THEME journal;
 ```
 
+Run the same automatic workflow available as `project.auto()` directly from
+an ADQL cell:
+
+```adql
+# %% [Automatic workflow]
+AUTO MODE full
+    VISUALIZE true
+    APPLY_FEATURES true
+    ALGORITHM random_forest_regressor
+    REPORT "reports/auto-report.html"
+    CONTINUE_ON_ERROR true;
+```
+
+`review` mode analyzes data and prepares cleaning actions without applying
+them. `clean` applies approved cleaning actions. `full` continues through
+modeling, prediction, and explainability when a target is available. The ADQL
+notebook renders the automatic stages, status, timing, and next actions as a
+collapsible rich result.
+
 Run the file from a terminal:
 
 ```bash
@@ -170,6 +189,10 @@ Run the test suite:
 ```bash
 python -m unittest discover -s tests
 ```
+
+References: [Python API](docs/API_REFERENCE.md),
+[ADQL language](docs/ADQL_SPEC.md), [release guide](docs/RELEASING.md), and
+[changelog](CHANGELOG.md).
 
 Build and verify release artifacts:
 

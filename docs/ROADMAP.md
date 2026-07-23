@@ -29,13 +29,17 @@
     - Single-sourced package version
     - Complete dependency and PyPI metadata
     - Distribution inspection and clean-install smoke testing
+11. Release-candidate tests and documentation
+    - Python 3.10–3.13 compatibility matrix for Linux, macOS, and Windows
+    - Python API and complete ADQL `AUTO` reference documentation
+    - Changelog and 0.1.0 release notes
+    - Standalone ADQL automatic-workflow acceptance coverage
+    - Automated wheel and source-distribution release checks
 
-## Next milestone
+## Publication gate
 
-11. Tests, documentation, and release
-    - Expand compatibility testing across Python 3.10–3.13
-    - Resolve current pandas deprecation warnings
-    - Complete API and ADQL reference documentation
-    - Add release notes and changelog
-    - Test the package on TestPyPI
-    - Publish the first PyPI release
+- Run the compatibility matrix in the hosted repository.
+- Install and verify the 0.1.0 candidate from TestPyPI.
+- Publish the tested first PyPI release.
+- Continue resolving upstream pandas and SHAP deprecation warnings without
+  delaying functional release validation.

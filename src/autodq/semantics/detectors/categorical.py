@@ -2,13 +2,14 @@ import pandas as pd
 
 from autodq.semantics.base import BaseSemanticDetector
 from autodq.semantics.prediction import SemanticPrediction
+from autodq.utils.helpers import is_text_or_categorical_dtype
 
 
 class CategoricalDetector(BaseSemanticDetector):
     name = "categorical_detector"
 
     def detect(self, column_name: str, series: pd.Series, df: pd.DataFrame) -> SemanticPrediction | None:
-        if not (pd.api.types.is_object_dtype(series) or pd.api.types.is_categorical_dtype(series)):
+        if not is_text_or_categorical_dtype(series.dtype):
             return None
 
         total_rows = len(df)

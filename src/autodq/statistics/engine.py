@@ -3,6 +3,7 @@ import pandas as pd
 from autodq.statistics.descriptive import DescriptiveStatisticsEngine
 from autodq.statistics.distribution import DistributionEngine
 from autodq.statistics.models import StatisticsReport, StatisticsSummary
+from autodq.utils.helpers import categorical_columns
 
 
 class StatisticsEngine:
@@ -25,9 +26,7 @@ class StatisticsEngine:
 
         report.summary = StatisticsSummary(
             numeric_columns=len(df.select_dtypes(include="number").columns),
-            categorical_columns=len(
-                df.select_dtypes(include=["object", "category"]).columns
-            ),
+            categorical_columns=len(categorical_columns(df)),
             datetime_columns=len(df.select_dtypes(include="datetime").columns),
             analyzed_columns=len(df.columns),
         )

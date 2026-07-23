@@ -266,6 +266,62 @@ DIAGNOSE;
         self.assertIn("Data Quality Diagnosis", html_outputs[1])
         self.assertIn("Quality score", html_outputs[1])
 
+    def test_auto_runs_from_adql_and_renders_workflow_summary(self):
+        automatic = self.root / "automatic.adql"
+        automatic.write_text(
+            """#!/usr/bin/env autodq
+# %% [Dataset]
+DATASET "sales.csv" TARGET Revenue;
+# %% [Automatic workflow]
+AUTO MODE review VISUALIZE false REPORT "reports/auto.json";
+""",
+            encoding="utf-8",
+        )
+        result = ADQLFileRunner().run(automatic)
+        auto_result = result.cell_runs[-1].result.latest.value
+        report = self.root / "reports" / "auto.json"
+
+        self.assertTrue(result.success)
+        self.assertTrue(auto_result.success)
+        self.assertEqual(auto_result.config.mode, "review")
+        self.assertEqual(auto_result.config.report_output, str(report.resolve()))
+        self.assertTrue(report.is_file())
+
+        notebook = self.root / "automatic-notebook.adql"
+        notebook.write_text(
+            """#!/usr/bin/env autodq
+# %% [Dataset]
+DATASET "sales.csv" TARGET Revenue;
+# %% [Automatic workflow]
+AUTO MODE review VISUALIZE false;
+""",
+            encoding="utf-8",
+        )
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "run",
+                    str(notebook),
+                    "--through-cell",
+                    "2",
+                    "--notebook-json",
+                ]
+            )
+
+        payload = json.loads(stdout.getvalue())
+        auto_html = next(
+            item["data"]
+            for item in payload["outputs"]
+            if item["mime"] == "text/html"
+        )
+
+        self.assertEqual(exit_code, 0)
+        self.assertIn("AutoDQ Automatic Workflow", auto_html)
+        self.assertIn("Automatic Workflow", auto_html)
+        self.assertIn("Click to show or hide", auto_html)
+
     def test_notebook_json_renders_other_structured_reports(self):
         reports = self.root / "reports.adql"
         reports.write_text(

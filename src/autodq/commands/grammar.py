@@ -138,8 +138,13 @@ AUTO_OPTIONS = {
     "ALGORITHM": "algorithm",
     "TEST_SIZE": "test_size",
     "RANDOM_STATE": "random_state",
+    "REPORT": "report_output",
+    "REPORT_OUTPUT": "report_output",
+    "REPORT_STYLE": "report_style",
+    "SAVE_WORKSPACE": "save_workspace",
     "REFRESH": "refresh",
     "CONTINUE_ON_ERROR": "continue_on_error",
+    "RAISE_ON_ERROR": "raise_on_error",
 }
 
 MODEL_OPTIONS = {
@@ -280,7 +285,10 @@ COMMAND_HELP = [
     },
     {
         "command": "AUTO",
-        "syntax": "AUTO MODE review|clean|full [VISUALIZE true|false]",
+        "syntax": (
+            "AUTO MODE review|clean|full [VISUALIZE true|false] "
+            "[REPORT path.html]"
+        ),
         "description": "Run project.auto() with explicit allowlisted options.",
     },
     {

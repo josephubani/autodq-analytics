@@ -73,6 +73,33 @@ class ADQLValidator:
                     "AUTO MODE must be review, clean, or full."
                 )
 
+            test_size = parameters.get("test_size")
+
+            if test_size is not None and not 0 < test_size < 1:
+                raise ADQLValidationError(
+                    "AUTO TEST_SIZE must be between 0 and 1."
+                )
+
+            random_state = parameters.get("random_state")
+
+            if random_state is not None and (
+                not isinstance(random_state, int)
+                or isinstance(random_state, bool)
+            ):
+                raise ADQLValidationError(
+                    "AUTO RANDOM_STATE must be an integer."
+                )
+
+            report_output = parameters.get("report_output")
+
+            if report_output is not None and Path(report_output).suffix.lower() not in {
+                ".html",
+                ".json",
+            }:
+                raise ADQLValidationError(
+                    "AUTO REPORT must end with .html or .json."
+                )
+
         elif statement.kind == "MODEL":
             if parameters.get("action") in {"save", "load"}:
                 return

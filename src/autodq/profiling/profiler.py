@@ -1,5 +1,6 @@
 import pandas as pd
 from autodq.semantics.inference import infer_semantic_types
+from autodq.utils.helpers import categorical_columns
 
 def generate_profile(df: pd.DataFrame, dataset_path: str | None = None) -> dict:
     """
@@ -18,7 +19,7 @@ def generate_profile(df: pd.DataFrame, dataset_path: str | None = None) -> dict:
         "missing_percentages": (df.isna().mean() * 100).round(2).to_dict(),
         "duplicate_rows": int(df.duplicated().sum()),
         "numeric_columns": list(df.select_dtypes(include=["number"]).columns),
-        "categorical_columns": list(df.select_dtypes(include=["object", "category"]).columns),
+        "categorical_columns": categorical_columns(df),
         "datetime_columns": list(df.select_dtypes(include=["datetime"]).columns),
     }
 

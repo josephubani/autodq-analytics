@@ -7,6 +7,7 @@ This extension makes `.adql` a first-class AutoDQ language and notebook format.
 - Markdown cells with `# %% [markdown] Title`
 - Run File, Run through Cell, and Run Cell Only actions
 - A persistent notebook session with rich tables, reports, and charts
+- Rich `AUTO MODE review|clean|full` workflow summaries
 
 The session keeps the current AutoDQ project in memory as cells run. Use
 **ADQL: Restart Session** from the Command Palette when you want a completely
@@ -18,6 +19,14 @@ result stays in the active AutoDQ project for later statements and exports.
 Change `autodq.notebook.maxOutputRows` or
 `autodq.notebook.maxOutputCharacters` in VS Code Settings when a larger or
 smaller preview is useful.
+
+An automatic workflow can be a single executable cell:
+
+```adql
+# %% [Automatic workflow]
+AUTO MODE full VISUALIZE true APPLY_FEATURES true
+    REPORT "reports/auto-report.html";
+```
 
 Install the AutoDQ package first. The extension searches upward from each
 `.adql` file and automatically uses the nearest `.venv/bin/autodq` (or Windows

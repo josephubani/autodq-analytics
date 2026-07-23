@@ -390,6 +390,52 @@ class ADQLTests(unittest.TestCase):
         )
         self.assertEqual(pending.status, "rejected")
 
+    def test_auto_statement_maps_every_public_workflow_option(self):
+        statement = ADQLParser().parse(
+            """
+            AUTO MODE full
+                VISUALIZE false
+                APPROVE_ALL true
+                APPLY_CLEANING true
+                APPLY_FEATURES true
+                TRAIN_MODEL true
+                PREDICT true
+                EXPLAIN true
+                ALGORITHM decision_tree_regressor
+                TEST_SIZE 0.25
+                RANDOM_STATE 7
+                REPORT "reports/auto.json"
+                REPORT_STYLE journal
+                SAVE_WORKSPACE false
+                REFRESH true
+                CONTINUE_ON_ERROR true
+                RAISE_ON_ERROR false;
+            """
+        ).statements[0]
+
+        self.assertEqual(
+            statement.parameters,
+            {
+                "mode": "full",
+                "visualize": False,
+                "approve_all": True,
+                "apply_cleaning": True,
+                "apply_features": True,
+                "train_model": True,
+                "generate_predictions": True,
+                "explain_model": True,
+                "algorithm": "decision_tree_regressor",
+                "test_size": 0.25,
+                "random_state": 7,
+                "report_output": "reports/auto.json",
+                "report_style": "journal",
+                "save_workspace": False,
+                "refresh": True,
+                "continue_on_error": True,
+                "raise_on_error": False,
+            },
+        )
+
     def test_adql_file_execution_help_and_history(self):
         project = self._project()
         script_path = self.root / "analysis.adql"
@@ -461,6 +507,18 @@ class ADQLTests(unittest.TestCase):
         with self.assertRaisesRegex(ADQLValidationError, "GROUP BY"):
             project.query(
                 "SELECT Region, SUM(Revenue) AS total FROM CURRENT;",
+                auto_display=False,
+            )
+
+        with self.assertRaisesRegex(ADQLValidationError, "AUTO TEST_SIZE"):
+            project.query(
+                "AUTO MODE review TEST_SIZE 1.5;",
+                auto_display=False,
+            )
+
+        with self.assertRaisesRegex(ADQLValidationError, "AUTO REPORT"):
+            project.query(
+                'AUTO MODE review REPORT "unsafe.txt";',
                 auto_display=False,
             )
 

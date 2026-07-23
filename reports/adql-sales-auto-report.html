@@ -1,0 +1,3358 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AutoDQ Executive Report</title>
+<style>
+
+:root {
+    --bg: #f4f7fb;
+    --card: #ffffff;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --primary: #2563eb;
+    --success: #16a34a;
+    --hero: linear-gradient(135deg, #1e3a8a, #2563eb);
+    --hero-text: #ffffff;
+    --hero-muted: #dbeafe;
+    --pill: rgba(255,255,255,0.15);
+    --border: #e5e7eb;
+    --shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    --radius: 18px;
+    --radius-lg: 22px;
+    --gauge-bg: #e5e7eb;
+    --bar-bg: #e5e7eb;
+    --success-soft: #dcfce7;
+    --success-text: #166534;
+    --warning-soft: #fef3c7;
+    --warning-text: #92400e;
+    --danger-soft: #fee2e2;
+    --danger-text: #991b1b;
+}
+
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.page {
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 32px;
+}
+
+.hero {
+    background: var(--hero);
+    color: var(--hero-text);
+    padding: 34px;
+    border-radius: var(--radius-lg);
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+}
+
+.hero h1 {
+    margin: 0;
+    font-size: 34px;
+}
+
+.hero p {
+    margin-top: 10px;
+    color: var(--hero-muted);
+    font-size: 16px;
+}
+
+.meta {
+    margin-top: 20px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    font-size: 14px;
+}
+
+.meta span {
+    background: var(--pill);
+    padding: 8px 12px;
+    border-radius: 999px;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+}
+
+.card h3 {
+    margin: 0;
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 700;
+}
+
+.metric {
+    margin-top: 10px;
+    font-size: 30px;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+}
+
+.metric-small {
+    margin-top: 8px;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.section {
+    margin-bottom: 24px;
+}
+
+.section-title {
+    font-size: 22px;
+    margin: 8px 0 14px;
+}
+
+.two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.quality-wrap {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+}
+
+.gauge {
+    width: 170px;
+    height: 170px;
+    border-radius: 50%;
+    background: conic-gradient(var(--success) 97.88%, var(--gauge-bg) 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.gauge::before {
+    content: "";
+    width: 118px;
+    height: 118px;
+    background: var(--card);
+    border-radius: 50%;
+    position: absolute;
+}
+
+.gauge-value {
+    position: relative;
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--primary);
+}
+
+.quality-info h2 {
+    margin: 0;
+    font-size: 32px;
+}
+
+.quality-info p {
+    color: var(--muted);
+    margin: 8px 0;
+}
+
+.change {
+    display: inline-block;
+    margin-top: 8px;
+    color: white;
+    background: var(--success);
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-weight: 700;
+}
+
+.before-after-bars {
+    display: grid;
+    gap: 14px;
+}
+
+.bar-row {
+    display: grid;
+    grid-template-columns: 150px 1fr 80px;
+    gap: 10px;
+    align-items: center;
+    font-size: 14px;
+}
+
+.bar-track {
+    height: 12px;
+    border-radius: 999px;
+    background: var(--bar-bg);
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    border-radius: 999px;
+    background: var(--primary);
+}
+
+.chart-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.chart-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: var(--card);
+}
+
+.chart-title {
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.mini-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 18px;
+    height: 130px;
+    margin-top: 12px;
+}
+
+.mini-bar-wrap {
+    flex: 1;
+    text-align: center;
+}
+
+.mini-bar {
+    width: 100%;
+    min-height: 4px;
+    border-radius: 8px 8px 0 0;
+    background: var(--primary);
+}
+
+.mini-bar.after {
+    background: var(--success);
+}
+
+.mini-label {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.mini-value {
+    font-weight: 800;
+    margin-top: 4px;
+}
+
+.rendered-viz-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 18px;
+}
+
+.rendered-viz-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: var(--card);
+}
+
+.rendered-viz-card img {
+    width: 100%;
+    border-radius: 12px;
+    background: white;
+    margin-top: 12px;
+}
+
+.visualization-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.viz-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: var(--card);
+}
+
+.viz-title {
+    font-weight: 800;
+    margin-bottom: 6px;
+}
+
+.viz-description {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 14px;
+}
+
+.viz-bar-row {
+    display: grid;
+    grid-template-columns: 130px 1fr 70px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.viz-bar-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.viz-bar-track {
+    height: 12px;
+    border-radius: 999px;
+    background: var(--bar-bg);
+    overflow: hidden;
+}
+
+.viz-bar-fill {
+    height: 100%;
+    background: var(--primary);
+    border-radius: 999px;
+}
+
+.viz-meta {
+    margin-top: 10px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.model-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.leaderboard-row {
+    display: grid;
+    grid-template-columns: 70px 1fr 120px;
+    gap: 12px;
+    align-items: center;
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.importance-row {
+    display: grid;
+    grid-template-columns: 180px 1fr 80px;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    font-size: 13px;
+}
+
+.prediction-table {
+    font-size: 13px;
+}
+
+.recommendation-list {
+    margin: 0;
+    padding-left: 22px;
+}
+
+
+.shap-direction-positive {
+    color: var(--success-text);
+    font-weight: 700;
+}
+
+.shap-direction-negative {
+    color: var(--danger-text);
+    font-weight: 700;
+}
+
+.shap-row-details {
+    margin-top: 10px;
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--bar-bg);
+}
+
+.operation-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+.operation-warning-list {
+    margin: 10px 0 0;
+    padding-left: 20px;
+}
+
+.operation-warning-list li {
+    margin-bottom: 8px;
+}
+
+.recommendation-list li {
+    margin-bottom: 10px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+th, td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+    vertical-align: top;
+}
+
+th {
+    color: var(--muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.badge {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.success {
+    background: var(--success-soft);
+    color: var(--success-text);
+}
+
+.skipped {
+    background: var(--warning-soft);
+    color: var(--warning-text);
+}
+
+.medium {
+    background: var(--warning-soft);
+    color: var(--warning-text);
+}
+
+.high {
+    background: var(--danger-soft);
+    color: var(--danger-text);
+}
+
+
+.blue-status-passed {
+    background: var(--success-soft);
+    color: var(--success-text);
+}
+
+.blue-status-warning {
+    background: var(--warning-soft);
+    color: var(--warning-text);
+}
+
+.blue-status-failed {
+    background: var(--danger-soft);
+    color: var(--danger-text);
+}
+
+.blue-assumption-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+}
+
+.blue-assumption-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    background: var(--card);
+}
+
+.blue-assumption-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.blue-assumption-name {
+    font-weight: 800;
+    font-size: 15px;
+}
+
+.blue-detail {
+    color: var(--muted);
+    font-size: 13px;
+    margin-top: 8px;
+    line-height: 1.5;
+}
+
+.blue-feature-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.blue-feature-pill {
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: var(--bar-bg);
+    font-size: 12px;
+}
+
+.footer {
+    color: var(--muted);
+    text-align: center;
+    margin-top: 32px;
+    font-size: 13px;
+}
+
+@media print {
+    body {
+        background: white;
+        color: black;
+    }
+
+    .page {
+        max-width: none;
+        padding: 0;
+    }
+
+    .card, .hero {
+        box-shadow: none;
+        break-inside: avoid;
+    }
+}
+
+@media (max-width: 900px) {
+    .grid,
+    .two-col,
+    .chart-grid,
+    .visualization-grid,
+    .rendered-viz-grid,
+    .model-grid,
+    .operation-summary-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .blue-assumption-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .quality-wrap {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+</style>
+</head>
+
+<body>
+<div class="page">
+
+    <div class="hero">
+        <h1>AutoDQ Executive Data Quality Report</h1>
+        <p>Automated profiling, diagnosis, evidence-aware recommendations, cleaning validation, visualization, machine learning, and prediction summary.</p>
+        <div class="meta">
+            <span>Dataset: /Users/admin/Desktop/Auto DQ/autodq-analytics/datasets/sample/sales.csv</span>
+            <span>Style: executive</span>
+            <span>Generated: 2026-07-22 20:38:09</span>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <h3>Quality Before</h3>
+            <div class="metric">87.92</div>
+            <div class="metric-small">Initial quality score</div>
+        </div>
+
+        <div class="card">
+            <h3>Quality After</h3>
+            <div class="metric">97.88</div>
+            <div class="metric-small">After approved cleaning</div>
+        </div>
+
+        <div class="card">
+            <h3>Issues Detected</h3>
+            <div class="metric">3</div>
+            <div class="metric-small">Detected by diagnosis engine</div>
+        </div>
+
+        <div class="card">
+            <h3>Actions Successful</h3>
+            <div class="metric">6/16</div>
+            <div class="metric-small">Executed safely</div>
+        </div>
+    </div>
+
+    <div class="section card">
+        <h2 class="section-title">Quality Score Gauge</h2>
+        <div class="quality-wrap">
+            <div class="gauge">
+                <div class="gauge-value">97.88</div>
+            </div>
+            <div class="quality-info">
+                <h2>87.92 → 97.88</h2>
+                <p>Overall quality score after approved cleaning actions.</p>
+                <span class="change">Improvement: 9.96</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="section two-col">
+        <div class="card">
+            <h2 class="section-title">Before vs After Comparison</h2>
+            <table>
+                <tr><th>Metric</th><th>Before</th><th>After</th><th>Meaning</th></tr>
+                <tr><td>Missing Values</td><td>382</td><td>60</td><td>Resolved 322</td></tr>
+                <tr><td>Duplicate Rows</td><td>33</td><td>0</td><td>Removed 33</td></tr>
+                <tr><td>Rows</td><td>5035</td><td>5002</td><td>Removed 33</td></tr>
+                <tr><td>Columns</td><td>23</td><td>23</td><td>No structural column loss</td></tr>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2 class="section-title">Before vs After Visual</h2>
+            <div class="before-after-bars">
+                
+        <div>
+            <div class="bar-row">
+                <strong>Missing values before</strong>
+                <div class="bar-track"><div class="bar-fill" style="width:100.0%"></div></div>
+                <span>382</span>
+            </div>
+            <div class="bar-row">
+                <strong>Missing values after</strong>
+                <div class="bar-track"><div class="bar-fill" style="width:15.71%"></div></div>
+                <span>60</span>
+            </div>
+        </div>
+        
+                
+        <div>
+            <div class="bar-row">
+                <strong>Duplicate rows before</strong>
+                <div class="bar-track"><div class="bar-fill" style="width:100.0%"></div></div>
+                <span>33</span>
+            </div>
+            <div class="bar-row">
+                <strong>Duplicate rows after</strong>
+                <div class="bar-track"><div class="bar-fill" style="width:0.0%"></div></div>
+                <span>0</span>
+            </div>
+        </div>
+        
+                
+        <div>
+            <div class="bar-row">
+                <strong>Rows before</strong>
+                <div class="bar-track"><div class="bar-fill" style="width:100.0%"></div></div>
+                <span>5035</span>
+            </div>
+            <div class="bar-row">
+                <strong>Rows after</strong>
+                <div class="bar-track"><div class="bar-fill" style="width:99.34%"></div></div>
+                <span>5002</span>
+            </div>
+        </div>
+        
+                
+        <div>
+            <div class="bar-row">
+                <strong>Quality score before</strong>
+                <div class="bar-track"><div class="bar-fill" style="width:89.82%"></div></div>
+                <span>87.92</span>
+            </div>
+            <div class="bar-row">
+                <strong>Quality score after</strong>
+                <div class="bar-track"><div class="bar-fill" style="width:100.0%"></div></div>
+                <span>97.88</span>
+            </div>
+        </div>
+        
+            </div>
+        </div>
+    </div>
+
+    <div class="section card">
+        <h2 class="section-title">Visual Cleaning Impact</h2>
+        <div class="chart-grid">
+            
+        <div class="chart-card">
+            <div class="chart-title">Missing Values</div>
+
+            <div class="mini-bars">
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar" style="height:100.0%"></div>
+                    <div class="mini-label">Before</div>
+                    <div class="mini-value">382</div>
+                </div>
+
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar after" style="height:15.71%"></div>
+                    <div class="mini-label">After</div>
+                    <div class="mini-value">60</div>
+                </div>
+            </div>
+
+            <div class="metric-small">Change: -322</div>
+        </div>
+        
+            
+        <div class="chart-card">
+            <div class="chart-title">Duplicate Rows</div>
+
+            <div class="mini-bars">
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar" style="height:100.0%"></div>
+                    <div class="mini-label">Before</div>
+                    <div class="mini-value">33</div>
+                </div>
+
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar after" style="height:0.0%"></div>
+                    <div class="mini-label">After</div>
+                    <div class="mini-value">0</div>
+                </div>
+            </div>
+
+            <div class="metric-small">Change: -33</div>
+        </div>
+        
+            
+        <div class="chart-card">
+            <div class="chart-title">Rows</div>
+
+            <div class="mini-bars">
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar" style="height:100.0%"></div>
+                    <div class="mini-label">Before</div>
+                    <div class="mini-value">5035</div>
+                </div>
+
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar after" style="height:99.34%"></div>
+                    <div class="mini-label">After</div>
+                    <div class="mini-value">5002</div>
+                </div>
+            </div>
+
+            <div class="metric-small">Change: -33</div>
+        </div>
+        
+            
+        <div class="chart-card">
+            <div class="chart-title">Quality Score</div>
+
+            <div class="mini-bars">
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar" style="height:89.82%"></div>
+                    <div class="mini-label">Before</div>
+                    <div class="mini-value">87.92</div>
+                </div>
+
+                <div class="mini-bar-wrap">
+                    <div class="mini-bar after" style="height:100.0%"></div>
+                    <div class="mini-label">After</div>
+                    <div class="mini-value">97.88</div>
+                </div>
+            </div>
+
+            <div class="metric-small">Change: +9.959999999999994</div>
+        </div>
+        
+        </div>
+    </div>
+
+    
+            <div class="section card">
+                <h2 class="section-title">Dataset Operations</h2>
+                <p class="metric-small">
+                    No merge or concatenation operation was recorded.
+                </p>
+            </div>
+            
+
+    <div class="section card">
+        <h2 class="section-title">Rendered Visualization Assets</h2>
+        <div class="rendered-viz-grid">
+            
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Quality Score Before vs After</div>
+                    <div class="viz-description">Compares the dataset quality score before and after approved cleaning actions.</div>
+                    <img src="charts/quality_score_comparison.png" alt="Quality Score Before vs After">
+                    <div class="viz-meta">
+                        Chart ID: quality_score_comparison | Type: bar | Stage: comparison
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Missing Values by Column (before)</div>
+                    <div class="viz-description">Shows missing value counts by column.</div>
+                    <img src="charts/missing_values_before.png" alt="Missing Values by Column (before)">
+                    <div class="viz-meta">
+                        Chart ID: missing_values_before | Type: bar | Stage: before
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Missing Values by Column (after)</div>
+                    <div class="viz-description">Shows missing value counts by column.</div>
+                    <img src="charts/missing_values_after.png" alt="Missing Values by Column (after)">
+                    <div class="viz-meta">
+                        Chart ID: missing_values_after | Type: bar | Stage: after
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Data Quality Issue Breakdown</div>
+                    <div class="viz-description">Shows detected data quality issues and confidence levels.</div>
+                    <img src="charts/issue_breakdown.png" alt="Data Quality Issue Breakdown">
+                    <div class="viz-meta">
+                        Chart ID: issue_breakdown | Type: bar | Stage: before
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Cleaning Action Status</div>
+                    <div class="viz-description">Shows how many approved actions succeeded or were skipped.</div>
+                    <img src="charts/cleaning_action_status.png" alt="Cleaning Action Status">
+                    <div class="viz-meta">
+                        Chart ID: cleaning_action_status | Type: bar | Stage: after
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Missing Values Before vs After</div>
+                    <div class="viz-description">Compares missing values before and after cleaning.</div>
+                    <img src="charts/missing_values_comparison.png" alt="Missing Values Before vs After">
+                    <div class="viz-meta">
+                        Chart ID: missing_values_comparison | Type: bar | Stage: comparison
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Duplicate Rows Before vs After</div>
+                    <div class="viz-description">Compares duplicate rows before and after cleaning.</div>
+                    <img src="charts/duplicate_rows_comparison.png" alt="Duplicate Rows Before vs After">
+                    <div class="viz-meta">
+                        Chart ID: duplicate_rows_comparison | Type: bar | Stage: comparison
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Rows Before vs After</div>
+                    <div class="viz-description">Compares rows before and after cleaning.</div>
+                    <img src="charts/rows_comparison.png" alt="Rows Before vs After">
+                    <div class="viz-meta">
+                        Chart ID: rows_comparison | Type: bar | Stage: comparison
+                    </div>
+                </div>
+                
+
+                <div class="rendered-viz-card">
+                    <div class="viz-title">Columns Before vs After</div>
+                    <div class="viz-description">Compares columns before and after cleaning.</div>
+                    <img src="charts/columns_comparison.png" alt="Columns Before vs After">
+                    <div class="viz-meta">
+                        Chart ID: columns_comparison | Type: bar | Stage: comparison
+                    </div>
+                </div>
+                
+        </div>
+    </div>
+
+    <div class="section card">
+        <h2 class="section-title">Visualization Engine Output</h2>
+        <div class="visualization-grid">
+            
+        <div class="viz-card">
+            <div class="viz-title">Quality Score Before vs After</div>
+            <div class="viz-description">Compares the dataset quality score before and after approved cleaning actions.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">before</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:89.82%"></div>
+                    </div>
+                    <strong>87.92</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">after</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>97.88</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: quality_score_comparison | Type: bar | Stage: comparison
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Missing Values by Column (before)</div>
+            <div class="viz-description">Shows missing value counts by column.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">City</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>60</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: missing_values_before | Type: bar | Stage: before
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Missing Values by Column (after)</div>
+            <div class="viz-description">Shows missing value counts by column.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">City</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>60</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: missing_values_after | Type: bar | Stage: after
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Data Quality Issue Breakdown</div>
+            <div class="viz-description">Shows detected data quality issues and confidence levels.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">missing_values</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>95.0</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">duplicate_rows</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:94.74%"></div>
+                    </div>
+                    <strong>90.0</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">outliers</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:89.47%"></div>
+                    </div>
+                    <strong>85.0</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: issue_breakdown | Type: bar | Stage: before
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Cleaning Action Status</div>
+            <div class="viz-description">Shows how many approved actions succeeded or were skipped.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">success</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:60.0%"></div>
+                    </div>
+                    <strong>6</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">skipped</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>10</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: cleaning_action_status | Type: bar | Stage: after
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Missing Values Before vs After</div>
+            <div class="viz-description">Compares missing values before and after cleaning.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">before</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>382</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">after</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:15.71%"></div>
+                    </div>
+                    <strong>60</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: missing_values_comparison | Type: bar | Stage: comparison
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Duplicate Rows Before vs After</div>
+            <div class="viz-description">Compares duplicate rows before and after cleaning.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">before</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>33</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">after</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:0.0%"></div>
+                    </div>
+                    <strong>0</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: duplicate_rows_comparison | Type: bar | Stage: comparison
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Rows Before vs After</div>
+            <div class="viz-description">Compares rows before and after cleaning.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">before</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>5035</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">after</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:99.34%"></div>
+                    </div>
+                    <strong>5002</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: rows_comparison | Type: bar | Stage: comparison
+            </div>
+        </div>
+        
+
+        <div class="viz-card">
+            <div class="viz-title">Columns Before vs After</div>
+            <div class="viz-description">Compares columns before and after cleaning.</div>
+            
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">before</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>23</strong>
+                </div>
+                
+
+                <div class="viz-bar-row">
+                    <span class="viz-bar-label">after</span>
+                    <div class="viz-bar-track">
+                        <div class="viz-bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>23</strong>
+                </div>
+                
+            <div class="viz-meta">
+                Chart ID: columns_comparison | Type: bar | Stage: comparison
+            </div>
+        </div>
+        
+        </div>
+    </div>
+
+    
+            <div class="section card">
+                <h2 class="section-title">BLUE Regression Diagnostics</h2>
+                <p class="metric-small">
+                    No BLUE diagnostics have been generated.
+                </p>
+            </div>
+            
+
+    
+        <div class="section card">
+            <h2 class="section-title">Machine Learning Model Summary</h2>
+
+            <div class="model-grid">
+                <div class="card">
+                    <h3>Best Algorithm</h3>
+                    <div class="metric">Random Forest Regressor</div>
+                    <div class="metric-small">Selected by AutoDQ</div>
+                </div>
+
+                <div class="card">
+                    <h3>Target</h3>
+                    <div class="metric">Revenue</div>
+                    <div class="metric-small">Prediction target</div>
+                </div>
+
+                <div class="card">
+                    <h3>Features Used</h3>
+                    <div class="metric">32</div>
+                    <div class="metric-small">Training features</div>
+                </div>
+
+                <div class="card">
+                    <h3>Predictions Stored</h3>
+                    <div class="metric">25</div>
+                    <div class="metric-small">Sample predictions</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">Model Performance Metrics</h2>
+            <div class="model-grid">
+                
+            
+        <div class="chart-card">
+            <div class="chart-title">MAE</div>
+            <div class="metric">18.3556</div>
+        </div>
+        
+            
+        <div class="chart-card">
+            <div class="chart-title">RMSE</div>
+            <div class="metric">114.4314</div>
+        </div>
+        
+            
+        <div class="chart-card">
+            <div class="chart-title">R²</div>
+            <div class="metric">0.9853</div>
+        </div>
+        
+            
+        <div class="chart-card">
+            <div class="chart-title">Problem</div>
+            <div class="metric">regression</div>
+        </div>
+        
+            
+            </div>
+        </div>
+
+        <div class="section two-col">
+            <div class="card">
+                <h2 class="section-title">Model Comparison Leaderboard</h2>
+                
+                <div class="leaderboard-row">
+                    <strong>🥇</strong>
+                    <span>Random Forest Regressor</span>
+                    <strong>r2: 0.9853</strong>
+                </div>
+                
+            </div>
+
+            <div class="card">
+                <h2 class="section-title">Top Feature Importance</h2>
+                
+                <div class="importance-row">
+                    <span>Gross_Sales</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:100.0%"></div>
+                    </div>
+                    <strong>86.53%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>cost_to_revenue_ratio</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:4.53%"></div>
+                    </div>
+                    <strong>3.92%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>revenue_per_unit</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:2.33%"></div>
+                    </div>
+                    <strong>2.02%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>log_Unit_Price</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:1.66%"></div>
+                    </div>
+                    <strong>1.44%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Profit</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:1.11%"></div>
+                    </div>
+                    <strong>0.96%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>profit_margin</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:1.11%"></div>
+                    </div>
+                    <strong>0.96%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Cost</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:1.02%"></div>
+                    </div>
+                    <strong>0.88%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>high_value_transaction</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:0.49%"></div>
+                    </div>
+                    <strong>0.42%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Delivery_Days</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:0.44%"></div>
+                    </div>
+                    <strong>0.38%</strong>
+                </div>
+                
+
+                <div class="importance-row">
+                    <span>Customer_ID_CUST-1808</span>
+                    <div class="bar-track">
+                        <div class="bar-fill" style="width:0.36%"></div>
+                    </div>
+                    <strong>0.31%</strong>
+                </div>
+                
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">Model Recommendations</h2>
+            <ul class="recommendation-list">
+                <li>Model performance is strong based on R². Review target leakage before trusting results.</li>
+<li>The most influential feature appears to be 'Gross_Sales'. Review whether it is valid or causes leakage.</li>
+<li>Regression intervals use holdout conformal calibration with 1001 observations.</li>
+<li>random_forest_regressor was selected as the best model based on r2.</li>
+            </ul>
+        </div>
+        
+
+    
+        <div class="section card">
+            <h2 class="section-title">Prediction Results</h2>
+
+            <div class="grid">
+                <div class="card">
+                    <h3>Predictions</h3>
+                    <div class="metric">5002</div>
+                    <div class="metric-small">Stored in report</div>
+                </div>
+
+                <div class="card">
+                    <h3>Target</h3>
+                    <div class="metric">Revenue</div>
+                    <div class="metric-small">Prediction target</div>
+                </div>
+
+                <div class="card">
+                    <h3>Algorithm</h3>
+                    <div class="metric">Random Forest Regressor</div>
+                    <div class="metric-small">Trained model</div>
+                </div>
+
+                <div class="card">
+                    <h3>Problem Type</h3>
+                    <div class="metric">regression</div>
+                    <div class="metric-small">ML task</div>
+                </div>
+
+                <div class="card">
+                    <h3>Uncertainty Method</h3>
+                    <div class="metric">Holdout Conformal</div>
+                    <div class="metric-small">1001 calibration rows</div>
+                </div>
+
+                <div class="card">
+                    <h3>Uncertainty Summary</h3>
+                    <div class="metric">94.36%</div>
+                    <div class="metric-small">Observed interval coverage</div>
+                </div>
+            </div>
+
+            <table class="prediction-table">
+                <tr>
+                    <th>Row</th>
+                    <th>Actual</th>
+                    <th>Predicted</th>
+                    <th>Residual</th>
+                    <th>Abs Error</th>
+                    <th>% Error</th>
+                    <th>Confidence</th>
+                    <th>Prediction Interval</th>
+                    <th>Most Important Features</th>
+                </tr>
+                
+                <tr>
+                    <td>0</td>
+                    <td>89.11</td>
+                    <td>89.8213</td>
+                    <td>-0.7113</td>
+                    <td>0.7113</td>
+                    <td>0.7982</td>
+                    <td>90.0%</td>
+                    <td>[70.878, 108.7646]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>1</td>
+                    <td>284.09</td>
+                    <td>286.896</td>
+                    <td>-2.806</td>
+                    <td>2.806</td>
+                    <td>0.9877</td>
+                    <td>90.0%</td>
+                    <td>[267.9527, 305.8393]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>2</td>
+                    <td>31.98</td>
+                    <td>31.906</td>
+                    <td>0.074</td>
+                    <td>0.074</td>
+                    <td>0.2314</td>
+                    <td>90.0%</td>
+                    <td>[12.9627, 50.8493]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>3</td>
+                    <td>199.58</td>
+                    <td>199.0345</td>
+                    <td>0.5455</td>
+                    <td>0.5455</td>
+                    <td>0.2733</td>
+                    <td>90.0%</td>
+                    <td>[180.0912, 217.9778]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>4</td>
+                    <td>209.53</td>
+                    <td>210.1043</td>
+                    <td>-0.5743</td>
+                    <td>0.5743</td>
+                    <td>0.2741</td>
+                    <td>90.0%</td>
+                    <td>[191.161, 229.0476]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>5</td>
+                    <td>37.6</td>
+                    <td>37.5979</td>
+                    <td>0.0021</td>
+                    <td>0.0021</td>
+                    <td>0.0056</td>
+                    <td>90.0%</td>
+                    <td>[18.6546, 56.5412]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>6</td>
+                    <td>168.62</td>
+                    <td>168.2335</td>
+                    <td>0.3865</td>
+                    <td>0.3865</td>
+                    <td>0.2292</td>
+                    <td>90.0%</td>
+                    <td>[149.2902, 187.1768]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>7</td>
+                    <td>83.0</td>
+                    <td>83.0574</td>
+                    <td>-0.0574</td>
+                    <td>0.0574</td>
+                    <td>0.0692</td>
+                    <td>90.0%</td>
+                    <td>[64.1141, 102.0007]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>8</td>
+                    <td>10.22</td>
+                    <td>10.6114</td>
+                    <td>-0.3914</td>
+                    <td>0.3914</td>
+                    <td>3.8297</td>
+                    <td>90.0%</td>
+                    <td>[-8.3319, 29.5547]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>9</td>
+                    <td>5065.55</td>
+                    <td>4911.6684</td>
+                    <td>153.8816</td>
+                    <td>153.8816</td>
+                    <td>3.0378</td>
+                    <td>90.0%</td>
+                    <td>[4892.7251, 4930.6117]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>10</td>
+                    <td>143.3</td>
+                    <td>143.3428</td>
+                    <td>-0.0428</td>
+                    <td>0.0428</td>
+                    <td>0.0299</td>
+                    <td>90.0%</td>
+                    <td>[124.3995, 162.2861]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>11</td>
+                    <td>239.42</td>
+                    <td>239.0681</td>
+                    <td>0.3519</td>
+                    <td>0.3519</td>
+                    <td>0.147</td>
+                    <td>90.0%</td>
+                    <td>[220.1248, 258.0114]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>12</td>
+                    <td>192.53</td>
+                    <td>192.3246</td>
+                    <td>0.2054</td>
+                    <td>0.2054</td>
+                    <td>0.1067</td>
+                    <td>90.0%</td>
+                    <td>[173.3813, 211.2679]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>13</td>
+                    <td>9.49</td>
+                    <td>9.7752</td>
+                    <td>-0.2852</td>
+                    <td>0.2852</td>
+                    <td>3.0053</td>
+                    <td>90.0%</td>
+                    <td>[-9.1681, 28.7185]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>14</td>
+                    <td>249.49</td>
+                    <td>249.5369</td>
+                    <td>-0.0469</td>
+                    <td>0.0469</td>
+                    <td>0.0188</td>
+                    <td>90.0%</td>
+                    <td>[230.5936, 268.4802]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>15</td>
+                    <td>1346.29</td>
+                    <td>1330.586</td>
+                    <td>15.704</td>
+                    <td>15.704</td>
+                    <td>1.1665</td>
+                    <td>90.0%</td>
+                    <td>[1311.6427, 1349.5293]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>16</td>
+                    <td>92.68</td>
+                    <td>92.8398</td>
+                    <td>-0.1598</td>
+                    <td>0.1598</td>
+                    <td>0.1724</td>
+                    <td>90.0%</td>
+                    <td>[73.8965, 111.7831]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>17</td>
+                    <td>44.62</td>
+                    <td>44.4451</td>
+                    <td>0.1749</td>
+                    <td>0.1749</td>
+                    <td>0.392</td>
+                    <td>90.0%</td>
+                    <td>[25.5018, 63.3884]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>18</td>
+                    <td>107.39</td>
+                    <td>107.9622</td>
+                    <td>-0.5722</td>
+                    <td>0.5722</td>
+                    <td>0.5328</td>
+                    <td>90.0%</td>
+                    <td>[89.0189, 126.9055]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+                <tr>
+                    <td>19</td>
+                    <td>135.35</td>
+                    <td>134.7998</td>
+                    <td>0.5502</td>
+                    <td>0.5502</td>
+                    <td>0.4065</td>
+                    <td>90.0%</td>
+                    <td>[115.8565, 153.7431]</td>
+                    <td>Gross_Sales, cost_to_revenue_ratio, revenue_per_unit</td>
+                </tr>
+                
+            </table>
+        </div>
+        
+
+    
+        <div class="section card">
+            <h2 class="section-title">Model Explainability</h2>
+
+            <div class="grid">
+                <div class="card">
+                    <h3>Method</h3>
+                    <div class="metric">Shap Tree Explainer</div>
+                    <div class="metric-small">Explanation method</div>
+                </div>
+
+                <div class="card">
+                    <h3>Rows Explained</h3>
+                    <div class="metric">20</div>
+                    <div class="metric-small">Stored row explanations</div>
+                </div>
+
+                <div class="card">
+                    <h3>Global Features</h3>
+                    <div class="metric">10</div>
+                    <div class="metric-small">Ranked model features</div>
+                </div>
+
+                <div class="card">
+                    <h3>Status</h3>
+                    <div class="metric">SHAP Active</div>
+                    <div class="metric-small">Explainability status</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="section two-col">
+            <div class="card">
+                <h2 class="section-title">Global SHAP Feature Contributions</h2>
+                
+                <div class="importance-row">
+                    <span>Gross_Sales</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:89.24%"
+                        ></div>
+                    </div>
+                    <strong>89.24%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>high_value_transaction</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:3.81%"
+                        ></div>
+                    </div>
+                    <strong>3.81%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>discount_intensity</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:1.65%"
+                        ></div>
+                    </div>
+                    <strong>1.65%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>Cost</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:0.82%"
+                        ></div>
+                    </div>
+                    <strong>0.82%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>revenue_per_unit</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:0.72%"
+                        ></div>
+                    </div>
+                    <strong>0.72%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>cost_to_revenue_ratio</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:0.7%"
+                        ></div>
+                    </div>
+                    <strong>0.7%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>Profit</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:0.65%"
+                        ></div>
+                    </div>
+                    <strong>0.65%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>log_Unit_Price</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:0.27%"
+                        ></div>
+                    </div>
+                    <strong>0.27%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>log_Discount_Amount</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:0.25%"
+                        ></div>
+                    </div>
+                    <strong>0.25%</strong>
+                </div>
+                
+                <div class="importance-row">
+                    <span>Discount_Rate</span>
+                    <div class="bar-track">
+                        <div
+                            class="bar-fill"
+                            style="width:0.24%"
+                        ></div>
+                    </div>
+                    <strong>0.24%</strong>
+                </div>
+                
+            </div>
+
+            <div class="card">
+                <h2 class="section-title">Explainability Notes</h2>
+                <ul class="recommendation-list">
+                    <li>Identifier-like transformed features were excluded from the displayed explanations.</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="section card">
+            <h2 class="section-title">Sample Row-Level SHAP Explanations</h2>
+
+            <table>
+                <tr>
+                    <th>Row</th>
+                    <th>Prediction</th>
+                    <th>Base Value</th>
+                    <th>Top Contributions</th>
+                    <th>Increasing Features</th>
+                    <th>Decreasing Features</th>
+                    <th>Explanation</th>
+                </tr>
+                
+                <tr>
+                    <td>0</td>
+                    <td>89.8213</td>
+                    <td>517.2329</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Gross_Sales
+                        </span>
+                        <span>
+                            = 104.83
+                            | SHAP: -403.241447
+                             (87.14%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - high_value_transaction
+                        </span>
+                        <span>
+                            = 0.0
+                            | SHAP: -22.73046
+                             (4.91%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - discount_intensity
+                        </span>
+                        <span>
+                            = 0.1499570733568635
+                            | SHAP: -10.753039
+                             (2.32%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Profit
+                        </span>
+                        <span>
+                            = 19.22
+                            | SHAP: 7.509355
+                             (1.62%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Cost
+                        </span>
+                        <span>
+                            = 69.89
+                            | SHAP: 4.756754
+                             (1.03%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>Profit, Cost</td>
+                    <td>Gross_Sales, high_value_transaction, discount_intensity</td>
+                    <td>The model predicted 89.82129999999995. The strongest increasing influences were Profit, Cost. The strongest decreasing influences were Gross_Sales, high_value_transaction, discount_intensity.</td>
+                </tr>
+                
+                <tr>
+                    <td>1</td>
+                    <td>286.896</td>
+                    <td>517.2329</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Gross_Sales
+                        </span>
+                        <span>
+                            = 315.65
+                            | SHAP: -188.019157
+                             (80.29%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - high_value_transaction
+                        </span>
+                        <span>
+                            = 0.0
+                            | SHAP: -25.890706
+                             (11.06%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - revenue_per_unit
+                        </span>
+                        <span>
+                            = 56.818
+                            | SHAP: -4.455154
+                             (1.9%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - cost_to_revenue_ratio
+                        </span>
+                        <span>
+                            = 0.6067443415818932
+                            | SHAP: -2.58281
+                             (1.1%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Discount_Rate
+                        </span>
+                        <span>
+                            = 0.1
+                            | SHAP: -1.524065
+                             (0.65%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>-</td>
+                    <td>Gross_Sales, high_value_transaction, revenue_per_unit</td>
+                    <td>The model predicted 286.896. The strongest decreasing influences were Gross_Sales, high_value_transaction, revenue_per_unit.</td>
+                </tr>
+                
+                <tr>
+                    <td>2</td>
+                    <td>31.906</td>
+                    <td>517.2329</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Gross_Sales
+                        </span>
+                        <span>
+                            = 31.98
+                            | SHAP: -476.05195
+                             (88.44%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - high_value_transaction
+                        </span>
+                        <span>
+                            = 0.0
+                            | SHAP: -24.156481
+                             (4.49%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + discount_intensity
+                        </span>
+                        <span>
+                            = 0.0
+                            | SHAP: 7.682525
+                             (1.43%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Profit
+                        </span>
+                        <span>
+                            = 12.75
+                            | SHAP: 7.646893
+                             (1.42%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Cost
+                        </span>
+                        <span>
+                            = 19.23
+                            | SHAP: 5.991455
+                             (1.11%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>discount_intensity, Profit, Cost</td>
+                    <td>Gross_Sales, high_value_transaction</td>
+                    <td>The model predicted 31.906. The strongest increasing influences were discount_intensity, Profit, Cost. The strongest decreasing influences were Gross_Sales, high_value_transaction.</td>
+                </tr>
+                
+                <tr>
+                    <td>3</td>
+                    <td>199.0345</td>
+                    <td>517.2329</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Gross_Sales
+                        </span>
+                        <span>
+                            = 221.76
+                            | SHAP: -277.886109
+                             (84.55%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - high_value_transaction
+                        </span>
+                        <span>
+                            = 0.0
+                            | SHAP: -22.08996
+                             (6.72%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - discount_intensity
+                        </span>
+                        <span>
+                            = 0.10001803751803752
+                            | SHAP: -9.108587
+                             (2.77%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - revenue_per_unit
+                        </span>
+                        <span>
+                            = 16.631666666666668
+                            | SHAP: -5.177333
+                             (1.58%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - cost_to_revenue_ratio
+                        </span>
+                        <span>
+                            = 0.7382002204629723
+                            | SHAP: -2.828856
+                             (0.86%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>-</td>
+                    <td>Gross_Sales, high_value_transaction, discount_intensity</td>
+                    <td>The model predicted 199.03450000000015. The strongest decreasing influences were Gross_Sales, high_value_transaction, discount_intensity.</td>
+                </tr>
+                
+                <tr>
+                    <td>4</td>
+                    <td>210.1043</td>
+                    <td>517.2329</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Gross_Sales
+                        </span>
+                        <span>
+                            = 220.56
+                            | SHAP: -285.367983
+                             (87.48%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - high_value_transaction
+                        </span>
+                        <span>
+                            = 0.0
+                            | SHAP: -22.193279
+                             (6.8%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + discount_intensity
+                        </span>
+                        <span>
+                            = 0.05000906782734856
+                            | SHAP: 5.235933
+                             (1.61%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + revenue_per_unit
+                        </span>
+                        <span>
+                            = 69.84333333333333
+                            | SHAP: 2.858234
+                             (0.88%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - cost_to_revenue_ratio
+                        </span>
+                        <span>
+                            = 0.7317806519352837
+                            | SHAP: -2.502526
+                             (0.77%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>discount_intensity, revenue_per_unit</td>
+                    <td>Gross_Sales, high_value_transaction, cost_to_revenue_ratio</td>
+                    <td>The model predicted 210.10429999999994. The strongest increasing influences were discount_intensity, revenue_per_unit. The strongest decreasing influences were Gross_Sales, high_value_transaction, cost_to_revenue_ratio.</td>
+                </tr>
+                
+                <tr>
+                    <td>5</td>
+                    <td>37.5979</td>
+                    <td>517.2329</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Gross_Sales
+                        </span>
+                        <span>
+                            = 41.78
+                            | SHAP: -454.112593
+                             (88.18%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - high_value_transaction
+                        </span>
+                        <span>
+                            = 0.0
+                            | SHAP: -23.264878
+                             (4.52%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - discount_intensity
+                        </span>
+                        <span>
+                            = 0.10004786979415987
+                            | SHAP: -7.674632
+                             (1.49%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Profit
+                        </span>
+                        <span>
+                            = 5.04
+                            | SHAP: 7.492797
+                             (1.45%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Cost
+                        </span>
+                        <span>
+                            = 32.56
+                            | SHAP: 5.318332
+                             (1.03%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>Profit, Cost</td>
+                    <td>Gross_Sales, high_value_transaction, discount_intensity</td>
+                    <td>The model predicted 37.597899999999974. The strongest increasing influences were Profit, Cost. The strongest decreasing influences were Gross_Sales, high_value_transaction, discount_intensity.</td>
+                </tr>
+                
+                <tr>
+                    <td>6</td>
+                    <td>168.2335</td>
+                    <td>517.2329</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Gross_Sales
+                        </span>
+                        <span>
+                            = 177.5
+                            | SHAP: -326.13274
+                             (87.51%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - high_value_transaction
+                        </span>
+                        <span>
+                            = 0.0
+                            | SHAP: -22.629632
+                             (6.07%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Cost
+                        </span>
+                        <span>
+                            = 112.45
+                            | SHAP: 5.455329
+                             (1.46%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - revenue_per_unit
+                        </span>
+                        <span>
+                            = 33.724000000000004
+                            | SHAP: -4.956853
+                             (1.33%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - cost_to_revenue_ratio
+                        </span>
+                        <span>
+                            = 0.6668841181354525
+                            | SHAP: -2.645206
+                             (0.71%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>Cost</td>
+                    <td>Gross_Sales, high_value_transaction, revenue_per_unit</td>
+                    <td>The model predicted 168.2335000000002. The strongest increasing influences were Cost. The strongest decreasing influences were Gross_Sales, high_value_transaction, revenue_per_unit.</td>
+                </tr>
+                
+                <tr>
+                    <td>7</td>
+                    <td>83.0574</td>
+                    <td>517.2329</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Gross_Sales
+                        </span>
+                        <span>
+                            = 92.22
+                            | SHAP: -414.230767
+                             (88.8%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - high_value_transaction
+                        </span>
+                        <span>
+                            = 0.0
+                            | SHAP: -23.182269
+                             (4.97%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Profit
+                        </span>
+                        <span>
+                            = 18.02
+                            | SHAP: 7.576416
+                             (1.62%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Cost
+                        </span>
+                        <span>
+                            = 64.98
+                            | SHAP: 5.710354
+                             (1.22%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - revenue_per_unit
+                        </span>
+                        <span>
+                            = 41.5
+                            | SHAP: -4.440627
+                             (0.95%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>Profit, Cost</td>
+                    <td>Gross_Sales, high_value_transaction, revenue_per_unit</td>
+                    <td>The model predicted 83.05740000000003. The strongest increasing influences were Profit, Cost. The strongest decreasing influences were Gross_Sales, high_value_transaction, revenue_per_unit.</td>
+                </tr>
+                
+                <tr>
+                    <td>8</td>
+                    <td>10.6114</td>
+                    <td>517.2329</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Gross_Sales
+                        </span>
+                        <span>
+                            = 10.76
+                            | SHAP: -489.807782
+                             (90.03%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - high_value_transaction
+                        </span>
+                        <span>
+                            = 0.0
+                            | SHAP: -23.92974
+                             (4.4%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Profit
+                        </span>
+                        <span>
+                            = 3.7
+                            | SHAP: 7.587861
+                             (1.39%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Cost
+                        </span>
+                        <span>
+                            = 6.52
+                            | SHAP: 5.833694
+                             (1.07%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - revenue_per_unit
+                        </span>
+                        <span>
+                            = 10.22
+                            | SHAP: -5.598826
+                             (1.03%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>Profit, Cost</td>
+                    <td>Gross_Sales, high_value_transaction, revenue_per_unit</td>
+                    <td>The model predicted 10.611399999999993. The strongest increasing influences were Profit, Cost. The strongest decreasing influences were Gross_Sales, high_value_transaction, revenue_per_unit.</td>
+                </tr>
+                
+                <tr>
+                    <td>9</td>
+                    <td>4911.6684</td>
+                    <td>517.2329</td>
+                    <td>
+                        <div class="shap-row-details">
+                            
+                    <div>
+                        <span class="shap-direction-positive">
+                            + Gross_Sales
+                        </span>
+                        <span>
+                            = 5065.55
+                            | SHAP: 4343.834738
+                             (93.48%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + discount_intensity
+                        </span>
+                        <span>
+                            = 0.0
+                            | SHAP: 54.828668
+                             (1.18%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - cost_to_revenue_ratio
+                        </span>
+                        <span>
+                            = 0.6540888945919002
+                            | SHAP: -41.125191
+                             (0.89%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-negative">
+                            - Cost
+                        </span>
+                        <span>
+                            = 3313.32
+                            | SHAP: -29.309312
+                             (0.63%)
+                        </span>
+                    </div>
+                    
+                    <div>
+                        <span class="shap-direction-positive">
+                            + high_value_transaction
+                        </span>
+                        <span>
+                            = 1.0
+                            | SHAP: 28.100766
+                             (0.6%)
+                        </span>
+                    </div>
+                    
+                        </div>
+                    </td>
+                    <td>Gross_Sales, discount_intensity, high_value_transaction</td>
+                    <td>cost_to_revenue_ratio, Cost</td>
+                    <td>The model predicted 4911.668399999995. The strongest increasing influences were Gross_Sales, discount_intensity, high_value_transaction. The strongest decreasing influences were cost_to_revenue_ratio, Cost.</td>
+                </tr>
+                
+            </table>
+        </div>
+        
+
+    <div class="section card">
+        <h2 class="section-title">Issue Breakdown</h2>
+        <table>
+            <tr><th>Issue</th><th>Severity</th><th>Confidence</th></tr>
+            
+                <tr>
+                    <td>missing_values</td>
+                    <td><span class="badge low">low</span></td>
+                    <td>95.0%</td>
+                </tr>
+                
+
+                <tr>
+                    <td>duplicate_rows</td>
+                    <td><span class="badge low">low</span></td>
+                    <td>90.0%</td>
+                </tr>
+                
+
+                <tr>
+                    <td>outliers</td>
+                    <td><span class="badge medium">medium</span></td>
+                    <td>85.0%</td>
+                </tr>
+                
+        </table>
+    </div>
+
+    <div class="section card">
+        <h2 class="section-title">Evidence-Aware Recommendations</h2>
+        <table>
+            <tr>
+                <th>#</th>
+                <th>Issue</th>
+                <th>Strategy</th>
+                <th>Columns</th>
+                <th>Confidence</th>
+                <th>Reason</th>
+            </tr>
+            
+                <tr>
+                    <td>1</td>
+                    <td>missing_values</td>
+                    <td>median</td>
+                    <td>Customer_Age</td>
+                    <td>88.0%</td>
+                    <td>Diagnosis detected missing values in Customer_Age. Knowledge rule 'age' recommends median imputation. Statistics show mean=35.9423 and median=36.0.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>2</td>
+                    <td>missing_values</td>
+                    <td>mode</td>
+                    <td>Region</td>
+                    <td>80.0%</td>
+                    <td>Diagnosis detected missing values in Region. Knowledge rule 'region' recommends mode imputation.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>3</td>
+                    <td>missing_values</td>
+                    <td>review_missing_values</td>
+                    <td>City</td>
+                    <td>70.0%</td>
+                    <td>Diagnosis detected missing values in City.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>4</td>
+                    <td>missing_values</td>
+                    <td>median</td>
+                    <td>Revenue</td>
+                    <td>97.0%</td>
+                    <td>Diagnosis detected missing values in Revenue. Knowledge rule 'revenue' recommends median imputation. Statistics show mean=507.4374 and median=169.34. Interpretation: The mean is substantially above the median, suggesting an asymmetric distribution. Interpretation: Revenue appears...</td>
+                </tr>
+                
+
+                <tr>
+                    <td>5</td>
+                    <td>missing_values</td>
+                    <td>median</td>
+                    <td>Customer_Satisfaction</td>
+                    <td>81.0%</td>
+                    <td>Diagnosis detected missing values in Customer_Satisfaction. Statistics show mean=3.923 and median=4.0. Interpretation: Customer_Satisfaction appears left-skewed. Small values may be pulling the mean downward.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>6</td>
+                    <td>duplicate_rows</td>
+                    <td>remove_exact_duplicates</td>
+                    <td>-</td>
+                    <td>92.0%</td>
+                    <td>Diagnosis detected exact duplicate rows. Exact duplicates can inflate counts, distort totals, and bias analysis.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>7</td>
+                    <td>outliers</td>
+                    <td>domain_range_check</td>
+                    <td>Customer_Age</td>
+                    <td>86.0%</td>
+                    <td>Diagnosis detected outlier behavior in Customer_Age. Knowledge rule 'age' recommends domain_range_check. Statistics show skewness=0.4479 and kurtosis=0.7825.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>8</td>
+                    <td>outliers</td>
+                    <td>review_or_cap</td>
+                    <td>Quantity</td>
+                    <td>96.0%</td>
+                    <td>Diagnosis detected outlier behavior in Quantity. Knowledge rule 'quantity' recommends review_or_cap. Statistics show skewness=17.1418 and kurtosis=408.8754. Interpretation: Quantity appears right-skewed. Large values may be pulling the mean upward. Interpretation: Quantity has he...</td>
+                </tr>
+                
+
+                <tr>
+                    <td>9</td>
+                    <td>outliers</td>
+                    <td>review_or_winsorize</td>
+                    <td>Unit_Price</td>
+                    <td>96.0%</td>
+                    <td>Diagnosis detected outlier behavior in Unit_Price. Knowledge rule 'unit_price' recommends review_or_winsorize. Statistics show skewness=8.702 and kurtosis=184.8562. Interpretation: Unit_Price appears right-skewed. Large values may be pulling the mean upward. Interpretation: Unit_...</td>
+                </tr>
+                
+
+                <tr>
+                    <td>10</td>
+                    <td>outliers</td>
+                    <td>review_or_treat_outliers</td>
+                    <td>Gross_Sales</td>
+                    <td>86.0%</td>
+                    <td>Diagnosis detected outlier behavior in Gross_Sales. Statistics show skewness=12.6195 and kurtosis=270.8405. Interpretation: Gross_Sales appears right-skewed. Large values may be pulling the mean upward. Interpretation: Gross_Sales has heavy-tailed behavior, suggesting extreme val...</td>
+                </tr>
+                
+
+                <tr>
+                    <td>11</td>
+                    <td>outliers</td>
+                    <td>domain_range_check</td>
+                    <td>Discount_Rate</td>
+                    <td>96.0%</td>
+                    <td>Diagnosis detected outlier behavior in Discount_Rate. Knowledge rule 'discount' recommends domain_range_check. Statistics show skewness=2.1336 and kurtosis=16.6757. Interpretation: Discount_Rate appears right-skewed. Large values may be pulling the mean upward. Interpretation: Di...</td>
+                </tr>
+                
+
+                <tr>
+                    <td>12</td>
+                    <td>outliers</td>
+                    <td>domain_range_check</td>
+                    <td>Discount_Amount</td>
+                    <td>96.0%</td>
+                    <td>Diagnosis detected outlier behavior in Discount_Amount. Knowledge rule 'discount' recommends domain_range_check. Statistics show skewness=8.8036 and kurtosis=113.0272. Interpretation: Discount_Amount appears right-skewed. Large values may be pulling the mean upward. Interpretatio...</td>
+                </tr>
+                
+
+                <tr>
+                    <td>13</td>
+                    <td>outliers</td>
+                    <td>review_or_winsorize</td>
+                    <td>Revenue</td>
+                    <td>96.0%</td>
+                    <td>Diagnosis detected outlier behavior in Revenue. Knowledge rule 'revenue' recommends review_or_winsorize. Statistics show skewness=13.224 and kurtosis=295.8814. Interpretation: Revenue appears right-skewed. Large values may be pulling the mean upward. Interpretation: Revenue has h...</td>
+                </tr>
+                
+
+                <tr>
+                    <td>14</td>
+                    <td>outliers</td>
+                    <td>review_or_treat_outliers</td>
+                    <td>Cost</td>
+                    <td>86.0%</td>
+                    <td>Diagnosis detected outlier behavior in Cost. Statistics show skewness=5.5726 and kurtosis=43.045. Interpretation: Cost appears right-skewed. Large values may be pulling the mean upward. Interpretation: Cost has heavy-tailed behavior, suggesting extreme values may strongly influen...</td>
+                </tr>
+                
+
+                <tr>
+                    <td>15</td>
+                    <td>outliers</td>
+                    <td>review_or_winsorize</td>
+                    <td>Profit</td>
+                    <td>96.0%</td>
+                    <td>Diagnosis detected outlier behavior in Profit. Knowledge rule 'profit' recommends review_or_winsorize. Statistics show skewness=11.164 and kurtosis=245.3158. Interpretation: Profit appears right-skewed. Large values may be pulling the mean upward. Interpretation: Profit has heavy...</td>
+                </tr>
+                
+
+                <tr>
+                    <td>16</td>
+                    <td>outliers</td>
+                    <td>review_or_treat_outliers</td>
+                    <td>Delivery_Days</td>
+                    <td>79.0%</td>
+                    <td>Diagnosis detected outlier behavior in Delivery_Days. Statistics show skewness=0.8642 and kurtosis=0.6586. Interpretation: Delivery_Days appears right-skewed. Large values may be pulling the mean upward.</td>
+                </tr>
+                
+        </table>
+    </div>
+
+    <div class="section card">
+        <h2 class="section-title">Cleaning Actions Table</h2>
+        <table>
+            <tr>
+                <th>Action</th>
+                <th>Issue</th>
+                <th>Strategy</th>
+                <th>Status</th>
+                <th>Columns</th>
+                <th>Rows Before</th>
+                <th>Rows After</th>
+                <th>Message</th>
+            </tr>
+            
+                <tr>
+                    <td>1</td>
+                    <td>missing_values</td>
+                    <td>median</td>
+                    <td><span class="badge success">success</span></td>
+                    <td>Customer_Age</td>
+                    <td>5035</td>
+                    <td>5035</td>
+                    <td>Applied median missing-value handling.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>2</td>
+                    <td>missing_values</td>
+                    <td>mode</td>
+                    <td><span class="badge success">success</span></td>
+                    <td>Region</td>
+                    <td>5035</td>
+                    <td>5035</td>
+                    <td>Applied mode missing-value handling.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>3</td>
+                    <td>missing_values</td>
+                    <td>review_missing_values</td>
+                    <td><span class="badge success">success</span></td>
+                    <td>City</td>
+                    <td>5035</td>
+                    <td>5035</td>
+                    <td>Applied review_missing_values missing-value handling.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>4</td>
+                    <td>missing_values</td>
+                    <td>median</td>
+                    <td><span class="badge success">success</span></td>
+                    <td>Revenue</td>
+                    <td>5035</td>
+                    <td>5035</td>
+                    <td>Applied median missing-value handling.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>5</td>
+                    <td>missing_values</td>
+                    <td>median</td>
+                    <td><span class="badge success">success</span></td>
+                    <td>Customer_Satisfaction</td>
+                    <td>5035</td>
+                    <td>5035</td>
+                    <td>Applied median missing-value handling.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>6</td>
+                    <td>duplicate_rows</td>
+                    <td>remove_exact_duplicates</td>
+                    <td><span class="badge success">success</span></td>
+                    <td>-</td>
+                    <td>5035</td>
+                    <td>5002</td>
+                    <td>Removed 33 duplicate row(s).</td>
+                </tr>
+                
+
+                <tr>
+                    <td>7</td>
+                    <td>outliers</td>
+                    <td>domain_range_check</td>
+                    <td><span class="badge skipped">skipped</span></td>
+                    <td>Customer_Age</td>
+                    <td>5002</td>
+                    <td>5002</td>
+                    <td>Strategy is not executable yet. Manual review required.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>8</td>
+                    <td>outliers</td>
+                    <td>review_or_cap</td>
+                    <td><span class="badge skipped">skipped</span></td>
+                    <td>Quantity</td>
+                    <td>5002</td>
+                    <td>5002</td>
+                    <td>Strategy is not executable yet. Manual review required.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>9</td>
+                    <td>outliers</td>
+                    <td>review_or_winsorize</td>
+                    <td><span class="badge skipped">skipped</span></td>
+                    <td>Unit_Price</td>
+                    <td>5002</td>
+                    <td>5002</td>
+                    <td>Strategy is not executable yet. Manual review required.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>10</td>
+                    <td>outliers</td>
+                    <td>review_or_treat_outliers</td>
+                    <td><span class="badge skipped">skipped</span></td>
+                    <td>Gross_Sales</td>
+                    <td>5002</td>
+                    <td>5002</td>
+                    <td>Strategy is not executable yet. Manual review required.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>11</td>
+                    <td>outliers</td>
+                    <td>domain_range_check</td>
+                    <td><span class="badge skipped">skipped</span></td>
+                    <td>Discount_Rate</td>
+                    <td>5002</td>
+                    <td>5002</td>
+                    <td>Strategy is not executable yet. Manual review required.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>12</td>
+                    <td>outliers</td>
+                    <td>domain_range_check</td>
+                    <td><span class="badge skipped">skipped</span></td>
+                    <td>Discount_Amount</td>
+                    <td>5002</td>
+                    <td>5002</td>
+                    <td>Strategy is not executable yet. Manual review required.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>13</td>
+                    <td>outliers</td>
+                    <td>review_or_winsorize</td>
+                    <td><span class="badge skipped">skipped</span></td>
+                    <td>Revenue</td>
+                    <td>5002</td>
+                    <td>5002</td>
+                    <td>Strategy is not executable yet. Manual review required.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>14</td>
+                    <td>outliers</td>
+                    <td>review_or_treat_outliers</td>
+                    <td><span class="badge skipped">skipped</span></td>
+                    <td>Cost</td>
+                    <td>5002</td>
+                    <td>5002</td>
+                    <td>Strategy is not executable yet. Manual review required.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>15</td>
+                    <td>outliers</td>
+                    <td>review_or_winsorize</td>
+                    <td><span class="badge skipped">skipped</span></td>
+                    <td>Profit</td>
+                    <td>5002</td>
+                    <td>5002</td>
+                    <td>Strategy is not executable yet. Manual review required.</td>
+                </tr>
+                
+
+                <tr>
+                    <td>16</td>
+                    <td>outliers</td>
+                    <td>review_or_treat_outliers</td>
+                    <td><span class="badge skipped">skipped</span></td>
+                    <td>Delivery_Days</td>
+                    <td>5002</td>
+                    <td>5002</td>
+                    <td>Strategy is not executable yet. Manual review required.</td>
+                </tr>
+                
+        </table>
+    </div>
+
+    
+        <div class="section card">
+            <h2 class="section-title">Interactive Cleaning Review</h2>
+            <div class="grid">
+                <div class="card"><h3>Approved</h3>
+                    <div class="metric">16</div></div>
+                <div class="card"><h3>Rejected</h3>
+                    <div class="metric">0</div></div>
+                <div class="card"><h3>Pending</h3>
+                    <div class="metric">0</div></div>
+                <div class="card"><h3>Domain Violations</h3>
+                    <div class="metric">0</div></div>
+                <div class="card"><h3>Remaining Outliers</h3>
+                    <div class="metric">3826</div></div>
+                <div class="card"><h3>Audit Entries</h3>
+                    <div class="metric">44</div></div>
+            </div>
+            <h3>Recent Cleaning Audit Trail</h3>
+            <table>
+                <tr><th>ID</th><th>Event</th><th>Action</th>
+                    <th>Row</th><th>Column</th><th>Reason</th></tr>
+                
+                <tr>
+                    <td>20</td>
+                    <td>action_approved</td>
+                    <td>10</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>21</td>
+                    <td>action_approved</td>
+                    <td>11</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>22</td>
+                    <td>action_approved</td>
+                    <td>12</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>23</td>
+                    <td>action_approved</td>
+                    <td>13</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>24</td>
+                    <td>action_approved</td>
+                    <td>14</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>25</td>
+                    <td>action_approved</td>
+                    <td>15</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>26</td>
+                    <td>action_approved</td>
+                    <td>16</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>27</td>
+                    <td>cleaning_action_executed</td>
+                    <td>1</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>28</td>
+                    <td>cleaning_action_executed</td>
+                    <td>2</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>29</td>
+                    <td>cleaning_action_executed</td>
+                    <td>3</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>30</td>
+                    <td>cleaning_action_executed</td>
+                    <td>4</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>31</td>
+                    <td>cleaning_action_executed</td>
+                    <td>5</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>32</td>
+                    <td>cleaning_action_executed</td>
+                    <td>6</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>33</td>
+                    <td>cleaning_action_executed</td>
+                    <td>7</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>34</td>
+                    <td>cleaning_action_executed</td>
+                    <td>8</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>35</td>
+                    <td>cleaning_action_executed</td>
+                    <td>9</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>36</td>
+                    <td>cleaning_action_executed</td>
+                    <td>10</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>37</td>
+                    <td>cleaning_action_executed</td>
+                    <td>11</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>38</td>
+                    <td>cleaning_action_executed</td>
+                    <td>12</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>39</td>
+                    <td>cleaning_action_executed</td>
+                    <td>13</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>40</td>
+                    <td>cleaning_action_executed</td>
+                    <td>14</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>41</td>
+                    <td>cleaning_action_executed</td>
+                    <td>15</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>42</td>
+                    <td>cleaning_action_executed</td>
+                    <td>16</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>43</td>
+                    <td>domain_validation</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+                <tr>
+                    <td>44</td>
+                    <td>outlier_review</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                </tr>
+                
+            </table>
+        </div>
+        
+
+    
+        <div class="section card">
+            <h2 class="section-title">Automatic Workflow</h2>
+            <div class="grid">
+                <div class="card"><h3>Mode</h3>
+                    <div class="metric">full</div></div>
+                <div class="card"><h3>Completed</h3>
+                    <div class="metric">21</div></div>
+                <div class="card"><h3>Reused</h3>
+                    <div class="metric">1</div></div>
+                <div class="card"><h3>Skipped</h3>
+                    <div class="metric">0</div></div>
+                <div class="card"><h3>Failed</h3>
+                    <div class="metric">0</div></div>
+            </div>
+            <table>
+                <tr><th>Stage</th><th>Status</th><th>Message</th>
+                    <th>Duration</th></tr>
+                
+                <tr>
+                    <td>load</td>
+                    <td>reused</td>
+                    <td>Existing project output reused.</td>
+                    <td>0.0000s</td>
+                </tr>
+                
+                <tr>
+                    <td>knowledge</td>
+                    <td>completed</td>
+                    <td>Knowledge rules matched.</td>
+                    <td>0.0001s</td>
+                </tr>
+                
+                <tr>
+                    <td>profile</td>
+                    <td>completed</td>
+                    <td>Dataset profile generated.</td>
+                    <td>0.0331s</td>
+                </tr>
+                
+                <tr>
+                    <td>statistics</td>
+                    <td>completed</td>
+                    <td>Descriptive statistics generated.</td>
+                    <td>0.0221s</td>
+                </tr>
+                
+                <tr>
+                    <td>interpret</td>
+                    <td>completed</td>
+                    <td>Statistical interpretations generated.</td>
+                    <td>0.0002s</td>
+                </tr>
+                
+                <tr>
+                    <td>diagnose</td>
+                    <td>completed</td>
+                    <td>Data quality diagnosis completed.</td>
+                    <td>0.0171s</td>
+                </tr>
+                
+                <tr>
+                    <td>recommend</td>
+                    <td>completed</td>
+                    <td>Cleaning recommendations generated.</td>
+                    <td>0.0002s</td>
+                </tr>
+                
+                <tr>
+                    <td>decide</td>
+                    <td>completed</td>
+                    <td>Decision plan generated.</td>
+                    <td>0.0000s</td>
+                </tr>
+                
+                <tr>
+                    <td>preview</td>
+                    <td>completed</td>
+                    <td>Safe cleaning previews generated.</td>
+                    <td>0.0092s</td>
+                </tr>
+                
+                <tr>
+                    <td>review</td>
+                    <td>completed</td>
+                    <td>Interactive cleaning review prepared.</td>
+                    <td>0.0889s</td>
+                </tr>
+                
+                <tr>
+                    <td>domain_validation</td>
+                    <td>completed</td>
+                    <td>Domain rules validated.</td>
+                    <td>0.0805s</td>
+                </tr>
+                
+                <tr>
+                    <td>correlation</td>
+                    <td>completed</td>
+                    <td>Correlation analysis completed.</td>
+                    <td>0.0042s</td>
+                </tr>
+                
+                <tr>
+                    <td>ml_readiness</td>
+                    <td>completed</td>
+                    <td>Machine-learning readiness evaluated.</td>
+                    <td>0.0037s</td>
+                </tr>
+                
+                <tr>
+                    <td>features</td>
+                    <td>completed</td>
+                    <td>Feature recommendations generated.</td>
+                    <td>0.0079s</td>
+                </tr>
+                
+                <tr>
+                    <td>approve_all</td>
+                    <td>completed</td>
+                    <td>All cleaning actions approved.</td>
+                    <td>0.0001s</td>
+                </tr>
+                
+                <tr>
+                    <td>clean</td>
+                    <td>completed</td>
+                    <td>Reviewed cleaning changes applied.</td>
+                    <td>0.1026s</td>
+                </tr>
+                
+                <tr>
+                    <td>validate_cleaning</td>
+                    <td>completed</td>
+                    <td>Post-cleaning validation completed.</td>
+                    <td>0.0362s</td>
+                </tr>
+                
+                <tr>
+                    <td>apply_features</td>
+                    <td>completed</td>
+                    <td>Recommended executable features applied.</td>
+                    <td>0.0040s</td>
+                </tr>
+                
+                <tr>
+                    <td>visualize</td>
+                    <td>completed</td>
+                    <td>Automatic visualizations generated.</td>
+                    <td>0.0018s</td>
+                </tr>
+                
+                <tr>
+                    <td>model</td>
+                    <td>completed</td>
+                    <td>Machine-learning model trained.</td>
+                    <td>11.7034s</td>
+                </tr>
+                
+                <tr>
+                    <td>predict</td>
+                    <td>completed</td>
+                    <td>Predictions generated.</td>
+                    <td>0.1602s</td>
+                </tr>
+                
+                <tr>
+                    <td>explain</td>
+                    <td>completed</td>
+                    <td>Model explanations generated.</td>
+                    <td>1.8294s</td>
+                </tr>
+                
+            </table>
+            <h3>Next Actions</h3><ul><li>No follow-up action is required.</li></ul>
+        </div>
+        
+
+    
+
+    
+        <div class="section card">
+            <h2 class="section-title">ADQL Query History</h2>
+            <table>
+                <tr><th>Source</th><th>Status</th><th>Statements</th>
+                    <th>Completed</th><th>Failed</th><th>Duration</th></tr>
+                
+                <tr>
+                    <td>/Users/admin/Desktop/Auto DQ/autodq-analytics/examples/sales_auto.adql#cell=1</td>
+                    <td><span class="badge success">Completed</span></td>
+                    <td>1</td>
+                    <td>1</td>
+                    <td>0</td>
+                    <td>0.0099s</td>
+                </tr>
+                
+            </table>
+        </div>
+        
+
+    <div class="footer">
+        Generated by AutoDQ Analytics — Intelligent Data Quality and Analytics Workflow Framework.
+    </div>
+
+</div>
+</body>
+</html>

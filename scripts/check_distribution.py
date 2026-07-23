@@ -35,10 +35,14 @@ REQUIRED_WHEEL_FILES = {
     "autodq/vscode/extension/syntaxes/adql.tmLanguage.json",
 }
 REQUIRED_SDIST_SUFFIXES = {
+    "/.github/workflows/tests.yml",
+    "/CHANGELOG.md",
     "/LICENSE",
     "/MANIFEST.in",
     "/README.md",
     "/docs/RELEASING.md",
+    "/docs/RELEASE_NOTES_0.1.0.md",
+    "/examples/sales_auto.adql",
     "/examples/sales_analysis.adql",
     "/pyproject.toml",
     "/scripts/check_distribution.py",

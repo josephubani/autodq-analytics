@@ -49,6 +49,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "build>=1.2",
+    "tomli>=2.0; python_version < '3.11'",
     "twine>=6.0",
 ]
 
