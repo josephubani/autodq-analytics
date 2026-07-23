@@ -2,7 +2,7 @@
   "name": "adql",
   "displayName": "AutoDQ ADQL",
   "description": "ADQL language support and executable notebook cells for AutoDQ.",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "publisher": "autodq",
   "license": "MIT",
   "engines": {
@@ -24,7 +24,11 @@
         "id": "adql",
         "aliases": ["ADQL", "adql"],
         "extensions": [".adql"],
-        "configuration": "./language-configuration.json"
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "light": "./icons/adql-light.svg",
+          "dark": "./icons/adql-dark.svg"
+        }
       }
     ],
     "grammars": [

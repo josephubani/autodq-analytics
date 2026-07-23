@@ -16,7 +16,12 @@ from autodq import (
     ADQLValidationError,
     AutoDQ,
 )
-from autodq.cli import _dataframe_html, _value_html, main
+from autodq.cli import (
+    _dataframe_html,
+    _recommendations_html,
+    _value_html,
+    main,
+)
 from autodq.vscode import extension_path, install_extension
 
 
@@ -177,6 +182,9 @@ HEAD 2;
             ["text/plain", "text/html"],
         )
         self.assertIn("total_revenue", payload["outputs"][1]["data"])
+        self.assertIn("autodq-output-toggle", payload["outputs"][1]["data"])
+        self.assertIn("Click to show or hide", payload["outputs"][1]["data"])
+        self.assertIn("<details", payload["outputs"][1]["data"])
         self.assertNotIn("Profile completed", stdout.getvalue())
 
     def test_notebook_json_renders_visualization_as_png(self):
@@ -330,7 +338,176 @@ STATISTICS;
         self.assertIn("Output truncated", markup)
         self.assertIn("additional item(s) omitted", markup)
         self.assertNotIn("unbounded-output", markup)
-        self.assertLess(len(markup), 10_000)
+        self.assertNotIn("<pre", markup)
+        self.assertIn("autodq-structured-table", markup)
+        self.assertLess(len(markup), 20_000)
+
+    def test_notebook_nested_analytics_render_as_tables_not_json(self):
+        markup = _value_html(
+            "statistics",
+            {
+                "descriptive": {
+                    "Customer_Age": {
+                        "column": "Customer_Age",
+                        "count": 4_908,
+                        "missing": 127,
+                        "missing_percent": 2.52,
+                        "mean": 35.9423,
+                        "median": 36.0,
+                        "minimum": 0.0,
+                        "maximum": 120.0,
+                        "std": 11.2465,
+                    }
+                },
+                "distributions": {
+                    "Customer_Age": {
+                        "column": "Customer_Age",
+                        "distribution_type": "approximately_normal",
+                        "skewness_level": "approximately_symmetric",
+                        "tail_risk": "low_tail_risk",
+                        "confidence": 0.75,
+                        "explanation": "The distribution is approximately normal.",
+                    }
+                },
+            },
+        )
+
+        self.assertIn("Descriptive", markup)
+        self.assertIn("Customer_Age", markup)
+        self.assertIn("4,908", markup)
+        self.assertIn("35.9423", markup)
+        self.assertIn("75.0%", markup)
+        self.assertIn("autodq-structured-table", markup)
+        self.assertNotIn("<pre", markup)
+        self.assertNotIn('&quot;Customer_Age&quot;', markup)
+
+    def test_notebook_validation_sections_render_as_readable_metrics(self):
+        markup = _value_html(
+            "validate",
+            {
+                "quality_score_before": 87.92,
+                "quality_score_after": 97.88,
+                "quality_score_change": 9.96,
+                "missing_values": {
+                    "name": "missing_values",
+                    "before": 382,
+                    "after": 60,
+                    "change": -322,
+                },
+                "duplicate_rows": {
+                    "name": "duplicate_rows",
+                    "before": 33,
+                    "after": 0,
+                    "change": -33,
+                },
+            },
+        )
+
+        self.assertIn("Quality Score Before", markup)
+        self.assertIn("97.88", markup)
+        self.assertIn("Missing Values", markup)
+        self.assertIn("Duplicate Rows", markup)
+        self.assertIn("-322", markup)
+        self.assertNotIn("<pre", markup)
+        self.assertNotIn('&quot;before&quot;', markup)
+
+    def test_notebook_correlations_render_as_matrix_and_relationship_table(self):
+        markup = _value_html(
+            "correlation",
+            {
+                "matrix": {
+                    "Revenue": {"Revenue": 1.0, "Profit": 0.83},
+                    "Profit": {"Revenue": 0.83, "Profit": 1.0},
+                },
+                "relationships": [
+                    {
+                        "feature_a": "Revenue",
+                        "feature_b": "Profit",
+                        "correlation": 0.83,
+                        "strength": "strong",
+                        "direction": "positive",
+                    }
+                ],
+            },
+        )
+
+        self.assertIn("autodq-matrix-table", markup)
+        self.assertIn("Relationships", markup)
+        self.assertIn("0.83", markup)
+        self.assertIn("Strong", markup)
+        self.assertIn("Positive", markup)
+        self.assertNotIn("<pre", markup)
+
+    def test_notebook_model_explain_and_blue_outputs_use_structured_views(self):
+        reports = {
+            "model": {
+                "algorithm": "random_forest_regressor",
+                "problem_type": "regression",
+                "metrics": {"r2": 0.91, "mae": 18.2},
+                "feature_importance": [
+                    {"feature": "Profit", "importance": 0.72}
+                ],
+            },
+            "explain": {
+                "method": "shap_tree_explainer",
+                "explanation_count": 20,
+                "row_explanations": [
+                    {
+                        "row_id": 0,
+                        "feature": "Profit",
+                        "importance": 0.72,
+                        "direction": "positive",
+                    }
+                ],
+            },
+            "blue": [
+                {
+                    "title": "Residuals vs Fitted Values",
+                    "status": "failed",
+                    "severity": "high",
+                    "confidence": 0.9,
+                    "interpretation": "Residual variance is not constant.",
+                    "recommendation": "Use robust standard errors.",
+                }
+            ],
+        }
+
+        for title, report in reports.items():
+            with self.subTest(title=title):
+                markup = _value_html(title, report)
+
+                self.assertIn("autodq-structured-table", markup)
+                self.assertNotIn("<pre", markup)
+                self.assertNotIn('&quot;status&quot;', markup)
+
+        self.assertIn("Feature Importance", _value_html("model", reports["model"]))
+        self.assertIn("Row Explanations", _value_html("explain", reports["explain"]))
+        self.assertIn("Residuals vs Fitted Values", _value_html("blue", reports["blue"]))
+        self.assertIn("90.0%", _value_html("blue", reports["blue"]))
+
+    def test_notebook_recommendations_render_as_cards_instead_of_json(self):
+        markup = _recommendations_html(
+            [
+                {
+                    "issue_type": "missing_values",
+                    "strategy": "median",
+                    "reason": "Median is robust for this age distribution.",
+                    "affected_columns": ["Customer_Age"],
+                    "action": "Apply median strategy to Customer_Age.",
+                    "priority": "low",
+                    "risk": "Imputation can alter the distribution.",
+                    "confidence": 0.88,
+                }
+            ]
+        )
+
+        self.assertIn("Cleaning Recommendations", markup)
+        self.assertIn("autodq-recommendation", markup)
+        self.assertIn("Apply median strategy to Customer_Age.", markup)
+        self.assertIn("88% confidence", markup)
+        self.assertIn("Why this is recommended", markup)
+        self.assertIn("Customer_Age", markup)
+        self.assertNotIn('&quot;issue_type&quot;', markup)
 
     def test_vscode_extension_is_bundled_and_installable(self):
         source = extension_path()
@@ -354,13 +531,20 @@ STATISTICS;
         self.assertNotIn("NotebookCellOutputItem.png", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.2.1")
+        self.assertEqual(package["version"], "0.2.2")
+        language_icon = package["contributes"]["languages"][0]["icon"]
+        self.assertEqual(language_icon["light"], "./icons/adql-light.svg")
+        self.assertEqual(language_icon["dark"], "./icons/adql-dark.svg")
+        self.assertTrue((source / "icons" / "adql-light.svg").is_file())
+        self.assertTrue((source / "icons" / "adql-dark.svg").is_file())
         self.assertEqual(
             package["contributes"]["configuration"]["properties"]
             ["autodq.notebook.maxOutputRows"]["default"],
             25,
         )
         self.assertTrue((installed / "package.json").is_file())
+        self.assertTrue((installed / "icons" / "adql-light.svg").is_file())
+        self.assertTrue((installed / "icons" / "adql-dark.svg").is_file())
 
     def test_persistent_kernel_bootstraps_once_and_retains_project(self):
         process = subprocess.Popen(

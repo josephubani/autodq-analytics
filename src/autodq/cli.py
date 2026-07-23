@@ -193,13 +193,15 @@ def _notebook_payload(
 
             if statement_result.data is not None:
                 outputs.append(
-                    {
-                        "mime": "text/html",
-                        "data": _dataframe_html(
+                    _notebook_html_output(
+                        _dataframe_html(
                             statement_result.data,
                             limit=row_limit,
                         ),
-                    }
+                        title=(
+                            f"{statement_result.statement.kind.title()} result"
+                        ),
+                    )
                 )
 
             rich_value_rendered = False
@@ -209,13 +211,13 @@ def _notebook_payload(
                 and isinstance(statement_result.value, dict)
             ):
                 outputs.append(
-                    {
-                        "mime": "text/html",
-                        "data": _profile_html(
+                    _notebook_html_output(
+                        _profile_html(
                             statement_result.value,
                             limit=row_limit,
                         ),
-                    }
+                        title="Dataset profile",
+                    )
                 )
                 rich_value_rendered = True
 
@@ -224,13 +226,28 @@ def _notebook_payload(
                 and statement_result.value is not None
             ):
                 outputs.append(
-                    {
-                        "mime": "text/html",
-                        "data": _diagnosis_html(
+                    _notebook_html_output(
+                        _diagnosis_html(
                             statement_result.value,
                             limit=row_limit,
                         ),
-                    }
+                        title="Data quality diagnosis",
+                    )
+                )
+                rich_value_rendered = True
+
+            if (
+                statement_result.statement.kind == "RECOMMEND"
+                and statement_result.value is not None
+            ):
+                outputs.append(
+                    _notebook_html_output(
+                        _recommendations_html(
+                            statement_result.value,
+                            limit=row_limit,
+                        ),
+                        title="Cleaning recommendations",
+                    )
                 )
                 rich_value_rendered = True
 
@@ -274,15 +291,17 @@ def _notebook_payload(
 
             if statement_result.value is not None and not rich_value_rendered:
                 outputs.append(
-                    {
-                        "mime": "text/html",
-                        "data": _value_html(
+                    _notebook_html_output(
+                        _value_html(
                             statement_result.statement.kind,
                             statement_result.value,
                             item_limit=row_limit,
                             character_limit=character_limit,
                         ),
-                    }
+                        title=(
+                            f"{statement_result.statement.kind.title()} output"
+                        ),
+                    )
                 )
 
             if statement_result.error_message:
@@ -311,6 +330,36 @@ def _notebook_payload(
         ),
         "outputs": outputs,
     }
+
+
+def _notebook_html_output(content: str, *, title: str) -> dict:
+    return {
+        "mime": "text/html",
+        "data": _collapsible_html(content, title=title),
+    }
+
+
+def _collapsible_html(
+    content: str,
+    *,
+    title: str,
+    open_by_default: bool = True,
+) -> str:
+    open_attribute = " open" if open_by_default else ""
+    return f"""<style>
+.autodq-output-toggle{{border:1px solid var(--vscode-panel-border);border-radius:9px;overflow:hidden}}
+.autodq-output-toggle>summary{{align-items:center;background:var(--vscode-editor-background);cursor:pointer;display:flex;font-family:var(--vscode-font-family);font-size:12px;font-weight:600;gap:8px;padding:9px 12px;user-select:none}}
+.autodq-output-toggle>summary:hover{{background:var(--vscode-list-hoverBackground)}}
+.autodq-output-toggle__hint{{color:var(--vscode-descriptionForeground);font-weight:400;margin-left:auto}}
+.autodq-output-toggle__body{{padding:8px 12px 2px}}
+</style>
+<details class="autodq-output-toggle"{open_attribute}>
+  <summary>
+    <span>{html.escape(title)}</span>
+    <span class="autodq-output-toggle__hint">Click to show or hide</span>
+  </summary>
+  <div class="autodq-output-toggle__body">{content}</div>
+</details>"""
 
 
 def _dataframe_html(
@@ -460,6 +509,104 @@ def _diagnosis_html(
 </section>"""
 
 
+def _recommendations_html(
+    recommendations,
+    limit: int = _NOTEBOOK_DEFAULT_OUTPUT_ROWS,
+) -> str:
+    serialized = serializable_value(recommendations)
+
+    if isinstance(serialized, dict):
+        items = serialized.get("recommendations", [])
+    elif isinstance(serialized, list):
+        items = serialized
+    else:
+        items = []
+
+    cards = []
+
+    for index, item in enumerate(items[:limit], start=1):
+        if not isinstance(item, dict):
+            continue
+
+        issue_type = str(item.get("issue_type") or "recommendation")
+        strategy = str(item.get("strategy") or "review")
+        priority = str(item.get("priority") or "normal").lower()
+        priority_class = (
+            priority
+            if priority in {"critical", "high", "medium", "low"}
+            else "normal"
+        )
+        action = str(item.get("action") or "Review this recommendation.")
+        reason = str(item.get("reason") or "No reason was provided.")
+        risk = str(item.get("risk") or "No specific risk was provided.")
+        affected = item.get("affected_columns") or []
+
+        if isinstance(affected, str):
+            affected = [affected]
+
+        columns = "".join(
+            f'<span class="autodq-column-chip">{html.escape(str(column))}</span>'
+            for column in affected
+        ) or '<span class="autodq-muted">No specific columns</span>'
+        confidence = item.get("confidence")
+
+        try:
+            confidence_value = float(confidence)
+            confidence_percent = (
+                confidence_value * 100
+                if confidence_value <= 1
+                else confidence_value
+            )
+            confidence_text = f"{confidence_percent:.0f}% confidence"
+        except (TypeError, ValueError):
+            confidence_text = "Confidence not available"
+
+        cards.append(
+            f"""<article class="autodq-recommendation">
+  <header class="autodq-recommendation__header">
+    <span class="autodq-recommendation__number">{index}</span>
+    <span class="autodq-priority autodq-priority--{priority_class}">{html.escape(priority.upper())} PRIORITY</span>
+    <span class="autodq-strategy">{html.escape(strategy.replace('_', ' ').title())}</span>
+  </header>
+  <h3>{html.escape(action)}</h3>
+  <div class="autodq-recommendation__meta">
+    <span>{html.escape(issue_type.replace('_', ' ').title())}</span>
+    <span>{html.escape(confidence_text)}</span>
+  </div>
+  <div class="autodq-column-list">{columns}</div>
+  <details class="autodq-recommendation__details">
+    <summary>Why this is recommended</summary>
+    <p><strong>Reason:</strong> {html.escape(reason)}</p>
+    <p><strong>Risk:</strong> {html.escape(risk)}</p>
+  </details>
+</article>"""
+        )
+
+    if not cards:
+        cards.append(
+            '<div class="autodq-empty">No cleaning recommendations were generated.</div>'
+        )
+
+    truncation_note = ""
+
+    if len(items) > limit:
+        truncation_note = _truncation_note(
+            f"Showing {limit:,} of {len(items):,} recommendations."
+        )
+
+    return f"""<style>{_REPORT_CSS}</style>
+<section class="autodq-report">
+  <div class="autodq-report-heading">
+    <div>
+      <h2>Cleaning Recommendations</h2>
+      <p class="autodq-muted">{len(items):,} evidence-aware action(s), ordered by priority.</p>
+    </div>
+  </div>
+  <div class="autodq-recommendations">{''.join(cards)}</div>
+  {truncation_note}
+</section>"""
+
+
 def _metric_card(label: str, value: str) -> str:
     return (
         '<div class="autodq-metric">'
@@ -490,7 +637,10 @@ def _value_html(
             rendered_html = None
 
         if isinstance(rendered_html, str) and rendered_html.strip():
-            if len(rendered_html) <= character_limit:
+            if (
+                len(rendered_html) <= character_limit
+                and "<pre" not in rendered_html.lower()
+            ):
                 return f"""<style>{_REPORT_CSS}</style>
 <div class="autodq-bounded-output">{rendered_html}</div>"""
 
@@ -503,74 +653,7 @@ def _value_html(
         string_limit=max(500, min(2_000, character_limit // 4)),
     )
     was_truncated = rich_output_was_truncated or structure_was_truncated
-
-    if isinstance(serialized, dict):
-        scalar_rows = []
-        details = []
-        detail_budget = character_limit
-        omitted_sections = 0
-
-        for index, (key, item) in enumerate(serialized.items()):
-            if index >= item_limit:
-                omitted_sections = len(serialized) - index
-                was_truncated = True
-                break
-
-            label = str(key).replace("_", " ").title()
-
-            if isinstance(item, (str, int, float, bool)) or item is None:
-                scalar = str(item) if item is not None else "—"
-                scalar, scalar_was_truncated = _truncate_text(
-                    scalar,
-                    min(500, character_limit),
-                )
-                was_truncated = was_truncated or scalar_was_truncated
-                scalar_rows.append(
-                    "<tr>"
-                    f"<th>{html.escape(label)}</th>"
-                    f"<td>{html.escape(scalar)}</td>"
-                    "</tr>"
-                )
-            else:
-                rendered = json.dumps(item, indent=2, ensure_ascii=False)
-                section_limit = min(4_000, max(250, detail_budget))
-                rendered, section_was_truncated = _truncate_text(
-                    rendered,
-                    section_limit,
-                )
-                was_truncated = was_truncated or section_was_truncated
-                details.append(
-                    "<details>"
-                    f"<summary>{html.escape(label)}</summary>"
-                    f"<pre>{html.escape(rendered)}</pre>"
-                    "</details>"
-                )
-                detail_budget -= len(rendered)
-
-                if detail_budget <= 250:
-                    omitted_sections = len(serialized) - index - 1
-                    was_truncated = was_truncated or omitted_sections > 0
-                    break
-
-        body = (
-            '<table class="autodq-key-values">'
-            + "".join(scalar_rows)
-            + "</table>"
-            + "".join(details)
-        )
-
-        if omitted_sections:
-            body += _truncation_note(
-                f"{omitted_sections:,} additional section(s) were omitted."
-            )
-    else:
-        rendered = json.dumps(serialized, indent=2, ensure_ascii=False)
-        rendered, rendered_was_truncated = _truncate_text(
-            rendered,
-            character_limit,
-        )
-        was_truncated = was_truncated or rendered_was_truncated
-        body = f"<pre>{html.escape(rendered)}</pre>"
+    body = _structured_html(serialized)
 
     if was_truncated:
         body += _truncation_note(
@@ -584,6 +667,462 @@ def _value_html(
   <h2>{heading}</h2>
   {body}
 </section>"""
+
+
+_STRUCTURED_LONG_FIELDS = {
+    "action",
+    "description",
+    "details",
+    "explanation",
+    "interpretation",
+    "notes",
+    "reason",
+    "recommendation",
+    "recommendations",
+    "risk",
+    "warnings",
+}
+
+_STRUCTURED_FIELD_ORDER = (
+    "action_id",
+    "row_id",
+    "rank",
+    "column",
+    "feature",
+    "feature_a",
+    "feature_b",
+    "target",
+    "name",
+    "title",
+    "label",
+    "issue_type",
+    "strategy",
+    "status",
+    "severity",
+    "priority",
+    "problem_type",
+    "algorithm",
+    "method",
+    "count",
+    "missing",
+    "missing_percent",
+    "before",
+    "after",
+    "change",
+    "mean",
+    "median",
+    "minimum",
+    "maximum",
+    "std",
+    "correlation",
+    "strength",
+    "direction",
+    "importance",
+    "confidence",
+)
+
+_STRUCTURED_SECTION_KEYS = {
+    "actions",
+    "assumptions",
+    "audit_trail",
+    "automation",
+    "charts",
+    "cleaning",
+    "columns",
+    "descriptive",
+    "domain",
+    "domain_report",
+    "domain_rules",
+    "duplicate_rows",
+    "excluded_features",
+    "feature_columns",
+    "feature_importance",
+    "feature_types",
+    "global_features",
+    "issues",
+    "matrix",
+    "metrics",
+    "missing_values",
+    "model",
+    "model_comparison",
+    "outlier_report",
+    "prediction",
+    "predictions",
+    "prescriptions",
+    "preview",
+    "previews",
+    "recommendations",
+    "relationships",
+    "review",
+    "row_explanations",
+    "rows",
+    "summary",
+    "target_relationships",
+    "uncertainty_calibration",
+    "vif_results",
+    "visual_insights",
+    "warnings",
+}
+
+
+def _structured_html(value, *, depth: int = 0) -> str:
+    if depth >= 5:
+        return '<p class="autodq-structured-note">Additional nested details omitted.</p>'
+
+    if _is_scalar(value):
+        return _structured_scalar(value)
+
+    if isinstance(value, dict):
+        items = dict(value)
+        preview_message = items.pop("__preview__", None)
+        content = ""
+
+        if _is_numeric_matrix(items):
+            content = _structured_matrix(items)
+        elif _is_record_mapping(items) and not _is_section_mapping(items):
+            records = []
+
+            for name, item in items.items():
+                if isinstance(item, dict):
+                    record = {"item": name, **item}
+                else:
+                    record = {"item": name, "status": "No matched rule"}
+
+                records.append(record)
+
+            content = _structured_records_table(
+                records,
+                depth=depth,
+                first_label="Item",
+            )
+        else:
+            scalar_rows = []
+            nested_sections = []
+
+            for key, item in items.items():
+                label = _humanize(key)
+
+                if _is_scalar(item):
+                    scalar_rows.append(
+                        "<tr>"
+                        f"<th>{html.escape(label)}</th>"
+                        f"<td>{_structured_scalar(item, key=key)}</td>"
+                        "</tr>"
+                    )
+                else:
+                    count = _structured_count(item)
+                    count_badge = (
+                        f'<span class="autodq-section-count">{count:,}</span>'
+                        if count is not None
+                        else ""
+                    )
+                    nested_sections.append(
+                        '<details class="autodq-structured-section">'
+                        f"<summary><span>{html.escape(label)}</span>{count_badge}</summary>"
+                        '<div class="autodq-structured-section__body">'
+                        f"{_structured_html(item, depth=depth + 1)}"
+                        "</div></details>"
+                    )
+
+            if scalar_rows:
+                content += (
+                    '<div class="autodq-structured-table-wrap">'
+                    '<table class="autodq-key-values">'
+                    + "".join(scalar_rows)
+                    + "</table></div>"
+                )
+
+            content += "".join(nested_sections)
+
+        if preview_message:
+            content = (
+                _structured_preview_note(str(preview_message))
+                + content
+            )
+
+        return content or '<p class="autodq-empty">No structured values.</p>'
+
+    if isinstance(value, (list, tuple)):
+        items = list(value)
+        preview_message = None
+
+        if items and _is_preview_marker(items[0]):
+            preview_message = str(items.pop(0))
+
+        if not items:
+            content = '<p class="autodq-empty">No items.</p>'
+        elif all(_is_scalar(item) for item in items):
+            content = (
+                '<div class="autodq-chip-list">'
+                + "".join(
+                    f'<span class="autodq-data-chip">{_structured_scalar(item)}</span>'
+                    for item in items
+                )
+                + "</div>"
+            )
+        elif all(isinstance(item, dict) for item in items):
+            content = _structured_records_table(items, depth=depth)
+        else:
+            cards = []
+
+            for index, item in enumerate(items, start=1):
+                cards.append(
+                    '<article class="autodq-structured-card">'
+                    f'<div class="autodq-structured-card__title">Item {index}</div>'
+                    f"{_structured_html(item, depth=depth + 1)}"
+                    "</article>"
+                )
+
+            content = '<div class="autodq-structured-grid">' + "".join(cards) + "</div>"
+
+        if preview_message:
+            content = _structured_preview_note(preview_message) + content
+
+        return content
+
+    return _structured_scalar(str(value))
+
+
+def _structured_records_table(
+    records: list[dict],
+    *,
+    depth: int,
+    first_label: str | None = None,
+) -> str:
+    if not records:
+        return '<p class="autodq-empty">No records.</p>'
+
+    keys = []
+
+    for record in records:
+        for key in record:
+            if key not in keys:
+                keys.append(key)
+
+    simple_keys = [
+        key
+        for key in keys
+        if key not in _STRUCTURED_LONG_FIELDS
+        and all(
+            _is_scalar(record.get(key))
+            and len(str(record.get(key) or "")) <= 100
+            for record in records
+        )
+    ]
+    order = {key: index for index, key in enumerate(_STRUCTURED_FIELD_ORDER)}
+    simple_keys.sort(key=lambda key: (order.get(key, len(order)), keys.index(key)))
+
+    if "item" in simple_keys:
+        simple_keys.remove("item")
+        simple_keys.insert(0, "item")
+
+    selected_keys = simple_keys[:8]
+
+    if not selected_keys:
+        selected_keys = keys[:1]
+
+    detail_keys = [key for key in keys if key not in selected_keys]
+    headers = []
+
+    for key in selected_keys:
+        label = first_label if key == "item" and first_label else _humanize(key)
+        headers.append(f"<th>{html.escape(label)}</th>")
+
+    if detail_keys:
+        headers.append("<th>Details</th>")
+
+    rows = []
+
+    for record in records:
+        cells = [
+            f"<td>{_structured_scalar(record.get(key), key=key)}</td>"
+            for key in selected_keys
+        ]
+
+        if detail_keys:
+            details = {
+                key: record.get(key)
+                for key in detail_keys
+                if record.get(key) not in (None, "", [], {})
+            }
+
+            if details:
+                cells.append(
+                    '<td><details class="autodq-row-details">'
+                    f"<summary>{len(details):,} field(s)</summary>"
+                    '<div class="autodq-row-details__body">'
+                    f"{_structured_html(details, depth=depth + 1)}"
+                    "</div></details></td>"
+                )
+            else:
+                cells.append("<td>—</td>")
+
+        rows.append("<tr>" + "".join(cells) + "</tr>")
+
+    return (
+        '<div class="autodq-structured-table-wrap">'
+        '<table class="autodq-structured-table"><thead><tr>'
+        + "".join(headers)
+        + "</tr></thead><tbody>"
+        + "".join(rows)
+        + "</tbody></table></div>"
+    )
+
+
+def _structured_matrix(matrix: dict) -> str:
+    row_names = list(matrix)[:12]
+    column_names = []
+
+    for row_name in row_names:
+        for column in matrix[row_name]:
+            if column not in column_names:
+                column_names.append(column)
+
+    column_names = column_names[:12]
+    headers = "".join(
+        f"<th>{html.escape(str(column))}</th>"
+        for column in column_names
+    )
+    rows = []
+
+    for row_name in row_names:
+        cells = "".join(
+            f"<td>{_structured_scalar(matrix[row_name].get(column), key='correlation')}</td>"
+            for column in column_names
+        )
+        rows.append(
+            f"<tr><th>{html.escape(str(row_name))}</th>{cells}</tr>"
+        )
+
+    note = ""
+
+    if len(matrix) > len(row_names):
+        note = _structured_preview_note(
+            f"Showing {len(row_names):,} of {len(matrix):,} matrix rows."
+        )
+
+    return (
+        note
+        + '<div class="autodq-structured-table-wrap">'
+        '<table class="autodq-structured-table autodq-matrix-table">'
+        f"<thead><tr><th>Feature</th>{headers}</tr></thead>"
+        f"<tbody>{''.join(rows)}</tbody></table></div>"
+    )
+
+
+def _structured_scalar(value, *, key: str | None = None) -> str:
+    if value is None:
+        return '<span class="autodq-null">—</span>'
+
+    normalized_key = str(key or "").lower()
+
+    if isinstance(value, bool):
+        status = "good" if value else "neutral"
+        label = "Yes" if value else "No"
+        return f'<span class="autodq-data-badge autodq-data-badge--{status}">{label}</span>'
+
+    if isinstance(value, float):
+        if "confidence" in normalized_key:
+            numeric = value * 100 if abs(value) <= 1 else value
+            rendered = f"{numeric:.1f}%"
+        elif "percent" in normalized_key:
+            rendered = f"{value:,.2f}%"
+        elif value != value:
+            rendered = "—"
+        else:
+            rendered = f"{value:,.4f}".rstrip("0").rstrip(".")
+    elif isinstance(value, int):
+        rendered = f"{value:,}"
+    else:
+        rendered = str(value)
+
+    normalized_value = rendered.lower().strip().replace(" ", "_")
+    badge_keys = {
+        "direction",
+        "priority",
+        "severity",
+        "status",
+        "strength",
+    }
+
+    if normalized_key in badge_keys:
+        badge_class = _structured_badge_class(normalized_value)
+        return (
+            f'<span class="autodq-data-badge autodq-data-badge--{badge_class}">'
+            f"{html.escape(_humanize(rendered))}</span>"
+        )
+
+    if normalized_key in {"algorithm", "method", "strategy", "problem_type"}:
+        return f'<code class="autodq-inline-code">{html.escape(rendered)}</code>'
+
+    return html.escape(rendered)
+
+
+def _structured_badge_class(value: str) -> str:
+    if value in {"passed", "good", "approved", "positive", "low", "strong", "very_strong"}:
+        return "good"
+    if value in {"failed", "bad", "rejected", "negative", "critical", "high"}:
+        return "bad"
+    if value in {"warning", "pending", "medium", "moderate"}:
+        return "warning"
+    return "neutral"
+
+
+def _is_scalar(value) -> bool:
+    return isinstance(value, (str, int, float, bool)) or value is None
+
+
+def _is_numeric_matrix(value: dict) -> bool:
+    if len(value) < 2 or not all(isinstance(item, dict) for item in value.values()):
+        return False
+
+    cells = [cell for row in value.values() for cell in row.values()]
+    return bool(cells) and all(
+        isinstance(cell, (int, float, bool)) or cell is None
+        for cell in cells
+    )
+
+
+def _is_record_mapping(value: dict) -> bool:
+    return bool(value) and any(isinstance(item, dict) for item in value.values()) and all(
+        isinstance(item, dict) or item is None
+        for item in value.values()
+    )
+
+
+def _is_section_mapping(value: dict) -> bool:
+    return any(str(key).lower() in _STRUCTURED_SECTION_KEYS for key in value)
+
+
+def _is_preview_marker(value) -> bool:
+    text = str(value)
+    return text.startswith("Showing ") and "omitted" in text
+
+
+def _structured_count(value) -> int | None:
+    if isinstance(value, (dict, list, tuple)):
+        count = len(value)
+
+        if isinstance(value, dict) and "__preview__" in value:
+            count -= 1
+        elif isinstance(value, (list, tuple)) and value and _is_preview_marker(value[0]):
+            count -= 1
+
+        return max(0, count)
+
+    return None
+
+
+def _structured_preview_note(message: str) -> str:
+    return (
+        '<p class="autodq-structured-note">'
+        f"{html.escape(message)}"
+        "</p>"
+    )
+
+
+def _humanize(value) -> str:
+    return str(value).replace("_", " ").strip().title()
 
 
 def _notebook_limit(
@@ -723,6 +1262,7 @@ def _limit_notebook_outputs(
 _REPORT_CSS = """
 .autodq-report{font-family:var(--vscode-font-family);color:var(--vscode-foreground);line-height:1.45;padding:4px 0 12px}
 .autodq-report h2{font-size:18px;margin:8px 0 2px}
+.autodq-report-heading{align-items:flex-start;display:flex;justify-content:space-between;margin-bottom:12px}
 .autodq-muted{color:var(--vscode-descriptionForeground);font-size:12px}
 .autodq-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:9px;margin:14px 0}
 .autodq-metric{border:1px solid var(--vscode-panel-border);border-radius:8px;padding:10px 12px}
@@ -741,9 +1281,51 @@ _REPORT_CSS = """
 .autodq-medium{background:#78350f;color:#fef3c7}
 .autodq-low,.autodq-none{background:#064e3b;color:#d1fae5}
 .autodq-empty{border:1px dashed var(--vscode-panel-border);border-radius:8px;padding:16px}
+.autodq-recommendations{display:grid;gap:10px}
+.autodq-recommendation{background:var(--vscode-editor-background);border:1px solid var(--vscode-panel-border);border-radius:10px;padding:13px 14px}
+.autodq-recommendation h3{font-size:14px;line-height:1.4;margin:10px 0 7px}
+.autodq-recommendation__header{align-items:center;display:flex;flex-wrap:wrap;gap:7px}
+.autodq-recommendation__number{align-items:center;background:var(--vscode-badge-background);border-radius:999px;color:var(--vscode-badge-foreground);display:inline-flex;font-size:11px;font-weight:700;height:24px;justify-content:center;width:24px}
+.autodq-priority,.autodq-strategy{border-radius:999px;font-size:10px;font-weight:700;padding:3px 7px}
+.autodq-priority--critical,.autodq-priority--high{background:#7f1d1d;color:#fee2e2}
+.autodq-priority--medium{background:#78350f;color:#fef3c7}
+.autodq-priority--low{background:#064e3b;color:#d1fae5}
+.autodq-priority--normal{background:var(--vscode-badge-background);color:var(--vscode-badge-foreground)}
+.autodq-strategy{background:var(--vscode-textBlockQuote-background);color:var(--vscode-foreground)}
+.autodq-recommendation__meta{color:var(--vscode-descriptionForeground);display:flex;flex-wrap:wrap;font-size:11px;gap:6px 16px;margin-bottom:9px}
+.autodq-column-list{display:flex;flex-wrap:wrap;gap:5px;margin:8px 0}
+.autodq-column-chip{background:var(--vscode-textCodeBlock-background);border:1px solid var(--vscode-panel-border);border-radius:5px;font-family:var(--vscode-editor-font-family);font-size:11px;padding:2px 6px}
+.autodq-recommendation__details{border-top:1px solid var(--vscode-panel-border);margin-top:11px;padding-top:9px}
+.autodq-recommendation__details summary{color:var(--vscode-textLink-foreground);cursor:pointer;font-size:12px;font-weight:600}
+.autodq-recommendation__details p{font-size:12px;margin:8px 0 0}
 .autodq-key-values{border-collapse:collapse;width:100%;font-size:12px}
 .autodq-key-values th,.autodq-key-values td{border-bottom:1px solid var(--vscode-panel-border);padding:7px 9px;text-align:left;vertical-align:top}
 .autodq-key-values th{width:28%;color:var(--vscode-descriptionForeground)}
+.autodq-structured-table-wrap{max-width:100%;overflow:auto}
+.autodq-structured-table{border-collapse:collapse;font-size:12px;min-width:100%;width:max-content}
+.autodq-structured-table th,.autodq-structured-table td{border-bottom:1px solid var(--vscode-panel-border);max-width:280px;padding:7px 9px;text-align:left;vertical-align:top}
+.autodq-structured-table thead th{background:var(--vscode-editor-background);color:var(--vscode-descriptionForeground);font-size:10px;letter-spacing:.04em;position:sticky;text-transform:uppercase;top:0;z-index:1}
+.autodq-structured-table tbody th{background:var(--vscode-editor-background);font-weight:600;position:sticky;left:0}
+.autodq-matrix-table td{font-variant-numeric:tabular-nums;text-align:right}
+.autodq-structured-section{border-bottom:1px solid var(--vscode-panel-border);padding:0}
+.autodq-structured-section>summary{align-items:center;cursor:pointer;display:flex;font-size:12px;font-weight:600;gap:8px;padding:9px 0}
+.autodq-structured-section__body{padding:2px 0 11px 10px}
+.autodq-section-count{background:var(--vscode-badge-background);border-radius:999px;color:var(--vscode-badge-foreground);font-size:10px;font-weight:600;padding:1px 6px}
+.autodq-chip-list{display:flex;flex-wrap:wrap;gap:5px;padding:7px 0}
+.autodq-data-chip{background:var(--vscode-textCodeBlock-background);border:1px solid var(--vscode-panel-border);border-radius:5px;font-family:var(--vscode-editor-font-family);font-size:11px;padding:3px 7px}
+.autodq-data-badge{border-radius:999px;display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;white-space:nowrap}
+.autodq-data-badge--good{background:#064e3b;color:#d1fae5}
+.autodq-data-badge--warning{background:#78350f;color:#fef3c7}
+.autodq-data-badge--bad{background:#7f1d1d;color:#fee2e2}
+.autodq-data-badge--neutral{background:var(--vscode-badge-background);color:var(--vscode-badge-foreground)}
+.autodq-inline-code{background:var(--vscode-textCodeBlock-background);border-radius:4px;font-family:var(--vscode-editor-font-family);font-size:11px;padding:2px 5px}
+.autodq-null{color:var(--vscode-descriptionForeground)}
+.autodq-row-details>summary{color:var(--vscode-textLink-foreground);cursor:pointer;font-size:11px;white-space:nowrap}
+.autodq-row-details__body{min-width:300px;padding:7px 0}
+.autodq-structured-grid{display:grid;gap:9px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.autodq-structured-card{border:1px solid var(--vscode-panel-border);border-radius:8px;padding:10px}
+.autodq-structured-card__title{font-size:11px;font-weight:700;margin-bottom:6px}
+.autodq-structured-note{border-left:3px solid var(--vscode-textLink-foreground);color:var(--vscode-descriptionForeground);font-size:11px;margin:7px 0;padding:5px 9px}
 .autodq-value-report details{border-bottom:1px solid var(--vscode-panel-border);padding:9px 0}
 .autodq-value-report summary{cursor:pointer;font-weight:600}
 .autodq-value-report pre{max-height:420px;white-space:pre-wrap;overflow:auto}

@@ -33,5 +33,6 @@ where = ["src"]
 [tool.setuptools.package-data]
 "autodq.vscode" = [
     "extension/*",
+    "extension/icons/*",
     "extension/syntaxes/*",
 ]
