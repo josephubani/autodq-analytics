@@ -1,3 +1,4 @@
+from autodq._version import __version__
 from autodq.core.project import AutoDQ
 from autodq.auto import (
     AutoRunConfig,
@@ -40,6 +41,7 @@ from autodq.commands import (
 )
 
 __all__ = [
+    "__version__",
     "AutoDQ",
     "AutoRunConfig",
     "AutoRunError",

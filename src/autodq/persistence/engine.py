@@ -15,6 +15,7 @@ from uuid import uuid4
 import joblib
 import numpy as np
 
+from autodq._version import __version__
 from autodq.ml.models import (
     FeatureImportance,
     ModelComparisonResult,
@@ -374,7 +375,7 @@ class ModelPersistenceEngine:
         try:
             return metadata.version(package_name)
         except metadata.PackageNotFoundError:
-            return "0.1.0" if package_name == "autodq" else "unknown"
+            return __version__ if package_name == "autodq" else "unknown"
 
     @staticmethod
     def _json_default(value):

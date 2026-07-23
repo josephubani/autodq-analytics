@@ -12,6 +12,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from autodq._version import __version__
 from autodq.commands.errors import ADQLError
 from autodq.commands.models import serializable_value
 from autodq.commands.runner import ADQLFileRunner
@@ -29,7 +30,11 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="autodq",
         description="Run standalone AutoDQ ADQL analytics files.",
     )
-    parser.add_argument("--version", action="version", version="AutoDQ 0.1.0")
+    parser.add_argument(
+        "--version",
+        action="version",
+        version=f"AutoDQ {__version__}",
+    )
     commands = parser.add_subparsers(dest="command", required=True)
 
     run = commands.add_parser("run", help="Run a .adql file.")

@@ -1,7 +1,6 @@
 #!/usr/bin/env autodq
 # %% [Dataset]
 DATASET "../datasets/sample/sales.csv" TARGET Revenue;
-
 # %% [markdown] AutoDQ sales workflow
 # Complete sales analytics workflow
 
@@ -11,14 +10,12 @@ uncertainty, produces SHAP and BLUE diagnostics, and exports final artifacts.
 
 Run the cells from top to bottom. The VS Code ADQL session retains the project
 state between cells.
-
 # %% [Data quality]
 PROFILE;
 STATISTICS;
 INTERPRET;
 DIAGNOSE;
 RECOMMEND;
-
 # %% [Cleaning review]
 KNOWLEDGE;
 DECIDE;
@@ -35,7 +32,6 @@ DOMAIN ADD Region ALLOWED "North,South,East,West,Central";
 DOMAIN VALIDATE;
 
 OUTLIERS REVIEW COLUMNS Revenue,Profit,Customer_Age IQR 1.5;
-
 # %% [Apply cleaning]
 APPROVE ALL;
 OUTLIERS TREAT COLUMN Revenue STRATEGY clip IQR 1.5
@@ -44,12 +40,10 @@ CLEANING PREVIEW MAX_ROWS 3;
 CLEAN;
 VALIDATE;
 DOMAIN VALIDATE;
-
 # %% [markdown] Feature engineering
 The next cell evaluates ML readiness, applies recommended features, and adds
 three transparent business features that do not directly use the Revenue
 target.
-
 # %% [Feature engineering]
 CORRELATION MIN_ABS 0.25;
 READINESS;
@@ -59,7 +53,6 @@ FEATURE CREATE Customer_Age_Squared METHOD square COLUMN Customer_Age;
 FEATURE CREATE Delivery_Is_Slow METHOD flag_greater_equal
     COLUMN Delivery_Days EXPRESSION "5";
 FEATURE CREATE Order_Year METHOD date_year COLUMN Date;
-
 # %% [Regional analysis]
 SELECT Region,
        SUM(Revenue) AS total_revenue,
@@ -71,7 +64,6 @@ WHERE Revenue IS NOT NULL AND Region IS NOT NULL
 GROUP BY Region
 ORDER BY total_revenue DESC
 LIMIT 10;
-
 # %% [Product analysis]
 SELECT Product_Category,
        SUM(Revenue) AS total_revenue,
@@ -83,7 +75,6 @@ WHERE Product_Category IS NOT NULL
 GROUP BY Product_Category
 ORDER BY total_revenue DESC
 LIMIT 15;
-
 # %% [Visualizations]
 VISUALIZE bar X Region Y Revenue STAGE cleaned
     TITLE "Revenue by Region"
@@ -122,7 +113,6 @@ VISUALIZE correlation_heatmap STAGE engineered
     THEME light
     FIGSIZE "12,9"
     DPI 160;
-
 # %% [Visualization gallery]
 GALLERY LIST;
 GALLERY CUSTOMIZE bar_Region_by_Revenue_cleaned
@@ -130,7 +120,6 @@ GALLERY CUSTOMIZE bar_Region_by_Revenue_cleaned
     THEME journal
     DPI 200;
 GALLERY SAVE TO "../reports/adql-sales-charts" FORMAT png;
-
 # %% [Revenue model]
 MODEL TARGET Revenue USING random_forest_regressor
     USE_ENGINEERED true
@@ -143,7 +132,6 @@ PREDICT CONFIDENCE 0.90
     LOW_CONFIDENCE 0.60;
 
 MODEL SAVE TO "../models/adql-sales-revenue-model" OVERWRITE;
-
 # %% [Prediction review]
 SELECT Transaction_ID,
        Region,
@@ -154,12 +142,10 @@ SELECT Transaction_ID,
 FROM PREDICTIONS
 ORDER BY AutoDQ_Prediction DESC
 LIMIT 25;
-
 # %% [SHAP explainability]
 EXPLAIN MAX_ROWS 20 USE_ENGINEERED true;
 SHAP CHART summary SAVE "../reports/adql-sales-shap-summary.png";
 SHAP CHART waterfall ROW 0 SAVE "../reports/adql-sales-shap-waterfall.png";
-
 # %% [BLUE diagnostics]
 BLUE SOURCE data
     USE_ENGINEERED true
@@ -169,7 +155,6 @@ BLUE SOURCE data
 BLUE VISUALIZE APPEND true;
 BLUE INTERPRET;
 BLUE PRESCRIBE;
-
 # %% [Dashboard]
 DASHBOARD TITLE "AutoDQ Sales Analytics"
     SUBTITLE "Data quality, cleaning, revenue modeling, uncertainty, and diagnostics"
@@ -180,7 +165,6 @@ DASHBOARD TITLE "AutoDQ Sales Analytics"
     SAVE "../reports/adql-sales-dashboard.html"
     OVERWRITE
     DISPLAY false;
-
 # %% [Exports]
 REPORT TO "../reports/adql-sales-report.html"
     STYLE executive
@@ -189,7 +173,6 @@ EXPORT CLEANED TO "../exports/adql-sales-cleaned.csv" OVERWRITE;
 EXPORT ENGINEERED TO "../exports/adql-sales-engineered.csv" OVERWRITE;
 EXPORT PREDICTIONS TO "../exports/adql-sales-predictions.csv" OVERWRITE;
 AUDIT EXPORT TO "../reports/adql-sales-cleaning-audit.json";
-
 # %% [markdown] Completed
 The workflow is complete. Open the generated dashboard in `reports`, inspect
 the saved charts and SHAP plots, and use the exported datasets for downstream
