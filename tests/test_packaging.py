@@ -190,6 +190,7 @@ class PackagingTests(unittest.TestCase):
 
         self.assertIn("workflow_dispatch", workflow)
         self.assertIn("EXPECTED_VERSION", workflow)
+        self.assertIn('mkdir -p "${GITHUB_WORKSPACE}/dist"', workflow)
         self.assertIn("@vscode/vsce@${VSCE_VERSION} package", workflow)
         self.assertIn("github_release", workflow)
         self.assertIn("sha256sum", workflow)

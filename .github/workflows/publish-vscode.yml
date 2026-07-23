@@ -54,6 +54,8 @@ jobs:
       - name: Validate extension source
         working-directory: ${{ env.EXTENSION_DIRECTORY }}
         run: npm test
+      - name: Prepare output directory
+        run: mkdir -p "${GITHUB_WORKSPACE}/dist"
       - name: Package VSIX
         working-directory: ${{ env.EXTENSION_DIRECTORY }}
         run: >-
