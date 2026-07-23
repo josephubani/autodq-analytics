@@ -47,3 +47,5 @@ jobs:
         run: |
           python -m twine check dist/*
           python scripts/check_distribution.py dist
+      - name: Smoke test installed wheel
+        run: python scripts/smoke_test_wheel.py dist

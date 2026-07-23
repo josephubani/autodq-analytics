@@ -3,9 +3,21 @@
 All notable AutoDQ changes are recorded here. Versions follow semantic
 versioning and Python package releases follow PEP 440.
 
+## Unreleased
+
+### Changed
+
+- Added a clean-environment wheel smoke test covering installation, dependency
+  integrity, Python API usage, ADQL `AUTO`, CLI entry points, and bundled VS
+  Code assets.
+- Added public release acceptance tests that execute outside the source tree.
+- Added a user quickstart, troubleshooting guide, post-release verification,
+  and automatic GitHub release creation for future PyPI publications.
+- Updated public documentation to reflect the live PyPI release.
+
 ## 0.1.0 - 2026-07-22
 
-Initial alpha release candidate.
+Initial alpha release.
 
 ### Added
 
@@ -24,5 +36,6 @@ Initial alpha release candidate.
 
 ### Release status
 
-- Local wheel and source-distribution checks pass.
-- TestPyPI and PyPI publication remain deliberate external release steps.
+- Published to TestPyPI and production PyPI through GitHub Trusted Publishing.
+- Clean installation, dependency, CLI, Python API, and full ADQL `AUTO`
+  verification passed against the production artifact.

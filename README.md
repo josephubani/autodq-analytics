@@ -1,5 +1,9 @@
 # AutoDQ Analytics
 
+[![PyPI](https://img.shields.io/pypi/v/autodq.svg)](https://pypi.org/project/autodq/)
+[![Python](https://img.shields.io/pypi/pyversions/autodq.svg)](https://pypi.org/project/autodq/)
+[![Tests](https://github.com/josephubani/autodq-analytics/actions/workflows/tests.yml/badge.svg)](https://github.com/josephubani/autodq-analytics/actions/workflows/tests.yml)
+
 AutoDQ is an end-to-end analytics workflow framework for tabular data. It
 profiles datasets, diagnoses quality problems, recommends and reviews cleaning
 actions, engineers features, trains explainable models, generates
@@ -36,7 +40,16 @@ Install the released package from PyPI:
 python -m pip install autodq
 ```
 
-Until the first PyPI release, install directly from the project source:
+Verify the active installation:
+
+```bash
+autodq --version
+python -c "import autodq; print(autodq.__version__)"
+```
+
+Version 0.1.0 is available on
+[PyPI](https://pypi.org/project/autodq/). To work on AutoDQ itself, install
+directly from the project source:
 
 ```bash
 git clone https://github.com/josephubani/autodq-analytics.git
@@ -57,6 +70,9 @@ For editable development and release tools:
 ```bash
 python -m pip install -e ".[dev]"
 ```
+
+New users can follow the [quickstart](docs/QUICKSTART.md) for a safe review
+workflow in Python and ADQL.
 
 ## Python quick start
 
@@ -191,8 +207,8 @@ python -m unittest discover -s tests
 ```
 
 References: [Python API](docs/API_REFERENCE.md),
-[ADQL language](docs/ADQL_SPEC.md), [release guide](docs/RELEASING.md), and
-[changelog](CHANGELOG.md).
+[ADQL language](docs/ADQL_SPEC.md), [troubleshooting](docs/TROUBLESHOOTING.md),
+[release guide](docs/RELEASING.md), and [changelog](CHANGELOG.md).
 
 Build and verify release artifacts:
 
@@ -208,10 +224,13 @@ For the complete release process, see the
 ## Documentation
 
 - [ADQL language reference](https://github.com/josephubani/autodq-analytics/blob/main/docs/ADQL_SPEC.md)
+- [Quickstart](https://github.com/josephubani/autodq-analytics/blob/main/docs/QUICKSTART.md)
+- [Troubleshooting](https://github.com/josephubani/autodq-analytics/blob/main/docs/TROUBLESHOOTING.md)
 - [System architecture](https://github.com/josephubani/autodq-analytics/blob/main/docs/ARCHITECTURE.md)
 - [Plugin development](https://github.com/josephubani/autodq-analytics/blob/main/docs/PLUGIN_GUIDE.md)
 - [Project roadmap](https://github.com/josephubani/autodq-analytics/blob/main/docs/ROADMAP.md)
 - [Package and release procedure](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASING.md)
+- [AutoDQ 0.1.0 release notes](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.0.md)
 
 ## License
 

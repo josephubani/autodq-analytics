@@ -44,11 +44,15 @@ REQUIRED_SDIST_SUFFIXES = {
     "/README.md",
     "/docs/RELEASING.md",
     "/docs/RELEASE_NOTES_0.1.0.md",
+    "/docs/QUICKSTART.md",
+    "/docs/TROUBLESHOOTING.md",
     "/examples/sales_auto.adql",
     "/examples/sales_analysis.adql",
     "/pyproject.toml",
     "/scripts/check_distribution.py",
+    "/scripts/smoke_test_wheel.py",
     "/tests/test_packaging.py",
+    "/tests/test_release_acceptance.py",
 }
 FORBIDDEN_PARTS = {"__pycache__", ".DS_Store"}
 

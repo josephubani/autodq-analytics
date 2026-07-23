@@ -35,11 +35,25 @@
     - Changelog and 0.1.0 release notes
     - Standalone ADQL automatic-workflow acceptance coverage
     - Automated wheel and source-distribution release checks
+    - Isolated wheel-install smoke testing against public user interfaces
+    - Quickstart, troubleshooting, release notes, and repeatable release guide
 
-## Publication gate
+## 0.1.0 release status
 
-- Run the compatibility matrix in the hosted repository.
-- Install and verify the 0.1.0 candidate from TestPyPI.
-- Publish the tested first PyPI release.
+- Compatibility and distribution workflows passed in the hosted repository.
+- The TestPyPI candidate was installed and verified.
+- AutoDQ 0.1.0 was published to production PyPI on 2026-07-22.
+- The production wheel passed clean installation, dependency, CLI, Python API,
+  and complete ADQL `AUTO` verification.
+
+All items in the original AutoDQ development roadmap are complete.
+
+## Post-0.1.0 maintenance
+
+- Continue expanding examples and task-oriented documentation.
+- Track dependency deprecations and supported Python releases.
+- Require the isolated wheel smoke test for every future publication.
+- Record new work under `Unreleased` in the changelog before assigning the next
+  version.
 - Continue resolving upstream pandas and SHAP deprecation warnings without
-  delaying functional release validation.
+  delaying functional maintenance releases.

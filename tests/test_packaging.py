@@ -55,6 +55,9 @@ class PackagingTests(unittest.TestCase):
         self.assertEqual(project["license-files"], ["LICENSE"])
         self.assertEqual(project["readme"], "README.md")
         self.assertIn("Repository", project["urls"])
+        self.assertIn("Documentation", project["urls"])
+        self.assertIn("Changelog", project["urls"])
+        self.assertIn("Release notes", project["urls"])
         self.assertIn("Programming Language :: Python :: 3.13", project["classifiers"])
 
     def test_ci_covers_every_supported_python_version(self):
@@ -67,6 +70,7 @@ class PackagingTests(unittest.TestCase):
 
         self.assertIn("actions/checkout@v6", workflow)
         self.assertIn("actions/setup-python@v6", workflow)
+        self.assertIn("python scripts/smoke_test_wheel.py dist", workflow)
 
     def test_testpypi_workflow_uses_trusted_publishing(self):
         workflow = (
@@ -74,6 +78,7 @@ class PackagingTests(unittest.TestCase):
         ).read_text(encoding="utf-8")
 
         self.assertIn("workflow_dispatch", workflow)
+        self.assertIn("EXPECTED_VERSION", workflow)
         self.assertIn("id-token: write", workflow)
         self.assertIn("environment:\n      name: testpypi", workflow)
         self.assertIn("https://test.pypi.org/legacy/", workflow)
@@ -82,6 +87,7 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("actions/setup-python@v6", workflow)
         self.assertIn("actions/upload-artifact@v7", workflow)
         self.assertIn("actions/download-artifact@v8", workflow)
+        self.assertIn("python scripts/smoke_test_wheel.py dist", workflow)
         self.assertNotIn("TWINE_PASSWORD", workflow)
         self.assertNotIn("API_TOKEN", workflow)
 
@@ -100,6 +106,10 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("actions/setup-python@v6", workflow)
         self.assertIn("actions/upload-artifact@v7", workflow)
         self.assertIn("actions/download-artifact@v8", workflow)
+        self.assertIn("python scripts/smoke_test_wheel.py dist", workflow)
+        self.assertIn("contents: write", workflow)
+        self.assertIn("gh release create", workflow)
+        self.assertIn("--generate-notes", workflow)
         self.assertNotIn("test.pypi.org", workflow)
         self.assertNotIn("TWINE_PASSWORD", workflow)
         self.assertNotIn("API_TOKEN", workflow)
@@ -168,6 +178,26 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("recursive-include .github *.yml", manifest)
         self.assertIn("recursive-include scripts *.py", manifest)
         self.assertIn("recursive-include tests *.py", manifest)
+
+    def test_public_release_documentation_is_current(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        notes = (
+            ROOT / "docs" / "RELEASE_NOTES_0.1.0.md"
+        ).read_text(encoding="utf-8")
+        roadmap = (ROOT / "docs" / "ROADMAP.md").read_text(encoding="utf-8")
+
+        self.assertIn("https://pypi.org/project/autodq/", readme)
+        self.assertNotIn("Until the first PyPI release", readme)
+        self.assertIn("first complete alpha release.", notes)
+        self.assertIn("production PyPI", notes)
+        self.assertIn(
+            "All items in the original AutoDQ development roadmap are complete.",
+            roadmap,
+        )
+        self.assertTrue((ROOT / "docs" / "QUICKSTART.md").is_file())
+        self.assertTrue((ROOT / "docs" / "TROUBLESHOOTING.md").is_file())
+        self.assertTrue((ROOT / "scripts" / "smoke_test_wheel.py").is_file())
+        self.assertTrue((ROOT / "tests" / "test_release_acceptance.py").is_file())
 
 
 if __name__ == "__main__":
