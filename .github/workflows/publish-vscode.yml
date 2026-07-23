@@ -8,6 +8,11 @@ on:
         required: true
         default: "0.2.2"
         type: string
+      github_release:
+        description: Attach the VSIX to an adql-vVERSION GitHub Release
+        required: true
+        default: true
+        type: boolean
       publish:
         description: Publish to Visual Studio Marketplace after packaging
         required: true
@@ -55,12 +60,62 @@ jobs:
           npx --yes @vscode/vsce@${VSCE_VERSION} package
           --out "${GITHUB_WORKSPACE}/dist/autodq-adql-${EXPECTED_VERSION}.vsix"
           ${{ inputs.pre_release && '--pre-release' || '' }}
+      - name: Create SHA-256 checksum
+        working-directory: dist
+        run: >-
+          sha256sum "autodq-adql-${EXPECTED_VERSION}.vsix"
+          > "autodq-adql-${EXPECTED_VERSION}.vsix.sha256"
       - name: Store verified VSIX
         uses: actions/upload-artifact@v7
         with:
           name: autodq-adql-${{ inputs.version }}-vsix
-          path: dist/autodq-adql-${{ inputs.version }}.vsix
+          path: |
+            dist/autodq-adql-${{ inputs.version }}.vsix
+            dist/autodq-adql-${{ inputs.version }}.vsix.sha256
           if-no-files-found: error
+
+  github-release:
+    name: Release AutoDQ ADQL ${{ inputs.version }} on GitHub
+    if: ${{ inputs.github_release }}
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERSION: ${{ inputs.version }}
+      PRE_RELEASE: ${{ inputs.pre_release }}
+
+    steps:
+      - name: Download verified VSIX
+        uses: actions/download-artifact@v8
+        with:
+          name: autodq-adql-${{ inputs.version }}-vsix
+          path: dist/
+      - name: Create or update GitHub release
+        shell: bash
+        run: |
+          tag="adql-v${VERSION}"
+          asset="dist/autodq-adql-${VERSION}.vsix"
+          checksum="${asset}.sha256"
+
+          if gh release view "${tag}" >/dev/null 2>&1; then
+            gh release upload "${tag}" "${asset}" "${checksum}" --clobber
+            exit 0
+          fi
+
+          release_options=(--latest=false)
+          if [[ "${PRE_RELEASE}" == "true" ]]; then
+            release_options+=(--prerelease)
+          fi
+
+          gh release create "${tag}" "${asset}" "${checksum}" \
+            --target "${GITHUB_SHA}" \
+            --title "AutoDQ ADQL ${VERSION}" \
+            --notes "Download the VSIX and use Extensions > Install from VSIX in Visual Studio Code. Install the Python runtime separately with: python -m pip install --upgrade autodq." \
+            --generate-notes \
+            "${release_options[@]}"
 
   publish:
     name: Publish AutoDQ ADQL ${{ inputs.version }}

@@ -182,10 +182,19 @@ Reload VS Code after installation. `.adql` files then receive syntax
 highlighting, named notebook cells, rich tables and charts, cell-by-cell
 execution, and an AutoDQ file icon.
 
-The same extension is packaged as a standard Marketplace-compatible VSIX so it
-can be published as `autodq.adql`, installed from the Extensions view, and
-updated automatically. See the
-[VS Code Marketplace publishing guide](docs/VSCODE_MARKETPLACE.md).
+For a normal VS Code installation, download the latest
+`autodq-adql-VERSION.vsix` from
+[GitHub Releases](https://github.com/josephubani/autodq-analytics/releases),
+then choose **Extensions → … → Install from VSIX**. From a terminal:
+
+```bash
+code --install-extension autodq-adql-VERSION.vsix --force
+```
+
+The VSIX is packaged automatically and attached to an `adql-vVERSION` GitHub
+Release. Manually installed VSIX extensions do not receive automatic updates,
+so install the new VSIX when a release is announced. See the
+[VS Code extension distribution guide](docs/VSCODE_MARKETPLACE.md).
 
 ## Command-line interface
 

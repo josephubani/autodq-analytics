@@ -77,7 +77,25 @@ tree, installs the wheel and its declared dependencies, and verifies:
 - dependency integrity with `pip check`;
 - the bundled VS Code extension manifest, grammar, and icons.
 
-## 5. Test the wheel in a clean environment
+## 5. Publish the ADQL VSIX
+
+The VS Code extension has an independent version. Open GitHub Actions, run
+**Publish VS Code Extension**, enter the exact version from
+`src/autodq/vscode/extension/package.json`, and keep GitHub Release creation
+enabled. Keep Marketplace publication disabled when distributing manually.
+
+The workflow tests and packages the extension, creates a SHA-256 checksum, and
+attaches both files to an `adql-vVERSION` GitHub Release. No Microsoft account
+or repository secret is required. Install the downloaded package with:
+
+```bash
+code --install-extension autodq-adql-VERSION.vsix --force
+```
+
+See `docs/VSCODE_MARKETPLACE.md` for direct download URLs, Windows steps, and
+the optional Marketplace path.
+
+## 6. Test the wheel in a clean environment
 
 ```bash
 python -m venv .build-venv
@@ -96,7 +114,7 @@ python -m pip check
 before upload. Do not rely on the source checkout being importable during a
 release smoke test.
 
-## 6. Upload to TestPyPI
+## 7. Upload to TestPyPI
 
 ### Recommended: GitHub Trusted Publishing
 
@@ -142,7 +160,7 @@ python -m pip install \
 
 Repeat the import, CLI, ADQL, and `pip check` smoke tests.
 
-## 7. Publish the release
+## 8. Publish the release
 
 Publishing is irreversible for a given name and version. Only upload after the
 TestPyPI candidate has passed.
