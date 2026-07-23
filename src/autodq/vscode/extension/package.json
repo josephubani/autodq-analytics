@@ -4,9 +4,58 @@
   "description": "ADQL language support and executable notebook cells for AutoDQ.",
   "version": "0.2.2",
   "publisher": "autodq",
-  "license": "MIT",
+  "author": {
+    "name": "Joseph Ubani"
+  },
+  "license": "SEE LICENSE IN LICENSE",
+  "homepage": "https://github.com/josephubani/autodq-analytics#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/josephubani/autodq-analytics.git",
+    "directory": "src/autodq/vscode/extension"
+  },
+  "bugs": {
+    "url": "https://github.com/josephubani/autodq-analytics/issues"
+  },
+  "pricing": "Free",
+  "galleryBanner": {
+    "color": "#0f172a",
+    "theme": "dark"
+  },
+  "keywords": [
+    "autodq",
+    "adql",
+    "analytics",
+    "data quality",
+    "data cleaning",
+    "notebook",
+    "visualization",
+    "machine learning"
+  ],
+  "files": [
+    "extension.js",
+    "language-configuration.json",
+    "syntaxes/**",
+    "icons/**",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
   "engines": {
     "vscode": "^1.85.0"
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "ADQL executes local AutoDQ workflows and is disabled until the workspace is trusted."
+    },
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "ADQL execution requires local dataset and executable paths."
+    }
   },
   "categories": [
     "Programming Languages",
@@ -103,6 +152,8 @@
     }
   },
   "scripts": {
+    "check": "node --check extension.js",
+    "package": "npx --yes @vscode/vsce@3.9.2 package",
     "test": "node --check extension.js"
   }
 }

@@ -49,3 +49,20 @@ jobs:
           python scripts/check_distribution.py dist
       - name: Smoke test installed wheel
         run: python scripts/smoke_test_wheel.py dist
+
+  vscode-extension:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Validate extension source
+        working-directory: src/autodq/vscode/extension
+        run: npm test
+      - name: Package Marketplace VSIX
+        working-directory: src/autodq/vscode/extension
+        run: >-
+          npx --yes @vscode/vsce@3.9.2 package
+          --out "${GITHUB_WORKSPACE}/autodq-adql.vsix"

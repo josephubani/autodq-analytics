@@ -171,7 +171,8 @@ autodq run analysis.adql --through-cell 3
 
 ## VS Code support
 
-The Python distribution bundles the AutoDQ ADQL extension. Install it with:
+The Python distribution bundles the AutoDQ ADQL extension for local or offline
+installation. Install it with:
 
 ```bash
 autodq vscode install
@@ -180,6 +181,11 @@ autodq vscode install
 Reload VS Code after installation. `.adql` files then receive syntax
 highlighting, named notebook cells, rich tables and charts, cell-by-cell
 execution, and an AutoDQ file icon.
+
+The same extension is packaged as a standard Marketplace-compatible VSIX so it
+can be published as `autodq.adql`, installed from the Extensions view, and
+updated automatically. See the
+[VS Code Marketplace publishing guide](docs/VSCODE_MARKETPLACE.md).
 
 ## Command-line interface
 
@@ -226,6 +232,7 @@ For the complete release process, see the
 - [ADQL language reference](https://github.com/josephubani/autodq-analytics/blob/main/docs/ADQL_SPEC.md)
 - [Quickstart](https://github.com/josephubani/autodq-analytics/blob/main/docs/QUICKSTART.md)
 - [Troubleshooting](https://github.com/josephubani/autodq-analytics/blob/main/docs/TROUBLESHOOTING.md)
+- [VS Code Marketplace publishing](https://github.com/josephubani/autodq-analytics/blob/main/docs/VSCODE_MARKETPLACE.md)
 - [System architecture](https://github.com/josephubani/autodq-analytics/blob/main/docs/ARCHITECTURE.md)
 - [Plugin development](https://github.com/josephubani/autodq-analytics/blob/main/docs/PLUGIN_GUIDE.md)
 - [Project roadmap](https://github.com/josephubani/autodq-analytics/blob/main/docs/ROADMAP.md)

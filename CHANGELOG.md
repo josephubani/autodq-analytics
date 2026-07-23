@@ -7,6 +7,9 @@ versioning and Python package releases follow PEP 440.
 
 ### Changed
 
+- Prepared AutoDQ ADQL as a public Visual Studio Marketplace extension with a
+  validated VSIX, guarded publication workflow, Marketplace listing metadata,
+  and workspace-trust protections.
 - Added a clean-environment wheel smoke test covering installation, dependency
   integrity, Python API usage, ADQL `AUTO`, CLI entry points, and bundled VS
   Code assets.

@@ -1,3 +1,4 @@
+import json
 import re
 import subprocess
 import sys
@@ -12,6 +13,7 @@ except ModuleNotFoundError:  # Python 3.10
 import autodq
 
 from autodq._version import __version__
+from autodq.vscode import EXTENSION_VERSION
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -71,6 +73,8 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("actions/checkout@v6", workflow)
         self.assertIn("actions/setup-python@v6", workflow)
         self.assertIn("python scripts/smoke_test_wheel.py dist", workflow)
+        self.assertIn("npx --yes @vscode/vsce@3.9.2 package", workflow)
+        self.assertIn("actions/setup-node@v6", workflow)
 
     def test_testpypi_workflow_uses_trusted_publishing(self):
         workflow = (
@@ -160,6 +164,42 @@ class PackagingTests(unittest.TestCase):
         self.assertTrue((extension / "package.json").is_file())
         self.assertTrue((extension / "icons" / "adql-light.svg").is_file())
         self.assertTrue((extension / "icons" / "adql-dark.svg").is_file())
+        self.assertTrue((extension / "CHANGELOG.md").is_file())
+        self.assertTrue((extension / "LICENSE").is_file())
+
+        manifest = json.loads(
+            (extension / "package.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(manifest["publisher"], "autodq")
+        self.assertEqual(manifest["name"], "adql")
+        self.assertEqual(manifest["version"], EXTENSION_VERSION)
+        self.assertEqual(manifest["license"], "SEE LICENSE IN LICENSE")
+        self.assertEqual(
+            manifest["repository"]["url"],
+            "https://github.com/josephubani/autodq-analytics.git",
+        )
+        self.assertIn("README.md", manifest["files"])
+        self.assertFalse(
+            manifest["capabilities"]["untrustedWorkspaces"]["supported"]
+        )
+
+    def test_vscode_marketplace_workflow_is_version_gated(self):
+        workflow = (
+            ROOT / ".github" / "workflows" / "publish-vscode.yml"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("workflow_dispatch", workflow)
+        self.assertIn("EXPECTED_VERSION", workflow)
+        self.assertIn("@vscode/vsce@${VSCE_VERSION} package", workflow)
+        self.assertIn("@vscode/vsce@${VSCE_VERSION} publish", workflow)
+        self.assertIn("environment:\n      name: vscode-marketplace", workflow)
+        self.assertIn("VSCE_PAT: ${{ secrets.VSCE_PAT }}", workflow)
+        self.assertIn("actions/checkout@v6", workflow)
+        self.assertIn("actions/setup-node@v6", workflow)
+        self.assertIn("actions/upload-artifact@v7", workflow)
+        self.assertIn("actions/download-artifact@v8", workflow)
+        self.assertNotIn("Marketplace (Manage)", workflow)
+        self.assertTrue((ROOT / "docs" / "VSCODE_MARKETPLACE.md").is_file())
 
     def test_requirements_files_delegate_to_pyproject(self):
         runtime = (ROOT / "requirements.txt").read_text(encoding="utf-8").strip()

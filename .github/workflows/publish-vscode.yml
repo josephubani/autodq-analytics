@@ -1,0 +1,89 @@
+name: Publish VS Code Extension
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: ADQL extension version to verify
+        required: true
+        default: "0.2.2"
+        type: string
+      publish:
+        description: Publish to Visual Studio Marketplace after packaging
+        required: true
+        default: false
+        type: boolean
+      pre_release:
+        description: Mark the Marketplace version as a pre-release
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+env:
+  EXTENSION_DIRECTORY: src/autodq/vscode/extension
+  VSCE_VERSION: "3.9.2"
+
+jobs:
+  package:
+    name: Package AutoDQ ADQL ${{ inputs.version }}
+    runs-on: ubuntu-latest
+    env:
+      EXPECTED_VERSION: ${{ inputs.version }}
+
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Verify requested extension version
+        working-directory: ${{ env.EXTENSION_DIRECTORY }}
+        run: >-
+          node -e "const manifest = require('./package.json');
+          const expected = process.env.EXPECTED_VERSION;
+          if (manifest.version !== expected) {
+          throw new Error('Expected ' + expected + ', found ' + manifest.version); }"
+      - name: Validate extension source
+        working-directory: ${{ env.EXTENSION_DIRECTORY }}
+        run: npm test
+      - name: Package VSIX
+        working-directory: ${{ env.EXTENSION_DIRECTORY }}
+        run: >-
+          npx --yes @vscode/vsce@${VSCE_VERSION} package
+          --out "${GITHUB_WORKSPACE}/dist/autodq-adql-${EXPECTED_VERSION}.vsix"
+          ${{ inputs.pre_release && '--pre-release' || '' }}
+      - name: Store verified VSIX
+        uses: actions/upload-artifact@v7
+        with:
+          name: autodq-adql-${{ inputs.version }}-vsix
+          path: dist/autodq-adql-${{ inputs.version }}.vsix
+          if-no-files-found: error
+
+  publish:
+    name: Publish AutoDQ ADQL ${{ inputs.version }}
+    if: ${{ inputs.publish }}
+    needs: package
+    runs-on: ubuntu-latest
+    environment:
+      name: vscode-marketplace
+      url: https://marketplace.visualstudio.com/items?itemName=autodq.adql
+
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          package-manager-cache: false
+      - name: Download verified VSIX
+        uses: actions/download-artifact@v8
+        with:
+          name: autodq-adql-${{ inputs.version }}-vsix
+          path: dist/
+      - name: Publish to Visual Studio Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: >-
+          npx --yes @vscode/vsce@${VSCE_VERSION} publish
+          --packagePath "dist/autodq-adql-${{ inputs.version }}.vsix"
