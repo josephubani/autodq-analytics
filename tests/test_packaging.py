@@ -65,6 +65,9 @@ class PackagingTests(unittest.TestCase):
         for version in ("3.10", "3.11", "3.12", "3.13"):
             self.assertIn(version, workflow)
 
+        self.assertIn("actions/checkout@v6", workflow)
+        self.assertIn("actions/setup-python@v6", workflow)
+
     def test_testpypi_workflow_uses_trusted_publishing(self):
         workflow = (
             ROOT / ".github" / "workflows" / "publish-testpypi.yml"
@@ -75,6 +78,10 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("environment:\n      name: testpypi", workflow)
         self.assertIn("https://test.pypi.org/legacy/", workflow)
         self.assertIn("pypa/gh-action-pypi-publish@release/v1", workflow)
+        self.assertIn("actions/checkout@v6", workflow)
+        self.assertIn("actions/setup-python@v6", workflow)
+        self.assertIn("actions/upload-artifact@v7", workflow)
+        self.assertIn("actions/download-artifact@v8", workflow)
         self.assertNotIn("TWINE_PASSWORD", workflow)
         self.assertNotIn("API_TOKEN", workflow)
 
