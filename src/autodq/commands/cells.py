@@ -9,6 +9,8 @@ from autodq.commands.models import ADQLCell, ADQLDocument
 class ADQLCellParser:
     """Split a plain-text ADQL document into notebook-style cells."""
 
+    OUTPUT_CACHE_START = '# <autodq-output-cache version="1">'
+    OUTPUT_CACHE_END = "# </autodq-output-cache>"
     CELL_MARKER = re.compile(
         r"^\s*(?:#|--)\s*%%(?:\s*\[(.*?)\])?(?:\s+(.*?))?\s*$"
     )
@@ -35,6 +37,7 @@ class ADQLCellParser:
         if not isinstance(source, str):
             raise TypeError("ADQL document source must be a string.")
 
+        source = self._without_output_cache(source)
         lines = source.splitlines(keepends=True)
 
         if not lines:
@@ -109,6 +112,35 @@ class ADQLCellParser:
             )
 
         return cells
+
+    @classmethod
+    def _without_output_cache(cls, source: str) -> str:
+        lines = source.splitlines(keepends=True)
+        start = next(
+            (
+                index
+                for index in range(len(lines) - 1, -1, -1)
+                if lines[index].strip() == cls.OUTPUT_CACHE_START
+            ),
+            None,
+        )
+
+        if start is None:
+            return source
+
+        end = next(
+            (
+                index
+                for index in range(start + 1, len(lines))
+                if lines[index].strip() == cls.OUTPUT_CACHE_END
+            ),
+            None,
+        )
+
+        if end is None:
+            return source
+
+        return "".join([*lines[:start], *lines[end + 1 :]])
 
     @staticmethod
     def _has_executable_source(source: str) -> bool:

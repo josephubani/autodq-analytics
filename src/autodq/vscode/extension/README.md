@@ -15,6 +15,8 @@ workflow.
   charts between cells
 - Rich tables, quality reports, cleaning recommendations, model explanations,
   and inline charts
+- Saved output restoration for text, HTML, tables, and charts after reopening
+  an `.adql` notebook
 - Collapsible and bounded previews for large outputs
 - Rich `AUTO MODE review|clean|full` workflow summaries
 
@@ -68,6 +70,12 @@ collection items and 12,000 structured-output characters. Complete results
 remain available to later statements and exports. Adjust
 `autodq.notebook.maxOutputRows` and
 `autodq.notebook.maxOutputCharacters` in Settings when needed.
+
+Press **Save** after running cells to persist their displayed outputs. AutoDQ
+stores a compact, versioned cache at the end of the `.adql` file using comment
+lines. The cache is hidden in notebook view, ignored by the AutoDQ runtime, and
+restored when the notebook is reopened. Editing a cell prevents an older
+non-matching cached output from being restored for that cell.
 
 ## Workspace trust
 

@@ -12,13 +12,13 @@ Node.js 20 or newer is required. From the repository root:
 ```bash
 cd src/autodq/vscode/extension
 npm test
-npx --yes @vscode/vsce@3.9.2 package --out ../../../../../dist/autodq-adql-0.2.2.vsix
+npx --yes @vscode/vsce@3.9.2 package --out ../../../../../dist/autodq-adql-0.2.3.vsix
 ```
 
 Install the VSIX before publishing the GitHub Release:
 
 ```bash
-code --install-extension ../../../../../dist/autodq-adql-0.2.2.vsix --force
+code --install-extension ../../../../../dist/autodq-adql-0.2.3.vsix --force
 ```
 
 Reload VS Code, open a representative `.adql` file, and verify syntax
@@ -38,36 +38,36 @@ GitHub Release without a Microsoft account or additional secret:
 6. Leave **Publish to Visual Studio Marketplace** disabled.
 7. Run the workflow.
 
-For version `0.2.2`, the workflow creates the tag and release
-`adql-v0.2.2`, then attaches:
+For version `0.2.3`, the workflow creates the tag and release
+`adql-v0.2.3`, then attaches:
 
-- `autodq-adql-0.2.2.vsix`
-- `autodq-adql-0.2.2.vsix.sha256`
+- `autodq-adql-0.2.3.vsix`
+- `autodq-adql-0.2.3.vsix.sha256`
 
 The permanent download page is:
 
 ```text
-https://github.com/josephubani/autodq-analytics/releases/tag/adql-v0.2.2
+https://github.com/josephubani/autodq-analytics/releases/tag/adql-v0.2.3
 ```
 
 The direct VSIX download is:
 
 ```text
-https://github.com/josephubani/autodq-analytics/releases/download/adql-v0.2.2/autodq-adql-0.2.2.vsix
+https://github.com/josephubani/autodq-analytics/releases/download/adql-v0.2.3/autodq-adql-0.2.3.vsix
 ```
 
 Windows users can download the VSIX and choose **Extensions → … → Install
 from VSIX**, or run:
 
 ```powershell
-code --install-extension .\autodq-adql-0.2.2.vsix --force
+code --install-extension .\autodq-adql-0.2.3.vsix --force
 python -m pip install --upgrade autodq
 ```
 
 The checksum can be verified in PowerShell with:
 
 ```powershell
-Get-FileHash .\autodq-adql-0.2.2.vsix -Algorithm SHA256
+Get-FileHash .\autodq-adql-0.2.3.vsix -Algorithm SHA256
 ```
 
 Compare that value with the downloaded `.sha256` file. Manually installed
@@ -100,7 +100,7 @@ The simplest first publication is a manual VSIX upload:
 
 1. Open the publisher portal and select the `autodq` publisher.
 2. Choose **New extension** and then **Visual Studio Code**.
-3. Upload `dist/autodq-adql-0.2.2.vsix`.
+3. Upload `dist/autodq-adql-0.2.3.vsix`.
 4. Complete Marketplace validation and make the extension public.
 
 After publication, the listing is expected at:
@@ -128,7 +128,7 @@ For PAT-based publication:
 2. Add it to the GitHub repository as an Actions secret named `VSCE_PAT`.
 3. Create a GitHub environment named `vscode-marketplace` and require a manual
    reviewer.
-4. Run **Publish VS Code Extension**, enter `0.2.2`, and select whether to
+4. Run **Publish VS Code Extension**, enter `0.2.3`, and select whether to
    publish to the Marketplace in addition to the GitHub Release.
 
 Never place the token in `package.json`, a command line committed to the

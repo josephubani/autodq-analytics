@@ -3,6 +3,15 @@ const path = require('path');
 const fs = require('fs');
 const os = require('os');
 const { spawn } = require('child_process');
+const {
+  appendOutputCache,
+  cellFingerprint,
+  decodeCellOutputs,
+  encodeCellOutputs,
+  extractOutputCache,
+  normalizeCellSource,
+  safeJsonValue
+} = require('./notebook-persistence');
 
 const CELL_MARKER = /^\s*(?:#|--)\s*%%(?:\s*\[(.*?)\])?(?:\s+(.*?))?\s*$/;
 
@@ -125,7 +134,11 @@ class ADQLSymbolProvider {
 class ADQLNotebookSerializer {
   async deserializeNotebook(content) {
     const text = new TextDecoder().decode(content);
-    const notebookCells = splitCells(text).map((cell) => {
+    const { source, cache } = extractOutputCache(text);
+    const cachedCells = new Map(
+      ((cache && cache.cells) || []).map((cell) => [cell.index, cell])
+    );
+    const notebookCells = splitCells(source).map((cell, index) => {
       const isMarkdown = cell.kind === 'markdown';
       const data = new vscode.NotebookCellData(
         isMarkdown ? vscode.NotebookCellKind.Markup : vscode.NotebookCellKind.Code,
@@ -133,6 +146,28 @@ class ADQLNotebookSerializer {
         isMarkdown ? 'markdown' : 'adql'
       );
       data.metadata = { title: cell.title };
+      const cached = cachedCells.get(index);
+      const fingerprint = cellFingerprint(
+        cell.kind,
+        cell.title,
+        cell.source
+      );
+
+      if (cached && cached.fingerprint === fingerprint) {
+        data.outputs = decodeCellOutputs(cached.outputs).map((output) => (
+          new vscode.NotebookCellOutput(
+            output.items.map((item) => (
+              new vscode.NotebookCellOutputItem(item.data, item.mime)
+            )),
+            output.metadata
+          )
+        ));
+
+        if (cached.executionSummary) {
+          data.executionSummary = cached.executionSummary;
+        }
+      }
+
       return data;
     });
     return new vscode.NotebookData(notebookCells);
@@ -140,16 +175,35 @@ class ADQLNotebookSerializer {
 
   async serializeNotebook(data) {
     const sections = ['#!/usr/bin/env autodq'];
+    const cachedCells = [];
+
     data.cells.forEach((cell, index) => {
       const title = (cell.metadata && cell.metadata.title) || `Cell ${index + 1}`;
+      const kind = cell.kind === vscode.NotebookCellKind.Markup
+        ? 'markdown'
+        : 'code';
+      const source = normalizeCellSource(cell.value);
       sections.push(
-        cell.kind === vscode.NotebookCellKind.Markup
+        kind === 'markdown'
           ? `# %% [markdown] ${title}`
           : `# %% [${title}]`
       );
-      sections.push(cell.value.replace(/\s+$/, ''));
+      sections.push(source);
+
+      if (cell.outputs && cell.outputs.length) {
+        cachedCells.push({
+          index,
+          fingerprint: cellFingerprint(kind, title, source),
+          outputs: encodeCellOutputs(cell.outputs),
+          executionSummary: safeJsonValue(cell.executionSummary, undefined)
+        });
+      }
     });
-    return new TextEncoder().encode(`${sections.join('\n')}\n`);
+
+    const source = `${sections.join('\n')}\n`;
+    return new TextEncoder().encode(
+      appendOutputCache(source, { cells: cachedCells })
+    );
   }
 }
 
@@ -314,7 +368,7 @@ function activate(context) {
   context.subscriptions.push(vscode.workspace.registerNotebookSerializer(
     'autodq-adql-notebook',
     new ADQLNotebookSerializer(),
-    { transientOutputs: true }
+    { transientOutputs: false }
   ));
 
   controller = vscode.notebooks.createNotebookController(

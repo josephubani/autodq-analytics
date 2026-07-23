@@ -68,6 +68,37 @@ ORDER BY total_revenue DESC;
         self.assertIn("DATASET", document.cell(1).source)
         self.assertIn("SELECT", document.cell(3).source)
 
+    def test_saved_notebook_output_cache_is_ignored_by_adql_runtime(self):
+        cache = base64.b64encode(
+            json.dumps(
+                {
+                    "version": 1,
+                    "cells": [
+                        {
+                            "index": 2,
+                            "fingerprint": "test",
+                            "outputs": [],
+                        }
+                    ],
+                }
+            ).encode("utf-8")
+        ).decode("ascii")
+        self.script.write_text(
+            self.script.read_text(encoding="utf-8")
+            + "\n# <autodq-output-cache version=\"1\">\n"
+            + f"# {cache}\n"
+            + "# </autodq-output-cache>\n",
+            encoding="utf-8",
+        )
+
+        document = ADQLCellParser().read(self.script)
+        result = ADQLFileRunner().run(self.script)
+
+        self.assertEqual(document.cell_count, 3)
+        self.assertNotIn("autodq-output-cache", document.cell(3).source)
+        self.assertTrue(result.success)
+        self.assertEqual(result.completed_cell_count, 3)
+
     def test_markdown_cells_are_preserved_and_skipped_by_execution(self):
         markdown = self.root / "markdown.adql"
         markdown.write_text(
@@ -585,14 +616,19 @@ STATISTICS;
         self.assertIn("NotebookCellKind.Markup", extension)
         self.assertIn("new vscode.NotebookCellOutputItem", extension)
         self.assertNotIn("NotebookCellOutputItem.png", extension)
+        self.assertIn("extractOutputCache", extension)
+        self.assertIn("encodeCellOutputs", extension)
+        self.assertIn("transientOutputs: false", extension)
+        self.assertNotIn("transientOutputs: true", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.2.2")
+        self.assertEqual(package["version"], "0.2.3")
         language_icon = package["contributes"]["languages"][0]["icon"]
         self.assertEqual(language_icon["light"], "./icons/adql-light.svg")
         self.assertEqual(language_icon["dark"], "./icons/adql-dark.svg")
         self.assertTrue((source / "icons" / "adql-light.svg").is_file())
         self.assertTrue((source / "icons" / "adql-dark.svg").is_file())
+        self.assertTrue((source / "notebook-persistence.js").is_file())
         self.assertEqual(
             package["contributes"]["configuration"]["properties"]
             ["autodq.notebook.maxOutputRows"]["default"],
@@ -601,6 +637,7 @@ STATISTICS;
         self.assertTrue((installed / "package.json").is_file())
         self.assertTrue((installed / "icons" / "adql-light.svg").is_file())
         self.assertTrue((installed / "icons" / "adql-dark.svg").is_file())
+        self.assertTrue((installed / "notebook-persistence.js").is_file())
 
     def test_persistent_kernel_bootstraps_once_and_retains_project(self):
         process = subprocess.Popen(

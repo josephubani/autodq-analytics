@@ -2,7 +2,7 @@
   "name": "adql",
   "displayName": "AutoDQ ADQL",
   "description": "ADQL language support and executable notebook cells for AutoDQ.",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "publisher": "autodq",
   "author": {
     "name": "Joseph Ubani"
@@ -34,6 +34,7 @@
   ],
   "files": [
     "extension.js",
+    "notebook-persistence.js",
     "language-configuration.json",
     "syntaxes/**",
     "icons/**",
@@ -154,6 +155,6 @@
   "scripts": {
     "check": "node --check extension.js",
     "package": "npx --yes @vscode/vsce@3.9.2 package",
-    "test": "node --check extension.js"
+    "test": "node --check extension.js && node --test notebook-persistence.test.js"
   }
 }

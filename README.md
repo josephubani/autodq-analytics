@@ -180,7 +180,8 @@ autodq vscode install
 
 Reload VS Code after installation. `.adql` files then receive syntax
 highlighting, named notebook cells, rich tables and charts, cell-by-cell
-execution, and an AutoDQ file icon.
+execution, saved output restoration after reopening, and an AutoDQ file icon.
+Press **Save** after execution to persist the displayed notebook outputs.
 
 For a normal VS Code installation, download the latest
 `autodq-adql-VERSION.vsix` from

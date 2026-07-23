@@ -166,6 +166,7 @@ class PackagingTests(unittest.TestCase):
         self.assertTrue((extension / "icons" / "adql-dark.svg").is_file())
         self.assertTrue((extension / "CHANGELOG.md").is_file())
         self.assertTrue((extension / "LICENSE").is_file())
+        self.assertTrue((extension / "notebook-persistence.js").is_file())
 
         manifest = json.loads(
             (extension / "package.json").read_text(encoding="utf-8")
@@ -179,6 +180,7 @@ class PackagingTests(unittest.TestCase):
             "https://github.com/josephubani/autodq-analytics.git",
         )
         self.assertIn("README.md", manifest["files"])
+        self.assertIn("notebook-persistence.js", manifest["files"])
         self.assertFalse(
             manifest["capabilities"]["untrustedWorkspaces"]["supported"]
         )

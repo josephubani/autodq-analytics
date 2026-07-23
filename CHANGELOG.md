@@ -7,6 +7,8 @@ versioning and Python package releases follow PEP 440.
 
 ### Changed
 
+- Persisted saved ADQL notebook outputs across close and reopen while keeping
+  the embedded output cache executable as ordinary ADQL comments.
 - Prepared AutoDQ ADQL as a public Visual Studio Marketplace extension with a
   validated VSIX, guarded publication workflow, Marketplace listing metadata,
   and workspace-trust protections.

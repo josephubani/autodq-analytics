@@ -32,6 +32,7 @@ REQUIRED_WHEEL_FILES = {
     "autodq/vscode/extension/package.json",
     "autodq/vscode/extension/CHANGELOG.md",
     "autodq/vscode/extension/LICENSE",
+    "autodq/vscode/extension/notebook-persistence.js",
     "autodq/vscode/extension/icons/adql-light.svg",
     "autodq/vscode/extension/icons/adql-dark.svg",
     "autodq/vscode/extension/syntaxes/adql.tmLanguage.json",

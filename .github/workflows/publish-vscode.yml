@@ -6,7 +6,7 @@ on:
       version:
         description: ADQL extension version to verify
         required: true
-        default: "0.2.2"
+        default: "0.2.3"
         type: string
       github_release:
         description: Attach the VSIX to an adql-vVERSION GitHub Release

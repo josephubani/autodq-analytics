@@ -405,6 +405,19 @@ Use `continue_on_error=True` to execute later statements after a runtime error:
 result = project.query(script, continue_on_error=True)
 ```
 
+## Saved notebook outputs
+
+The AutoDQ VS Code extension can persist displayed notebook output in a
+versioned cache at the end of an `.adql` file. Every cache line is an ADQL
+comment between reserved `autodq-output-cache` markers. The notebook view
+hides this block, while the CLI parser ignores it during validation and
+execution.
+
+The cache stores only the bounded output shown in VS Code, including text,
+HTML, tables, and images. It does not replace exports or runtime project
+state. Cached output is restored only when its cell fingerprint still matches
+the saved cell source.
+
 ## Safety and limits
 
 - Commands and options are allowlisted.
