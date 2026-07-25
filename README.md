@@ -47,7 +47,7 @@ autodq --version
 python -c "import autodq; print(autodq.__version__)"
 ```
 
-Version 0.1.0 is available on
+Version 0.1.1 is available on
 [PyPI](https://pypi.org/project/autodq/). To work on AutoDQ itself, install
 directly from the project source:
 
@@ -247,7 +247,7 @@ For the complete release process, see the
 - [Plugin development](https://github.com/josephubani/autodq-analytics/blob/main/docs/PLUGIN_GUIDE.md)
 - [Project roadmap](https://github.com/josephubani/autodq-analytics/blob/main/docs/ROADMAP.md)
 - [Package and release procedure](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASING.md)
-- [AutoDQ 0.1.0 release notes](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.0.md)
+- [AutoDQ 0.1.1 release notes](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.1.md)
 
 ## License
 

@@ -18,6 +18,7 @@ from autodq import (
 )
 from autodq.cli import (
     _dataframe_html,
+    _profile_html,
     _recommendations_html,
     _value_html,
     main,
@@ -391,15 +392,23 @@ STATISTICS;
         )
 
         markup = _dataframe_html(frame, limit=5, column_limit=3)
+        preview = markup.split(
+            '<details class="autodq-full-output-toggle">',
+            1,
+        )[0]
 
         self.assertIn("Showing 5 of 40 rows", markup)
         self.assertIn("showing 3 of 25 columns", markup)
         self.assertIn("Output truncated", markup)
-        self.assertIn("column_2", markup)
-        self.assertNotIn("column_3", markup)
-        self.assertEqual(markup.count("<tr"), 6)
+        self.assertIn("View full output", markup)
+        self.assertIn("Hide full output", markup)
+        self.assertIn("column_2", preview)
+        self.assertNotIn("column_3", preview)
+        self.assertIn("column_24", markup)
+        self.assertIn("<td>39</td>", markup)
+        self.assertEqual(preview.count("<tr"), 6)
 
-    def test_notebook_structured_preview_replaces_oversized_rich_html(self):
+    def test_notebook_structured_preview_defers_oversized_rich_html(self):
         class OversizedReport:
             def to_html(self):
                 return "<div>" + ("unbounded-output " * 2_000) + "</div>"
@@ -419,15 +428,80 @@ STATISTICS;
             item_limit=5,
             character_limit=2_000,
         )
+        preview = markup.split(
+            '<details class="autodq-full-output-toggle">',
+            1,
+        )[0]
 
         self.assertIn("Review", markup)
         self.assertIn("Summary", markup)
         self.assertIn("Output truncated", markup)
+        self.assertIn("View full output", markup)
+        self.assertIn("Hide full output", markup)
         self.assertIn("additional item(s) omitted", markup)
-        self.assertNotIn("unbounded-output", markup)
-        self.assertNotIn("<pre", markup)
-        self.assertIn("autodq-structured-table", markup)
-        self.assertLess(len(markup), 20_000)
+        self.assertNotIn("unbounded-output", preview)
+        self.assertIn("unbounded-output", markup)
+        self.assertNotIn("<pre", preview)
+        self.assertIn("autodq-structured-table", preview)
+        self.assertLess(len(preview), 20_000)
+
+    def test_notebook_structured_full_output_contains_omitted_records(self):
+        markup = _value_html(
+            "predictions",
+            {
+                "records": [
+                    {
+                        "row_id": index,
+                        "prediction": index * 10,
+                        "label": f"complete-row-{index}",
+                    }
+                    for index in range(10)
+                ]
+            },
+            item_limit=2,
+            character_limit=2_000,
+        )
+        preview = markup.split(
+            '<details class="autodq-full-output-toggle">',
+            1,
+        )[0]
+
+        self.assertIn("<td>1</td>", preview)
+        self.assertNotIn("complete-row-1", preview)
+        self.assertNotIn("complete-row-9", preview)
+        self.assertIn("complete-row-9", markup)
+        self.assertIn("View full output", markup)
+
+    def test_notebook_profile_full_output_contains_omitted_columns(self):
+        columns = ["Customer_Age", "Region", "Revenue"]
+        markup = _profile_html(
+            {
+                "column_names": columns,
+                "data_types": {column: "float64" for column in columns},
+                "semantic_types": {
+                    column: "continuous_numeric"
+                    for column in columns
+                },
+                "missing_values": {column: 0 for column in columns},
+                "missing_percentages": {column: 0.0 for column in columns},
+                "numeric_columns": [],
+                "categorical_columns": [],
+                "datetime_columns": [],
+                "rows": 100,
+                "columns": 3,
+                "duplicate_rows": 0,
+            },
+            limit=1,
+        )
+        preview = markup.split(
+            '<details class="autodq-full-output-toggle">',
+            1,
+        )[0]
+
+        self.assertIn("Customer_Age", preview)
+        self.assertNotIn("Revenue", preview)
+        self.assertIn("Revenue", markup)
+        self.assertIn("View full output", markup)
 
     def test_notebook_nested_analytics_render_as_tables_not_json(self):
         markup = _value_html(
@@ -525,6 +599,32 @@ STATISTICS;
         self.assertIn("Positive", markup)
         self.assertNotIn("<pre", markup)
 
+    def test_notebook_large_correlation_matrix_has_complete_expandable_view(self):
+        features = [f"feature_{index}" for index in range(8)]
+        matrix = {
+            row: {
+                column: 1.0 if row == column else 0.5
+                for column in features
+            }
+            for row in features
+        }
+        markup = _value_html(
+            "correlation",
+            {"matrix": matrix},
+            item_limit=3,
+            character_limit=2_000,
+        )
+        preview = markup.split(
+            '<details class="autodq-full-output-toggle">',
+            1,
+        )[0]
+
+        self.assertIn("autodq-matrix-table", preview)
+        self.assertIn("feature_2", preview)
+        self.assertNotIn("feature_7", preview)
+        self.assertIn("feature_7", markup)
+        self.assertIn("View full output", markup)
+
     def test_notebook_model_explain_and_blue_outputs_use_structured_views(self):
         reports = {
             "model": {
@@ -584,9 +684,24 @@ STATISTICS;
                     "priority": "low",
                     "risk": "Imputation can alter the distribution.",
                     "confidence": 0.88,
-                }
-            ]
+                },
+                {
+                    "issue_type": "outliers",
+                    "strategy": "review",
+                    "reason": "A domain expert should inspect this value.",
+                    "affected_columns": ["Revenue"],
+                    "action": "Inspect the complete recommendation.",
+                    "priority": "medium",
+                    "risk": "Removing valid extremes can bias results.",
+                    "confidence": 0.81,
+                },
+            ],
+            limit=1,
         )
+        preview = markup.split(
+            '<details class="autodq-full-output-toggle">',
+            1,
+        )[0]
 
         self.assertIn("Cleaning Recommendations", markup)
         self.assertIn("autodq-recommendation", markup)
@@ -595,6 +710,9 @@ STATISTICS;
         self.assertIn("Why this is recommended", markup)
         self.assertIn("Customer_Age", markup)
         self.assertNotIn('&quot;issue_type&quot;', markup)
+        self.assertNotIn("Inspect the complete recommendation.", preview)
+        self.assertIn("Inspect the complete recommendation.", markup)
+        self.assertIn("View full output", markup)
 
     def test_vscode_extension_is_bundled_and_installable(self):
         source = extension_path()
@@ -622,7 +740,7 @@ STATISTICS;
         self.assertNotIn("transientOutputs: true", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.2.3")
+        self.assertEqual(package["version"], "0.2.4")
         language_icon = package["contributes"]["languages"][0]["icon"]
         self.assertEqual(language_icon["light"], "./icons/adql-light.svg")
         self.assertEqual(language_icon["dark"], "./icons/adql-dark.svg")

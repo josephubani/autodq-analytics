@@ -1,5 +1,13 @@
 # Change Log
 
+## 0.2.4 - 2026-07-25
+
+- Added **View full output** and **Hide full output** controls to truncated
+  notebook results.
+- Preserved complete expandable results in the saved notebook output cache.
+- Kept the bounded preview as the default view so large results do not take
+  over the notebook.
+
 ## 0.2.3 - 2026-07-22
 
 - Persisted notebook text, HTML, table, and image outputs when an ADQL file is

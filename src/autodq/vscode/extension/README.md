@@ -67,15 +67,19 @@ fresh project.
 
 Large results are shown as bounded previews by default: up to 25 rows or
 collection items and 12,000 structured-output characters. Complete results
-remain available to later statements and exports. Adjust
+remain available to later statements and exports. When a preview is shortened,
+select **View full output** below it to reveal the complete result in a
+scrollable panel, then select **Hide full output** to collapse it again. Adjust
 `autodq.notebook.maxOutputRows` and
 `autodq.notebook.maxOutputCharacters` in Settings when needed.
 
 Press **Save** after running cells to persist their displayed outputs. AutoDQ
-stores a compact, versioned cache at the end of the `.adql` file using comment
-lines. The cache is hidden in notebook view, ignored by the AutoDQ runtime, and
-restored when the notebook is reopened. Editing a cell prevents an older
-non-matching cached output from being restored for that cell.
+stores a versioned cache at the end of the `.adql` file using comment lines,
+including complete results behind expandable previews. The cache is hidden in
+notebook view, ignored by the AutoDQ runtime, and restored when the notebook is
+reopened. Editing a cell prevents an older non-matching cached output from
+being restored for that cell. Saving very large complete outputs can increase
+the `.adql` file size.
 
 ## Workspace trust
 

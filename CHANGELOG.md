@@ -5,8 +5,19 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.1 - 2026-07-25
+
+### Added
+
+- Added an expandable **View full output** control to every truncated ADQL
+  notebook dataframe, report, recommendation list, matrix, and structured
+  result.
+- Preserved the complete expandable output when an `.adql` notebook is saved,
+  closed, and reopened.
+
 ### Changed
 
+- Updated the bundled AutoDQ ADQL VS Code extension to 0.2.4.
 - Persisted saved ADQL notebook outputs across close and reopen while keeping
   the embedded output cache executable as ordinary ADQL comments.
 - Prepared AutoDQ ADQL as a public Visual Studio Marketplace extension with a

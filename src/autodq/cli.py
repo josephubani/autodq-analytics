@@ -367,6 +367,30 @@ def _collapsible_html(
 </details>"""
 
 
+_FULL_OUTPUT_TOGGLE_CSS = """
+.autodq-full-output-toggle,.autodq-value-report .autodq-full-output-toggle{border:1px solid var(--vscode-panel-border);border-radius:8px;margin:10px 0;overflow:hidden;padding:0}
+.autodq-full-output-toggle>summary{align-items:center;background:var(--vscode-editor-background);color:var(--vscode-textLink-foreground);cursor:pointer;display:flex;font-family:var(--vscode-font-family);font-size:12px;font-weight:600;gap:8px;padding:9px 11px;user-select:none}
+.autodq-full-output-toggle>summary:hover{background:var(--vscode-list-hoverBackground)}
+.autodq-full-output-toggle__hide{display:none}
+.autodq-full-output-toggle[open] .autodq-full-output-toggle__show{display:none}
+.autodq-full-output-toggle[open] .autodq-full-output-toggle__hide{display:inline}
+.autodq-full-output-toggle__hint{color:var(--vscode-descriptionForeground);font-weight:400;margin-left:auto}
+.autodq-full-output-toggle__body{border-top:1px solid var(--vscode-panel-border);max-height:70vh;overflow:auto;padding:10px}
+"""
+
+
+def _full_output_toggle(content: str) -> str:
+    return f"""<style>{_FULL_OUTPUT_TOGGLE_CSS}</style>
+<details class="autodq-full-output-toggle">
+  <summary>
+    <span class="autodq-full-output-toggle__show">View full output</span>
+    <span class="autodq-full-output-toggle__hide">Hide full output</span>
+    <span class="autodq-full-output-toggle__hint">Complete result</span>
+  </summary>
+  <div class="autodq-full-output-toggle__body">{content}</div>
+</details>"""
+
+
 def _dataframe_html(
     frame: pd.DataFrame,
     limit: int = _NOTEBOOK_DEFAULT_OUTPUT_ROWS,
@@ -395,9 +419,21 @@ def _dataframe_html(
     remainder = ""
 
     if notes:
+        full_table = frame.to_html(
+            index=False,
+            escape=True,
+            border=0,
+            classes="autodq-dataframe",
+            max_rows=max(1, len(frame)),
+            max_cols=max(1, len(frame.columns)),
+        )
         remainder = _truncation_note(
             f"{'; '.join(notes)}. The complete result remains available to "
-            "later ADQL statements and exports."
+            "later ADQL statements and exports.",
+            full_output=(
+                '<div class="autodq-dataframe-wrap '
+                f'autodq-dataframe-wrap--full">{full_table}</div>'
+            ),
         )
 
     return f"""<style>
@@ -405,6 +441,7 @@ def _dataframe_html(
 .autodq-dataframe th,.autodq-dataframe td{{border-bottom:1px solid var(--vscode-panel-border);padding:6px 9px;text-align:left}}
 .autodq-dataframe th{{font-weight:600;position:sticky;top:0}}
 .autodq-dataframe-wrap{{max-height:560px;overflow:auto}}
+.autodq-dataframe-wrap--full{{max-height:none}}
 .autodq-truncation-note{{border-left:3px solid var(--vscode-editorWarning-foreground);color:var(--vscode-descriptionForeground);font-size:12px;padding:7px 10px}}
 </style><div class="autodq-dataframe-wrap">{table}</div>{remainder}"""
 
@@ -412,6 +449,8 @@ def _dataframe_html(
 def _profile_html(
     profile: dict,
     limit: int = _NOTEBOOK_DEFAULT_OUTPUT_ROWS,
+    *,
+    include_full_output: bool = True,
 ) -> str:
     columns = []
     column_names = list(profile.get("column_names", []))
@@ -432,8 +471,18 @@ def _profile_html(
     truncation_note = ""
 
     if len(column_names) > limit:
+        full_output = (
+            _profile_html(
+                profile,
+                limit=max(1, len(column_names)),
+                include_full_output=False,
+            )
+            if include_full_output
+            else None
+        )
         truncation_note = _truncation_note(
-            f"Showing {limit:,} of {len(column_names):,} profiled columns."
+            f"Showing {limit:,} of {len(column_names):,} profiled columns.",
+            full_output=full_output,
         )
 
     return f"""<style>{_REPORT_CSS}</style>
@@ -464,6 +513,8 @@ def _profile_html(
 def _diagnosis_html(
     report,
     limit: int = _NOTEBOOK_DEFAULT_OUTPUT_ROWS,
+    *,
+    include_full_output: bool = True,
 ) -> str:
     issue_cards = []
     issues = list(getattr(report, "issues", []))
@@ -497,8 +548,18 @@ def _diagnosis_html(
     truncation_note = ""
 
     if len(issues) > limit:
+        full_output = (
+            _diagnosis_html(
+                report,
+                limit=max(1, len(issues)),
+                include_full_output=False,
+            )
+            if include_full_output
+            else None
+        )
         truncation_note = _truncation_note(
-            f"Showing {limit:,} of {len(issues):,} diagnosed issues."
+            f"Showing {limit:,} of {len(issues):,} diagnosed issues.",
+            full_output=full_output,
         )
 
     return f"""<style>{_REPORT_CSS}</style>
@@ -517,6 +578,8 @@ def _diagnosis_html(
 def _recommendations_html(
     recommendations,
     limit: int = _NOTEBOOK_DEFAULT_OUTPUT_ROWS,
+    *,
+    include_full_output: bool = True,
 ) -> str:
     serialized = serializable_value(recommendations)
 
@@ -595,8 +658,18 @@ def _recommendations_html(
     truncation_note = ""
 
     if len(items) > limit:
+        full_output = (
+            _recommendations_html(
+                recommendations,
+                limit=max(1, len(items)),
+                include_full_output=False,
+            )
+            if include_full_output
+            else None
+        )
         truncation_note = _truncation_note(
-            f"Showing {limit:,} of {len(items):,} recommendations."
+            f"Showing {limit:,} of {len(items):,} recommendations.",
+            full_output=full_output,
         )
 
     return f"""<style>{_REPORT_CSS}</style>
@@ -634,6 +707,7 @@ def _value_html(
     character_limit: int = _NOTEBOOK_DEFAULT_OUTPUT_CHARACTERS,
 ) -> str:
     rich_output_was_truncated = False
+    rendered_html = None
 
     if hasattr(value, "to_html"):
         try:
@@ -651,19 +725,30 @@ def _value_html(
 
             rich_output_was_truncated = True
 
-    serialized = serializable_value(value)
-    serialized, structure_was_truncated = _truncate_notebook_value(
-        serialized,
+    full_serialized = serializable_value(value)
+    preview_serialized, structure_was_truncated = _truncate_notebook_value(
+        full_serialized,
         item_limit=item_limit,
         string_limit=max(500, min(2_000, character_limit // 4)),
     )
     was_truncated = rich_output_was_truncated or structure_was_truncated
-    body = _structured_html(serialized)
+    body = _structured_html(preview_serialized)
 
     if was_truncated:
+        full_body = (
+            rendered_html
+            if rich_output_was_truncated
+            and isinstance(rendered_html, str)
+            and rendered_html.strip()
+            else _structured_html(full_serialized, full=True)
+        )
         body += _truncation_note(
             "This notebook preview was shortened. The complete result remains "
-            "available to later ADQL statements and exports."
+            "available to later ADQL statements and exports.",
+            full_output=(
+                '<section class="autodq-report autodq-value-report">'
+                f"{full_body}</section>"
+            ),
         )
 
     heading = html.escape(title.replace("_", " ").title())
@@ -770,8 +855,13 @@ _STRUCTURED_SECTION_KEYS = {
 }
 
 
-def _structured_html(value, *, depth: int = 0) -> str:
-    if depth >= 5:
+def _structured_html(
+    value,
+    *,
+    depth: int = 0,
+    full: bool = False,
+) -> str:
+    if depth >= (20 if full else 5):
         return '<p class="autodq-structured-note">Additional nested details omitted.</p>'
 
     if _is_scalar(value):
@@ -799,6 +889,7 @@ def _structured_html(value, *, depth: int = 0) -> str:
                 records,
                 depth=depth,
                 first_label="Item",
+                full=full,
             )
         else:
             scalar_rows = []
@@ -825,7 +916,7 @@ def _structured_html(value, *, depth: int = 0) -> str:
                         '<details class="autodq-structured-section">'
                         f"<summary><span>{html.escape(label)}</span>{count_badge}</summary>"
                         '<div class="autodq-structured-section__body">'
-                        f"{_structured_html(item, depth=depth + 1)}"
+                        f"{_structured_html(item, depth=depth + 1, full=full)}"
                         "</div></details>"
                     )
 
@@ -866,7 +957,11 @@ def _structured_html(value, *, depth: int = 0) -> str:
                 + "</div>"
             )
         elif all(isinstance(item, dict) for item in items):
-            content = _structured_records_table(items, depth=depth)
+            content = _structured_records_table(
+                items,
+                depth=depth,
+                full=full,
+            )
         else:
             cards = []
 
@@ -874,7 +969,7 @@ def _structured_html(value, *, depth: int = 0) -> str:
                 cards.append(
                     '<article class="autodq-structured-card">'
                     f'<div class="autodq-structured-card__title">Item {index}</div>'
-                    f"{_structured_html(item, depth=depth + 1)}"
+                    f"{_structured_html(item, depth=depth + 1, full=full)}"
                     "</article>"
                 )
 
@@ -893,6 +988,7 @@ def _structured_records_table(
     *,
     depth: int,
     first_label: str | None = None,
+    full: bool = False,
 ) -> str:
     if not records:
         return '<p class="autodq-empty">No records.</p>'
@@ -956,7 +1052,7 @@ def _structured_records_table(
                     '<td><details class="autodq-row-details">'
                     f"<summary>{len(details):,} field(s)</summary>"
                     '<div class="autodq-row-details__body">'
-                    f"{_structured_html(details, depth=depth + 1)}"
+                    f"{_structured_html(details, depth=depth + 1, full=full)}"
                     "</div></details></td>"
                 )
             else:
@@ -975,15 +1071,17 @@ def _structured_records_table(
 
 
 def _structured_matrix(matrix: dict) -> str:
-    row_names = list(matrix)[:12]
+    row_names = list(matrix)
     column_names = []
 
     for row_name in row_names:
         for column in matrix[row_name]:
+            if column == "__preview__":
+                continue
+
             if column not in column_names:
                 column_names.append(column)
 
-    column_names = column_names[:12]
     headers = "".join(
         f"<th>{html.escape(str(column))}</th>"
         for column in column_names
@@ -999,16 +1097,8 @@ def _structured_matrix(matrix: dict) -> str:
             f"<tr><th>{html.escape(str(row_name))}</th>{cells}</tr>"
         )
 
-    note = ""
-
-    if len(matrix) > len(row_names):
-        note = _structured_preview_note(
-            f"Showing {len(row_names):,} of {len(matrix):,} matrix rows."
-        )
-
     return (
-        note
-        + '<div class="autodq-structured-table-wrap">'
+        '<div class="autodq-structured-table-wrap">'
         '<table class="autodq-structured-table autodq-matrix-table">'
         f"<thead><tr><th>Feature</th>{headers}</tr></thead>"
         f"<tbody>{''.join(rows)}</tbody></table></div>"
@@ -1081,7 +1171,12 @@ def _is_numeric_matrix(value: dict) -> bool:
     if len(value) < 2 or not all(isinstance(item, dict) for item in value.values()):
         return False
 
-    cells = [cell for row in value.values() for cell in row.values()]
+    cells = [
+        cell
+        for row in value.values()
+        for key, cell in row.items()
+        if key != "__preview__"
+    ]
     return bool(cells) and all(
         isinstance(cell, (int, float, bool)) or cell is None
         for cell in cells
@@ -1223,12 +1318,21 @@ def _truncate_notebook_value(
     return value, False
 
 
-def _truncation_note(message: str) -> str:
-    return (
+def _truncation_note(
+    message: str,
+    *,
+    full_output: str | None = None,
+) -> str:
+    note = (
         '<p class="autodq-truncation-note">'
         f"<strong>Output truncated.</strong> {html.escape(message)}"
         "</p>"
     )
+
+    if not full_output:
+        return note
+
+    return note + _full_output_toggle(full_output)
 
 
 def _limit_notebook_outputs(
