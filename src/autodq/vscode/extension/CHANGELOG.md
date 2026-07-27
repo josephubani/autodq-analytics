@@ -1,5 +1,15 @@
 # Change Log
 
+## 0.2.6 - 2026-07-26
+
+- Added comprehensive, theme-aware syntax highlighting for every ADQL command,
+  workflow action, clause, option, aggregate function, data source, literal,
+  operator, punctuation mark, and cell marker.
+- Added distinct scopes for column names, aliases, and backtick-quoted
+  identifiers.
+- Added grammar coverage tests for the public ADQL command and option
+  vocabulary.
+
 ## 0.2.5 - 2026-07-26
 
 - Fixed standalone dashboard and report CSS leaking light backgrounds into

@@ -5,21 +5,31 @@
   "patterns": [
     {"include": "#cell"},
     {"include": "#comments"},
+    {"include": "#quotedIdentifiers"},
     {"include": "#strings"},
     {"include": "#numbers"},
     {"include": "#commands"},
+    {"include": "#aggregateFunctions"},
+    {"include": "#operators"},
     {"include": "#clauses"},
+    {"include": "#actions"},
+    {"include": "#options"},
+    {"include": "#entities"},
+    {"include": "#dataSources"},
     {"include": "#constants"},
-    {"include": "#operators"}
+    {"include": "#enumValues"},
+    {"include": "#punctuation"},
+    {"include": "#identifiers"}
   ],
   "repository": {
     "cell": {
-      "match": "^\\s*(#|--)\\s*%%(?:\\s*\\[(.*?)\\]|\\s+(.*?))?\\s*$",
+      "match": "^\\s*(#|--)\\s*(%%)(?:\\s*\\[(.*?)\\]|\\s+(.*?))?\\s*$",
       "name": "meta.cell.adql",
       "captures": {
         "1": {"name": "punctuation.definition.comment.adql"},
-        "2": {"name": "entity.name.section.adql"},
-        "3": {"name": "entity.name.section.adql"}
+        "2": {"name": "keyword.control.cell.adql"},
+        "3": {"name": "entity.name.section.adql"},
+        "4": {"name": "entity.name.section.adql"}
       }
     },
     "comments": {
@@ -29,31 +39,108 @@
         {"match": "--.*$", "name": "comment.line.double-dash.adql"}
       ]
     },
+    "quotedIdentifiers": {
+      "begin": "`",
+      "beginCaptures": {
+        "0": {"name": "punctuation.definition.identifier.begin.adql"}
+      },
+      "end": "`",
+      "endCaptures": {
+        "0": {"name": "punctuation.definition.identifier.end.adql"}
+      },
+      "name": "variable.other.quoted.adql"
+    },
     "strings": {
       "patterns": [
-        {"begin": "\"", "end": "\"", "name": "string.quoted.double.adql", "patterns": [{"match": "\\\\.", "name": "constant.character.escape.adql"}]},
-        {"begin": "'", "end": "'", "name": "string.quoted.single.adql", "patterns": [{"match": "\\\\.", "name": "constant.character.escape.adql"}]}
+        {
+          "begin": "\"",
+          "beginCaptures": {
+            "0": {"name": "punctuation.definition.string.begin.adql"}
+          },
+          "end": "\"",
+          "endCaptures": {
+            "0": {"name": "punctuation.definition.string.end.adql"}
+          },
+          "name": "string.quoted.double.adql",
+          "patterns": [
+            {"match": "\\\\.", "name": "constant.character.escape.adql"}
+          ]
+        },
+        {
+          "begin": "'",
+          "beginCaptures": {
+            "0": {"name": "punctuation.definition.string.begin.adql"}
+          },
+          "end": "'",
+          "endCaptures": {
+            "0": {"name": "punctuation.definition.string.end.adql"}
+          },
+          "name": "string.quoted.single.adql",
+          "patterns": [
+            {"match": "\\\\.", "name": "constant.character.escape.adql"}
+          ]
+        }
       ]
     },
     "numbers": {
-      "match": "(?<![A-Za-z_])-?\\b\\d+(?:\\.\\d+)?\\b",
+      "match": "(?<![A-Za-z0-9_.])-?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?\\b",
       "name": "constant.numeric.adql"
     },
     "commands": {
-      "match": "(?i)\\b(DATASET|SELECT|LOAD|KNOWLEDGE|PROFILE|STATISTICS|INTERPRET|DIAGNOSE|RECOMMEND|DECIDE|PREVIEW|REVIEW|CLEAN|CLEANING|VALIDATE|AUTO|VISUALIZE|MODEL|PREDICT|EXPLAIN|SHAP|DASHBOARD|WORKSPACE|ADD|LIST|MERGE|CONCAT|EDIT|DOMAIN|OUTLIERS|AUDIT|CORRELATION|READINESS|FEATURES|FEATURE|BLUE|GALLERY|REPORT|EXPORT|APPROVE|REJECT|SET|USE|HEAD|TAIL|SAMPLE|HELP|HISTORY)\\b",
+      "match": "(?i)\\b(ADD|APPROVE|AUDIT|AUTO|BLUE|CLEAN|CLEANING|CONCAT|CORRELATION|DASHBOARD|DATASET|DECIDE|DIAGNOSE|DOMAIN|EDIT|EXPLAIN|EXPORT|FEATURE|FEATURES|GALLERY|HEAD|HELP|HISTORY|INTERPRET|KNOWLEDGE|LIST|LOAD|MERGE|MODEL|OUTLIERS|PREDICT|PREVIEW|PROFILE|READINESS|RECOMMEND|REJECT|REPORT|REVIEW|SAMPLE|SELECT|SET|SHAP|STATISTICS|TAIL|USE|VALIDATE|VISUALIZE|WORKSPACE)\\b",
       "name": "keyword.control.adql"
     },
-    "clauses": {
-      "match": "(?i)\\b(FROM|WHERE|GROUP\\s+BY|ORDER\\s+BY|LIMIT|AS|TARGET|USING|SAVE|TO|THEME|TITLE|SUBTITLE|X|Y|X_LABEL|Y_LABEL|FIGSIZE|DPI|PALETTE|GRID|LEGEND|DISPLAY|OVERWRITE|ASC|DESC|DISTINCT)\\b",
-      "name": "keyword.other.adql"
-    },
-    "constants": {
-      "match": "(?i)\\b(TRUE|FALSE|NULL|CURRENT|CLEANED|ENGINEERED|PREDICTIONS|COUNT|SUM|AVG|MIN|MAX|MEDIAN|NUNIQUE)\\b",
-      "name": "constant.language.adql"
+    "aggregateFunctions": {
+      "match": "(?i)\\b(AVG|COUNT|MAX|MEAN|MEDIAN|MIN|NUNIQUE|SUM)\\b(?=\\s*\\()",
+      "name": "support.function.aggregate.adql"
     },
     "operators": {
-      "match": "(?i)(<=|>=|!=|=|<|>|\\bAND\\b|\\bIN\\b|\\bCONTAINS\\b|\\bIS\\s+NOT\\s+NULL\\b|\\bIS\\s+NULL\\b)",
+      "match": "(?i)(<=|>=|!=|=|<|>|\\bIS\\s+NOT\\s+NULL\\b|\\bIS\\s+NULL\\b|\\bNOT\\s+IN\\b|\\bSTARTS\\s+WITH\\b|\\bENDS\\s+WITH\\b|\\bAND\\b|\\bOR\\b|\\bIN\\b|\\bCONTAINS\\b)",
       "name": "keyword.operator.adql"
+    },
+    "clauses": {
+      "match": "(?i)\\b(GROUP\\s+BY|ORDER\\s+BY|ASC|AS|DESC|DISTINCT|FROM|LIMIT|ON|TO|USING|WHERE|WITH)\\b",
+      "name": "keyword.other.clause.adql"
+    },
+    "actions": {
+      "match": "(?i)\\b(APPLY|CLEAR|CREATE|CUSTOMIZE|EXPORT|GET|INFO|INTERPRET|LOAD|OPEN|PRESCRIBE|REMOVE|REVIEW|SAVE|TREAT|VALIDATE|VISUALIZE)\\b",
+      "name": "storage.type.action.adql"
+    },
+    "options": {
+      "match": "(?i)\\b(ACTIONS|ALGORITHM|ALLOW_DUPLICATES|ALLOWED|APPEND|APPLY_CLEANING|APPLY_FEATURES|APPROVE_ALL|AXIS|BINS|CHANGES|CHART|CHART_IDS|CHARTS|COLOR|COLUMN|COLUMNS|CONFIDENCE|CONFIDENCE_LEVEL|CONTINUE_ON_ERROR|DESCRIPTION|DISPLAY|DPI|EXCLUDE|EXCLUDE_LEAKAGE|EXPRESSION|FEATURE|FIGSIZE|FORMAT|GRID|HOW|IGNORE_INDEX|INCLUDE_MODEL|IQR|JOIN|LABELS|LEAKAGE_THRESHOLD|LEFT_ON|LEGEND|LEGEND_POSITION|LOAD_MODEL|LOWER|LOW_CONFIDENCE|LOW_CONFIDENCE_THRESHOLD|MAKE_ACTIVE|MAX|MAX_CHARTS|MAX_FEATURES|MAX_ROWS|METHOD|MIN|MIN_ABS|MODE|MODEL_NAME|NAMES|NULLABLE|OUTPUT|OVERWRITE|PALETTE|PATTERN|RANDOM_STATE|RAISE_ON_ERROR|REASON|RECOMMENDED|REFRESH|REPORT_OUTPUT|REPORT_STYLE|RIGHT_ON|ROOT|SAVE_WORKSPACE|SIGNIFICANCE|SOURCE|STAGE|STRATEGY|STYLE|SUBTITLE|SUFFIXES|TARGET|TEMPLATE|TEST_SIZE|THEME|TITLE|TRAIN_MODEL|TRANSPARENT|TYPE|UNCERTAINTY|UNIQUE|UPPER|USE_ENGINEERED|X|X_LABEL|Y|Y_LABEL)\\b",
+      "name": "storage.modifier.option.adql"
+    },
+    "entities": {
+      "match": "(?i)\\b(DATASET|DATASETS|ROW|VISUALIZATION|VISUALIZATIONS|WORKSPACE|WORKSPACES)\\b",
+      "name": "support.type.entity.adql"
+    },
+    "dataSources": {
+      "match": "(?i)\\b(CLEANED|CURRENT|DATA|ENGINEERED|FEATURES|PREDICTIONS|RAW)\\b",
+      "name": "constant.language.data-source.adql"
+    },
+    "constants": {
+      "match": "(?i)\\b(ALL|FALSE|NONE|NULL|TRUE)\\b",
+      "name": "constant.language.adql"
+    },
+    "enumValues": {
+      "match": "(?i)\\b(AUTO|BAR|BOX|CLASSIFICATION|CLEAN|DARK|DECISION_TREE_CLASSIFIER|DECISION_TREE_REGRESSOR|EXECUTIVE|FULL|HEATMAP|HISTOGRAM|JOURNAL|LIGHT|LINE|LINEAR_REGRESSION|LOGISTIC_REGRESSION|PIE|PRESENTATION|RANDOM_FOREST_CLASSIFIER|RANDOM_FOREST_REGRESSOR|REGRESSION|REVIEW|SCATTER|SUMMARY|WATERFALL)\\b",
+      "name": "constant.other.enum.adql"
+    },
+    "punctuation": {
+      "patterns": [
+        {"match": ";", "name": "punctuation.terminator.statement.adql"},
+        {"match": ",", "name": "punctuation.separator.sequence.adql"},
+        {"match": "\\*", "name": "constant.other.wildcard.adql"},
+        {"match": "[()]", "name": "punctuation.section.group.adql"},
+        {"match": "[\\[\\]]", "name": "punctuation.section.brackets.adql"},
+        {"match": "[{}]", "name": "punctuation.section.mapping.adql"},
+        {"match": ":", "name": "punctuation.separator.key-value.adql"},
+        {"match": "\\.", "name": "punctuation.accessor.adql"}
+      ]
+    },
+    "identifiers": {
+      "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b",
+      "name": "variable.other.readwrite.adql"
     }
   }
 }

@@ -7,7 +7,9 @@ workflow.
 
 ## Features
 
-- ADQL syntax highlighting, comments, folding, and file icons
+- Comprehensive, theme-aware highlighting for ADQL commands, actions,
+  clauses, options, functions, data sources, literals, operators, column names,
+  aliases, comments, cell markers, and punctuation
 - Named cells using `# %% [Cell title]` or `-- %% [Cell title]`
 - Markdown cells using `# %% [markdown] Title`
 - **Run File**, **Run through Cell**, and **Run Cell Only** actions

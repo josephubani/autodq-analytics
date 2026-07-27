@@ -2,7 +2,7 @@
   "name": "adql",
   "displayName": "AutoDQ ADQL",
   "description": "ADQL language support and executable notebook cells for AutoDQ.",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "publisher": "autodq",
   "author": {
     "name": "Joseph Ubani"

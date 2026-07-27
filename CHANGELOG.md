@@ -5,6 +5,20 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.3 - 2026-07-26
+
+### Added
+
+- Added comprehensive, theme-aware ADQL syntax scopes for all supported
+  commands, workflow actions, clauses, options, aggregate functions, data
+  sources, constants, enum values, operators, and punctuation.
+- Added distinct highlighting for column names, aliases, and backtick-quoted
+  identifiers so user-defined ADQL names no longer blend into plain text.
+
+### Changed
+
+- Updated the bundled AutoDQ ADQL VS Code extension to 0.2.6.
+
 ## 0.1.2 - 2026-07-26
 
 ### Fixed

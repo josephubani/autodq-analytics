@@ -1,6 +1,7 @@
 import io
 import base64
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -22,6 +23,18 @@ from autodq.cli import (
     _recommendations_html,
     _value_html,
     main,
+)
+from autodq.commands.grammar import (
+    AUTO_OPTIONS,
+    BLUE_OPTIONS,
+    DASHBOARD_OPTIONS,
+    EXPLAIN_OPTIONS,
+    GALLERY_STYLE_OPTIONS,
+    MODEL_OPTIONS,
+    PREDICT_OPTIONS,
+    SHAP_OPTIONS,
+    SUPPORTED_COMMANDS,
+    VISUALIZE_OPTIONS,
 )
 from autodq.dashboard.models import Dashboard
 from autodq.vscode import extension_path, install_extension
@@ -793,7 +806,7 @@ body { background: white; color: black; }
         self.assertNotIn("transientOutputs: true", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.2.5")
+        self.assertEqual(package["version"], "0.2.6")
         language_icon = package["contributes"]["languages"][0]["icon"]
         self.assertEqual(language_icon["light"], "./icons/adql-light.svg")
         self.assertEqual(language_icon["dark"], "./icons/adql-dark.svg")
@@ -809,6 +822,156 @@ body { background: white; color: black; }
         self.assertTrue((installed / "icons" / "adql-light.svg").is_file())
         self.assertTrue((installed / "icons" / "adql-dark.svg").is_file())
         self.assertTrue((installed / "notebook-persistence.js").is_file())
+
+    def test_vscode_grammar_colors_complete_adql_vocabulary(self):
+        source = extension_path()
+        grammar = json.loads(
+            (source / "syntaxes" / "adql.tmLanguage.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        repository = grammar["repository"]
+
+        self.assertEqual(grammar["scopeName"], "source.adql")
+        self.assertEqual(
+            grammar["patterns"][-1]["include"],
+            "#identifiers",
+        )
+
+        command_pattern = re.compile(repository["commands"]["match"])
+        option_pattern = re.compile(repository["options"]["match"])
+        function_pattern = re.compile(
+            repository["aggregateFunctions"]["match"]
+        )
+        identifier_pattern = re.compile(repository["identifiers"]["match"])
+
+        for command in sorted(SUPPORTED_COMMANDS):
+            self.assertIsNotNone(
+                command_pattern.fullmatch(command),
+                f"Missing command highlighting for {command}",
+            )
+
+        option_groups = (
+            VISUALIZE_OPTIONS,
+            AUTO_OPTIONS,
+            MODEL_OPTIONS,
+            PREDICT_OPTIONS,
+            EXPLAIN_OPTIONS,
+            SHAP_OPTIONS,
+            BLUE_OPTIONS,
+            GALLERY_STYLE_OPTIONS,
+            DASHBOARD_OPTIONS,
+        )
+        parser_options = {
+            "ACTIONS",
+            "ALLOWED",
+            "ALLOW_DUPLICATES",
+            "AXIS",
+            "BINS",
+            "CHANGES",
+            "COLUMNS",
+            "DESCRIPTION",
+            "EXPRESSION",
+            "HOW",
+            "IGNORE_INDEX",
+            "INCLUDE_MODEL",
+            "IQR",
+            "JOIN",
+            "LABELS",
+            "LEFT_ON",
+            "LOAD_MODEL",
+            "LOWER",
+            "MAKE_ACTIVE",
+            "METHOD",
+            "MIN_ABS",
+            "MODEL_NAME",
+            "NAMES",
+            "NULLABLE",
+            "PATTERN",
+            "REASON",
+            "RECOMMENDED",
+            "RIGHT_ON",
+            "ROOT",
+            "STRATEGY",
+            "STYLE",
+            "SUFFIXES",
+            "UNIQUE",
+            "UPPER",
+        }
+        vocabulary_rules = [
+            re.compile(repository[name]["match"])
+            for name in (
+                "commands",
+                "clauses",
+                "actions",
+                "options",
+                "entities",
+                "dataSources",
+                "constants",
+                "enumValues",
+                "identifiers",
+            )
+        ]
+        option_vocabulary = parser_options.union(
+            *(set(group) for group in option_groups)
+        )
+
+        for option in sorted(parser_options):
+            self.assertIsNotNone(
+                option_pattern.fullmatch(option),
+                f"Expected {option} to use the ADQL option scope",
+            )
+
+        for option in sorted(option_vocabulary):
+            self.assertTrue(
+                any(pattern.fullmatch(option) for pattern in vocabulary_rules),
+                f"Missing syntax scope for {option}",
+            )
+
+        for option in (
+            "ALLOWED",
+            "COLUMNS",
+            "DESCRIPTION",
+            "IQR",
+            "NULLABLE",
+        ):
+            self.assertIsNotNone(
+                option_pattern.fullmatch(option),
+                f"Expected {option} to use the ADQL option scope",
+            )
+
+        for function in (
+            "AVG",
+            "COUNT",
+            "MAX",
+            "MEAN",
+            "MEDIAN",
+            "MIN",
+            "NUNIQUE",
+            "SUM",
+        ):
+            self.assertIsNotNone(
+                function_pattern.match(f"{function}("),
+                f"Missing aggregate-function highlighting for {function}",
+            )
+
+        for identifier in (
+            "Customer_Age",
+            "Revenue",
+            "average_profit",
+            "total_revenue",
+        ):
+            self.assertIsNotNone(identifier_pattern.fullmatch(identifier))
+
+        expected_scopes = {
+            "commands": "keyword.control.adql",
+            "aggregateFunctions": "support.function.aggregate.adql",
+            "options": "storage.modifier.option.adql",
+            "dataSources": "constant.language.data-source.adql",
+            "identifiers": "variable.other.readwrite.adql",
+        }
+        for name, scope in expected_scopes.items():
+            self.assertEqual(repository[name]["name"], scope)
 
     def test_persistent_kernel_bootstraps_once_and_retains_project(self):
         process = subprocess.Popen(

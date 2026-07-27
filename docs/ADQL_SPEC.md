@@ -93,8 +93,10 @@ AutoDQ includes its own VS Code extension for `.adql` files:
 autodq vscode install
 ```
 
-Restart VS Code after installation. Opening a `.adql` file then provides ADQL
-syntax highlighting, named cells, Run File, Run through Cell, Run Cell Only,
+Restart VS Code after installation. Opening a `.adql` file then provides
+theme-aware highlighting for commands, clauses, options, functions, literals,
+operators, data sources, and user-defined column names and aliases, plus named
+cells, Run File, Run through Cell, Run Cell Only,
 and a notebook editor with rich cell outputs. The notebook kernel retains one
 AutoDQ project per open document, so later cells reuse data, models, cleaning
 decisions, and charts created by earlier cells. The first executed code cell
