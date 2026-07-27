@@ -5,6 +5,19 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.2 - 2026-07-26
+
+### Fixed
+
+- Prevented standalone dashboard and report CSS from leaking a white background
+  into dark-themed VS Code ADQL notebook outputs.
+- Kept complete dashboard output isolated in its sandboxed notebook iframe while
+  retaining expandable full results for other structured outputs.
+
+### Changed
+
+- Updated the bundled AutoDQ ADQL VS Code extension to 0.2.5.
+
 ## 0.1.1 - 2026-07-25
 
 ### Added

@@ -23,6 +23,7 @@ from autodq.cli import (
     _value_html,
     main,
 )
+from autodq.dashboard.models import Dashboard
 from autodq.vscode import extension_path, install_extension
 
 
@@ -417,7 +418,10 @@ STATISTICS;
                 return {
                     "summary": "available",
                     "records": [
-                        {"row": index, "details": "x" * 1_000}
+                        {
+                            "row": index,
+                            "details": f"complete-record-{index}-" + "x" * 950,
+                        }
                         for index in range(100)
                     ],
                 }
@@ -440,10 +444,59 @@ STATISTICS;
         self.assertIn("Hide full output", markup)
         self.assertIn("additional item(s) omitted", markup)
         self.assertNotIn("unbounded-output", preview)
-        self.assertIn("unbounded-output", markup)
+        self.assertNotIn("unbounded-output", markup)
+        self.assertIn("complete-record-99", markup)
         self.assertNotIn("<pre", preview)
         self.assertIn("autodq-structured-table", preview)
         self.assertLess(len(preview), 20_000)
+
+    def test_notebook_rejects_standalone_html_that_can_leak_theme_css(self):
+        class StandaloneReport:
+            def to_html(self):
+                return """<!doctype html>
+<html><head><style>
+:root { color-scheme: light; }
+body { background: white; color: black; }
+</style></head><body>Standalone report</body></html>"""
+
+            def to_dict(self):
+                return {
+                    "summary": "Theme-safe structured report",
+                    "records": [{"row": 1, "status": "complete"}],
+                }
+
+        markup = _value_html(
+            "report",
+            StandaloneReport(),
+            character_limit=200_000,
+        )
+
+        self.assertNotIn("<!doctype", markup.lower())
+        self.assertNotIn("<html", markup.lower())
+        self.assertNotIn("<body", markup.lower())
+        self.assertNotIn(":root", markup.lower())
+        self.assertIn("Theme-safe structured report", markup)
+        self.assertIn("View full output", markup)
+
+    def test_notebook_dashboard_uses_its_isolated_iframe(self):
+        dashboard = Dashboard(
+            title="Sales dashboard",
+            subtitle="Theme isolation check",
+            dataset="sales.csv",
+            stage="engineered",
+            theme="light",
+        )
+        markup = _value_html(
+            "dashboard",
+            dashboard,
+            character_limit=2_000,
+        )
+
+        self.assertIn("<iframe", markup)
+        self.assertIn("sandbox=", markup)
+        self.assertNotIn("<html", markup.lower())
+        self.assertNotIn("<body", markup.lower())
+        self.assertIn("View full output", markup)
 
     def test_notebook_structured_full_output_contains_omitted_records(self):
         markup = _value_html(
@@ -740,7 +793,7 @@ STATISTICS;
         self.assertNotIn("transientOutputs: true", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.2.4")
+        self.assertEqual(package["version"], "0.2.5")
         language_icon = package["contributes"]["languages"][0]["icon"]
         self.assertEqual(language_icon["light"], "./icons/adql-light.svg")
         self.assertEqual(language_icon["dark"], "./icons/adql-dark.svg")

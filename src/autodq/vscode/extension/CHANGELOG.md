@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.2.5 - 2026-07-26
+
+- Fixed standalone dashboard and report CSS leaking light backgrounds into
+  dark-themed ADQL notebooks.
+- Rendered complete dashboards through their sandboxed iframe and kept other
+  expanded results inside AutoDQ's VS Code theme-aware structured renderer.
+
 ## 0.2.4 - 2026-07-25
 
 - Added **View full output** and **Hide full output** controls to truncated

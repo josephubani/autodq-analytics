@@ -6,6 +6,7 @@ import html
 import io
 import json
 import os
+import re
 import sys
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
@@ -708,22 +709,38 @@ def _value_html(
 ) -> str:
     rich_output_was_truncated = False
     rendered_html = None
+    isolated_rich_html = False
 
-    if hasattr(value, "to_html"):
+    if hasattr(value, "to_notebook_html"):
+        try:
+            rendered_html = value.to_notebook_html()
+        except Exception:
+            rendered_html = None
+        else:
+            isolated_rich_html = bool(
+                isinstance(rendered_html, str)
+                and rendered_html.strip()
+            )
+
+    if rendered_html is None and hasattr(value, "to_html"):
         try:
             rendered_html = value.to_html()
         except Exception:
             rendered_html = None
 
-        if isinstance(rendered_html, str) and rendered_html.strip():
-            if (
-                len(rendered_html) <= character_limit
-                and "<pre" not in rendered_html.lower()
-            ):
-                return f"""<style>{_REPORT_CSS}</style>
+    if isinstance(rendered_html, str) and rendered_html.strip():
+        if (
+            len(rendered_html) <= character_limit
+            and "<pre" not in rendered_html.lower()
+            and (
+                isolated_rich_html
+                or _is_notebook_html_fragment(rendered_html)
+            )
+        ):
+            return f"""<style>{_REPORT_CSS}</style>
 <div class="autodq-bounded-output">{rendered_html}</div>"""
 
-            rich_output_was_truncated = True
+        rich_output_was_truncated = True
 
     full_serialized = serializable_value(value)
     preview_serialized, structure_was_truncated = _truncate_notebook_value(
@@ -737,7 +754,7 @@ def _value_html(
     if was_truncated:
         full_body = (
             rendered_html
-            if rich_output_was_truncated
+            if isolated_rich_html
             and isinstance(rendered_html, str)
             and rendered_html.strip()
             else _structured_html(full_serialized, full=True)
@@ -757,6 +774,24 @@ def _value_html(
   <h2>{heading}</h2>
   {body}
 </section>"""
+
+
+def _is_notebook_html_fragment(markup: str) -> bool:
+    """Reject standalone documents and global CSS from shared notebook HTML."""
+    lowered = str(markup).lower()
+
+    if re.search(r"<\s*(?:!doctype|html|head|body)\b", lowered):
+        return False
+
+    for style in re.findall(r"<style\b[^>]*>(.*?)</style>", lowered, re.DOTALL):
+        if re.search(
+            r"(?:^|[{},])\s*(?::root\b|html\b|body\b|\*)",
+            style,
+            re.MULTILINE,
+        ):
+            return False
+
+    return True
 
 
 _STRUCTURED_LONG_FIELDS = {

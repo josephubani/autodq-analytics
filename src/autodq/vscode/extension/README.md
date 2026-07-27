@@ -73,6 +73,10 @@ scrollable panel, then select **Hide full output** to collapse it again. Adjust
 `autodq.notebook.maxOutputRows` and
 `autodq.notebook.maxOutputCharacters` in Settings when needed.
 
+Standalone dashboards are isolated in a sandboxed notebook frame so their
+light, dark, or executive theme cannot change the surrounding VS Code notebook
+colors.
+
 Press **Save** after running cells to persist their displayed outputs. AutoDQ
 stores a versioned cache at the end of the `.adql` file using comment lines,
 including complete results behind expandable previews. The cache is hidden in
