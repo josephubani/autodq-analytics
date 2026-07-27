@@ -66,6 +66,57 @@ SIMPLE_COMMANDS = {
     "VALIDATE",
 }
 
+# Commands whose only optional positional argument may be a dataset name.
+# ``PROFILE customers`` is therefore concise, while commands that already
+# accept positional values use the explicit ``DATASET customers`` selector.
+POSITIONAL_DATASET_COMMANDS = SIMPLE_COMMANDS | {
+    "FEATURES",
+    "READINESS",
+}
+
+# Dataset-scoped commands operate on project state.  The parser accepts a
+# leading ``DATASET name`` selector for every command in this set, and the
+# executor activates that dataset before dispatching through the project API.
+DATASET_SCOPED_COMMANDS = {
+    "APPROVE",
+    "AUDIT",
+    "AUTO",
+    "BLUE",
+    "CLEAN",
+    "CLEANING",
+    "CORRELATION",
+    "DASHBOARD",
+    "DECIDE",
+    "DIAGNOSE",
+    "DOMAIN",
+    "EDIT",
+    "EXPLAIN",
+    "EXPORT",
+    "FEATURE",
+    "FEATURES",
+    "HEAD",
+    "INTERPRET",
+    "KNOWLEDGE",
+    "LOAD",
+    "MODEL",
+    "OUTLIERS",
+    "PREDICT",
+    "PREVIEW",
+    "PROFILE",
+    "READINESS",
+    "RECOMMEND",
+    "REJECT",
+    "REPORT",
+    "REVIEW",
+    "SAMPLE",
+    "SET",
+    "SHAP",
+    "STATISTICS",
+    "TAIL",
+    "VALIDATE",
+    "VISUALIZE",
+}
+
 DATA_SOURCES = {
     "CURRENT": "current",
     "RAW": "current",
@@ -232,14 +283,18 @@ COMMAND_HELP = [
         "command": "SELECT",
         "syntax": (
             "SELECT columns|aggregates FROM CURRENT|CLEANED|ENGINEERED|"
-            "PREDICTIONS [WHERE ...] [GROUP BY ...] [ORDER BY ...] [LIMIT n]"
+            "PREDICTIONS|dataset [WHERE ...] [GROUP BY ...] "
+            "[ORDER BY ...] [LIMIT n]"
         ),
         "description": "Run a safe pandas-backed analytical query.",
     },
     {
         "command": "PROFILE / DIAGNOSE / RECOMMEND",
-        "syntax": "PROFILE; DIAGNOSE; RECOMMEND;",
-        "description": "Run an AutoDQ analysis workflow step.",
+        "syntax": (
+            "PROFILE [dataset]; DIAGNOSE [dataset]; "
+            "RECOMMEND [dataset];"
+        ),
+        "description": "Run an AutoDQ analysis step on the active or named dataset.",
     },
     {
         "command": "REVIEW / APPROVE / REJECT / CLEAN / VALIDATE",
@@ -296,6 +351,7 @@ COMMAND_HELP = [
         "syntax": (
             "WORKSPACE CREATE sales ROOT .autodq/workspaces; "
             "ADD DATASET costs FROM costs.csv; LIST DATASETS; "
+            "PROFILE costs; AUTO DATASET costs MODE review; "
             "MERGE main WITH costs AS joined ON Product"
         ),
         "description": "Manage workspaces and multiple datasets.",

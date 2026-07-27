@@ -806,7 +806,7 @@ body { background: white; color: black; }
         self.assertNotIn("transientOutputs: true", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.2.6")
+        self.assertEqual(package["version"], "0.2.7")
         language_icon = package["contributes"]["languages"][0]["icon"]
         self.assertEqual(language_icon["light"], "./icons/adql-light.svg")
         self.assertEqual(language_icon["dark"], "./icons/adql-dark.svg")

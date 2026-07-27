@@ -144,7 +144,7 @@ reference to the initialized project. Their most useful attributes are:
 
 ```text
 SELECT [DISTINCT] expression [, expression ...]
-FROM CURRENT | CLEANED | ENGINEERED | PREDICTIONS
+FROM CURRENT | CLEANED | ENGINEERED | PREDICTIONS | registered_dataset
 [WHERE condition [AND condition ...]]
 [GROUP BY column [, column ...]]
 [ORDER BY output_column [ASC | DESC] [, ...]]
@@ -156,6 +156,10 @@ Column names containing spaces can be wrapped in backticks or quotes.
 ```adql
 SELECT `Order Date`, Revenue FROM CURRENT LIMIT 20;
 ```
+
+`FROM` also accepts the exact name of a dataset registered with
+`ADD DATASET`. A named `SELECT` reads that dataset without changing the active
+workflow dataset.
 
 ### Expressions
 
@@ -293,10 +297,37 @@ WORKSPACE LIST ROOT ".autodq/workspaces";
 
 ADD DATASET costs FROM "costs.csv";
 LIST DATASETS;
+PROFILE costs;
+DIAGNOSE costs;
+AUTO DATASET costs MODE review VISUALIZE false;
+VISUALIZE DATASET costs bar X Category Y Amount;
+SELECT Category, SUM(Amount) AS total_amount FROM costs GROUP BY Category;
+EXPORT costs TO "exports/costs.csv" OVERWRITE;
 USE DATASET costs;
 MERGE main WITH costs AS sales_with_costs ON Product HOW left;
 CONCAT january,february AS q1_sales AXIS 0;
 ```
+
+Named dataset targeting is available across stateful workflow commands:
+
+- Commands that otherwise accept no arguments support the concise form
+  `PROFILE costs`, `DIAGNOSE costs`, `RECOMMEND costs`, `READINESS costs`, and
+  similar calls.
+- Every dataset-scoped command supports the universal leading selector
+  `COMMAND DATASET name ...`. For example,
+  `AUTO DATASET costs MODE review`, `HEAD DATASET costs 10`,
+  `DOMAIN DATASET costs ADD Amount MIN 0`, and
+  `REPORT DATASET costs TO "costs-report.html"`.
+- Targeting a dataset activates it before the command runs. Later commands
+  without a selector continue using that dataset. Repeating the same dataset
+  selector preserves profile, diagnosis, cleaning, feature, and model state.
+- `SELECT ... FROM name` and `EXPORT name TO ...` access a registered dataset
+  directly without changing the active workflow dataset.
+
+Dataset names are user-defined identifiers and are matched exactly. An unknown
+name reports all currently registered datasets. `USE DATASET name` remains
+available when you only want to change the active dataset without running
+another operation.
 
 ### Interactive cleaning and domain review
 

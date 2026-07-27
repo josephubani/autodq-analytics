@@ -14,6 +14,7 @@ from autodq import (
     ADQLValidationError,
     AutoDQ,
 )
+from autodq.commands.grammar import DATASET_SCOPED_COMMANDS
 
 
 class ADQLTests(unittest.TestCase):
@@ -85,6 +86,150 @@ class ADQLTests(unittest.TestCase):
         self.assertEqual(dashboard["title"], "Sales; Quality")
         self.assertEqual(dashboard["max_preview_rows"], 12)
         self.assertFalse(dashboard["auto_display"])
+
+    def test_parser_supports_named_dataset_targets_across_workflows(self):
+        parser = ADQLParser()
+        script = parser.parse(
+            """
+            PROFILE customers;
+            AUTO DATASET customers MODE review VISUALIZE false;
+            HEAD DATASET customers 2;
+            DOMAIN DATASET customers ADD Spend MIN 0;
+            VISUALIZE DATASET "customer cohort" bar
+                X Segment Y Spend TITLE "Spend by segment";
+            """
+        )
+
+        for statement in script.statements[:4]:
+            self.assertEqual(
+                statement.parameters["dataset_name"],
+                "customers",
+            )
+
+        self.assertEqual(script.statements[1].parameters["mode"], "review")
+        self.assertFalse(script.statements[1].parameters["visualize"])
+        self.assertEqual(script.statements[2].parameters["rows"], 2)
+        self.assertEqual(
+            script.statements[3].parameters["column"],
+            "Spend",
+        )
+        self.assertEqual(
+            script.statements[4].parameters["dataset_name"],
+            "customer cohort",
+        )
+        self.assertEqual(script.statements[4].parameters["chart"], "bar")
+        self.assertEqual(
+            script.statements[4].parameters["title"],
+            "Spend by segment",
+        )
+
+        for command in DATASET_SCOPED_COMMANDS:
+            rewritten, dataset = parser._extract_dataset_target(
+                command,
+                f"{command} DATASET customers",
+            )
+            self.assertEqual(dataset, "customers")
+            self.assertEqual(rewritten, command)
+
+    def test_named_dataset_workflow_targeting_switches_and_reuses_state(self):
+        project = self._project(target="Revenue")
+        customers_path = self.root / "customers.csv"
+        customers = pd.DataFrame(
+            {
+                "Customer_ID": [101, 102, 103, 104],
+                "Segment": ["Retail", "Business", "Retail", "Student"],
+                "Spend": [250.0, 900.0, 175.0, 80.0],
+            }
+        )
+        customers.to_csv(customers_path, index=False)
+
+        added = project.query(
+            f'ADD DATASET customers FROM "{customers_path}";',
+            auto_display=False,
+        )
+        self.assertTrue(added.success)
+        self.assertEqual(project.dataset_manager.primary().name, "main")
+
+        profiled = project.query("PROFILE customers;", auto_display=False)
+        self.assertTrue(profiled.success)
+        self.assertEqual(project.dataset_manager.primary().name, "customers")
+        self.assertEqual(project.state.profile_report["rows"], 4)
+        self.assertEqual(
+            project.state.profile_report["columns"],
+            3,
+        )
+        self.assertIn("Dataset: customers", profiled.latest.message)
+
+        customer_profile = project.state.profile_report
+        diagnosed = project.query(
+            "DIAGNOSE customers;",
+            auto_display=False,
+        )
+        self.assertTrue(diagnosed.success)
+        self.assertIs(project.state.profile_report, customer_profile)
+        self.assertIsNotNone(project.state.diagnosis_report)
+
+        repeated = project.query("PROFILE;", auto_display=False)
+        self.assertEqual(repeated.value["rows"], 4)
+        self.assertEqual(project.dataset_manager.primary().name, "customers")
+
+        headed = project.query(
+            "HEAD DATASET customers 2;",
+            auto_display=False,
+        )
+        self.assertEqual(headed.data["Customer_ID"].tolist(), [101, 102])
+
+        automatic = project.query(
+            "AUTO DATASET customers MODE review VISUALIZE false;",
+            auto_display=False,
+        )
+        self.assertTrue(automatic.success)
+        self.assertEqual(automatic.value.config.mode, "review")
+        self.assertEqual(project.dataset_manager.primary().name, "customers")
+
+        main_profile = project.query("PROFILE main;", auto_display=False)
+        self.assertEqual(main_profile.value["rows"], len(self.data))
+        self.assertEqual(project.dataset_manager.primary().name, "main")
+
+    def test_select_and_export_accept_registered_dataset_names(self):
+        project = self._project()
+        customers_path = self.root / "customers.csv"
+        export_path = self.root / "customers-export.csv"
+        customers = pd.DataFrame(
+            {
+                "Customer_ID": [101, 102, 103],
+                "Spend": [250.0, 900.0, 175.0],
+            }
+        )
+        customers.to_csv(customers_path, index=False)
+        project.add_dataset("customers", dataset_path=str(customers_path))
+
+        selected = project.query(
+            "SELECT Customer_ID, Spend FROM customers "
+            "ORDER BY Spend DESC LIMIT 2;",
+            auto_display=False,
+        )
+
+        self.assertEqual(selected.data["Customer_ID"].tolist(), [102, 101])
+        self.assertEqual(project.dataset_manager.primary().name, "main")
+
+        exported = project.query(
+            f'EXPORT customers TO "{export_path}";',
+            auto_display=False,
+        )
+        self.assertTrue(exported.success)
+        assert_frame_equal(pd.read_csv(export_path), customers)
+        self.assertEqual(project.dataset_manager.primary().name, "main")
+
+    def test_named_dataset_target_reports_available_names(self):
+        project = self._project()
+
+        with self.assertRaises(ADQLExecutionError) as context:
+            project.query("PROFILE customers;", auto_display=False)
+
+        message = str(context.exception)
+        self.assertIn("Dataset 'customers' was not found", message)
+        self.assertIn("Available datasets: main", message)
 
     def test_grouped_select_matches_pandas_and_does_not_mutate_data(self):
         project = self._project()

@@ -15,6 +15,8 @@ workflow.
 - **Run File**, **Run through Cell**, and **Run Cell Only** actions
 - A persistent notebook session that retains datasets, reviews, models, and
   charts between cells
+- Direct named-dataset workflows such as `PROFILE customers`,
+  `AUTO DATASET customers MODE review`, and `SELECT * FROM customers`
 - Rich tables, quality reports, cleaning recommendations, model explanations,
   and inline charts
 - Saved output restoration for text, HTML, tables, and charts after reopening

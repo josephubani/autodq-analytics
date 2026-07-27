@@ -5,6 +5,27 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.4 - 2026-07-27
+
+### Added
+
+- Added named-dataset workflow targeting across stateful ADQL commands,
+  including concise calls such as `PROFILE customers` and the universal
+  `COMMAND DATASET name ...` selector.
+- Added direct registered-dataset sources for `SELECT ... FROM name` and
+  `EXPORT name TO ...` without changing the active workflow dataset.
+- Added `export_named_dataset()` to the Python project API.
+
+### Fixed
+
+- Prevented repeated commands targeting the same active dataset from clearing
+  profile, diagnosis, cleaning, feature, and model state between statements.
+- Added actionable unknown-dataset errors listing the available names.
+
+### Changed
+
+- Updated the bundled AutoDQ ADQL VS Code extension to 0.2.7.
+
 ## 0.1.3 - 2026-07-26
 
 ### Added

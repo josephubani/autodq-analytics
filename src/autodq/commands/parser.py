@@ -11,11 +11,13 @@ from autodq.commands.grammar import (
     AUTO_OPTIONS,
     BLUE_OPTIONS,
     DASHBOARD_OPTIONS,
+    DATASET_SCOPED_COMMANDS,
     DATA_SOURCES,
     EXPLAIN_OPTIONS,
     GALLERY_STYLE_OPTIONS,
     MODEL_OPTIONS,
     PREDICT_OPTIONS,
+    POSITIONAL_DATASET_COMMANDS,
     SHAP_OPTIONS,
     SIMPLE_COMMANDS,
     SUPPORTED_COMMANDS,
@@ -70,7 +72,14 @@ class ADQLParser:
         if kind == "SELECT":
             parameters = self._parse_select(raw)
         else:
-            parameters = self._parse_workflow(kind, raw)
+            workflow_raw, dataset_name = self._extract_dataset_target(
+                kind,
+                raw,
+            )
+            parameters = self._parse_workflow(kind, workflow_raw)
+
+            if dataset_name is not None:
+                parameters["dataset_name"] = dataset_name
 
         return ADQLStatement(
             kind=kind,
@@ -78,6 +87,53 @@ class ADQLParser:
             parameters=parameters,
             statement_number=number,
         )
+
+    @staticmethod
+    def _extract_dataset_target(
+        kind: str,
+        raw: str,
+    ) -> tuple[str, str | None]:
+        """Remove a common dataset selector before command-specific parsing."""
+        if kind not in DATASET_SCOPED_COMMANDS:
+            return raw, None
+
+        try:
+            tokens = shlex.split(raw, posix=True)
+        except ValueError:
+            # Keep the original statement so the regular workflow parser emits
+            # its established invalid-quoting error.
+            return raw, None
+
+        arguments = tokens[1:]
+
+        if not arguments:
+            return raw, None
+
+        explicit = arguments[0].upper() == "DATASET"
+        positional = (
+            kind in POSITIONAL_DATASET_COMMANDS
+            and len(arguments) == 1
+        )
+
+        if not explicit and not positional:
+            return raw, None
+
+        if explicit:
+            if len(arguments) < 2:
+                raise ADQLSyntaxError(
+                    f"{kind} DATASET requires a registered dataset name."
+                )
+
+            dataset_name = arguments[1].strip()
+            remaining = arguments[2:]
+        else:
+            dataset_name = arguments[0].strip()
+            remaining = []
+
+        if not dataset_name:
+            raise ADQLSyntaxError("Dataset name cannot be empty.")
+
+        return shlex.join([tokens[0], *remaining]), dataset_name
 
     def _parse_workflow(self, kind: str, raw: str) -> dict[str, Any]:
         try:
@@ -336,7 +392,13 @@ class ADQLParser:
                     "EXPORT requires a data source and TO followed by a path."
                 )
 
-            source = arguments[0].upper()
+            source_token = arguments[0]
+            source_key = source_token.upper()
+            source = (
+                source_key
+                if source_key in DATA_SOURCES
+                else source_token
+            )
             options = self._parse_options(
                 arguments[1:],
                 {"TO": "output", "OVERWRITE": "overwrite"},
@@ -763,13 +825,13 @@ class ADQLParser:
 
             clause_values[keyword] = value
 
-        source = clause_values["FROM"].upper()
-
-        if source not in DATA_SOURCES:
-            supported = ", ".join(DATA_SOURCES)
-            raise ADQLSyntaxError(
-                f"Unsupported SELECT source: {source}. Use one of {supported}."
-            )
+        source_text = clause_values["FROM"].strip()
+        source_key = source_text.upper()
+        source = (
+            DATA_SOURCES[source_key]
+            if source_key in DATA_SOURCES
+            else self._identifier(source_text)
+        )
 
         distinct = False
 
@@ -817,7 +879,7 @@ class ADQLParser:
             )
 
         return {
-            "source": DATA_SOURCES[source],
+            "source": source,
             "distinct": distinct,
             "select": select_items,
             "where": where,

@@ -51,6 +51,19 @@ class ADQLValidator:
             return
 
         parameters = statement.parameters
+        dataset_name = parameters.get("dataset_name")
+
+        if dataset_name is not None and (
+            not str(dataset_name).strip()
+            or len(str(dataset_name)) > 255
+            or any(
+                character in str(dataset_name)
+                for character in ";\r\n"
+            )
+        ):
+            raise ADQLValidationError(
+                "DATASET selector must contain a valid registered dataset name."
+            )
 
         if statement.kind == "DATASET":
             dataset_path = Path(parameters["dataset_path"])
@@ -194,12 +207,17 @@ class ADQLValidator:
                 )
 
         elif statement.kind == "EXPORT":
-            source = parameters["source"].upper()
+            source_name = str(parameters["source"]).strip()
+            source = source_name.upper()
 
-            if source not in DATA_SOURCES:
-                supported = ", ".join(DATA_SOURCES)
+            if (
+                not source_name
+                or len(source_name) > 255
+                or any(character in source_name for character in ";\r\n")
+            ):
                 raise ADQLValidationError(
-                    f"Unsupported EXPORT source: {source}. Use {supported}."
+                    "EXPORT source must be a valid built-in source or "
+                    "registered dataset name."
                 )
 
             suffix = Path(parameters["output"]).suffix.lower()

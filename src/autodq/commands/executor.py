@@ -48,13 +48,22 @@ class ADQLExecutor:
                         else None
                     ),
                 )
+                message = output.get(
+                    "message",
+                    f"{statement.kind} completed.",
+                )
+                dataset_name = statement.parameters.get("dataset_name")
+
+                if dataset_name is not None:
+                    message = (
+                        f"{message.rstrip('.')}. "
+                        f"Dataset: {dataset_name}."
+                    )
+
                 result = ADQLResult(
                     statement=statement,
                     status="completed",
-                    message=output.get(
-                        "message",
-                        f"{statement.kind} completed.",
-                    ),
+                    message=message,
                     data=output.get("data"),
                     value=output.get("value"),
                     total_rows=output.get("total_rows"),
@@ -101,6 +110,10 @@ class ADQLExecutor:
             statement.parameters,
             base_path=base_path,
         )
+        dataset_name = parameters.pop("dataset_name", None)
+
+        if dataset_name is not None:
+            project.use_dataset(dataset_name)
 
         if kind == "DATASET":
             data = project.change_dataset(parameters["dataset_path"])
@@ -450,17 +463,24 @@ class ADQLExecutor:
             }
 
         if kind == "EXPORT":
-            source = DATA_SOURCES[parameters["source"].upper()]
+            source_name = parameters["source"]
+            source_key = source_name.upper()
             output = Path(parameters["output"]).expanduser()
             overwrite = bool(parameters.get("overwrite", False))
             self._ensure_output_available(output, overwrite)
-            exporters = {
-                "current": project.export_current,
-                "cleaned": project.export_cleaned,
-                "engineered": project.export_engineered,
-                "predictions": project.export_predictions,
-            }
-            exporters[source](str(output))
+
+            if source_key in DATA_SOURCES:
+                source = DATA_SOURCES[source_key]
+                exporters = {
+                    "current": project.export_current,
+                    "cleaned": project.export_cleaned,
+                    "engineered": project.export_engineered,
+                    "predictions": project.export_predictions,
+                }
+                exporters[source](str(output))
+            else:
+                source = source_name
+                project.export_named_dataset(source, str(output))
 
             if not output.exists():
                 raise RuntimeError(
@@ -751,6 +771,30 @@ class ADQLExecutor:
         }
 
     def _source_frame(self, project, source: str) -> pd.DataFrame:
+        built_in_sources = {
+            "current",
+            "cleaned",
+            "engineered",
+            "predictions",
+        }
+
+        if source not in built_in_sources:
+            try:
+                entry = project.dataset_manager.get(source)
+            except KeyError as error:
+                raise ValueError(error.args[0]) from error
+
+            active = project.dataset_manager.primary()
+
+            if (
+                active is not None
+                and active.name == entry.name
+                and project.state.data is not None
+            ):
+                return project.state.data
+
+            return entry.data
+
         if project.state.data is None:
             project.load()
 

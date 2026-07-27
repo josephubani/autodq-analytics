@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.2.7 - 2026-07-27
+
+- Documented direct named-dataset workflows such as `PROFILE customers`,
+  `AUTO DATASET customers MODE review`, and `SELECT * FROM customers`.
+- Bundled the AutoDQ 0.1.4 runtime release metadata for consistent manual
+  VSIX and PyPI upgrades.
+
 ## 0.2.6 - 2026-07-26
 
 - Added comprehensive, theme-aware syntax highlighting for every ADQL command,

@@ -231,14 +231,14 @@ class PackagingTests(unittest.TestCase):
     def test_public_release_documentation_is_current(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         notes = (
-            ROOT / "docs" / "RELEASE_NOTES_0.1.3.md"
+            ROOT / "docs" / "RELEASE_NOTES_0.1.4.md"
         ).read_text(encoding="utf-8")
         roadmap = (ROOT / "docs" / "ROADMAP.md").read_text(encoding="utf-8")
 
         self.assertIn("https://pypi.org/project/autodq/", readme)
         self.assertNotIn("Until the first PyPI release", readme)
-        self.assertIn("comprehensive, theme-aware ADQL syntax", notes)
-        self.assertIn("Column names and aliases", notes)
+        self.assertIn("named-dataset workflow targeting", notes)
+        self.assertIn("PROFILE customers", notes)
         self.assertIn(
             "All items in the original AutoDQ development roadmap are complete.",
             roadmap,

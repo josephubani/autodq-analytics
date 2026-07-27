@@ -1407,6 +1407,34 @@ class AutoDQ:
         )
 
         print(f"\nCurrent dataset exported to {output}")
+
+    def export_named_dataset(self, name: str, output: str) -> None:
+        """Export a registered dataset without changing the active dataset."""
+        entry = self.dataset_manager.get(name)
+        active = self.dataset_manager.primary()
+        data = (
+            self.state.data
+            if (
+                active is not None
+                and active.name == entry.name
+                and self.state.data is not None
+            )
+            else entry.data
+        )
+        export_dataset(data, output)
+
+        self.session.log(
+            step="export_named_dataset",
+            message="Named dataset exported.",
+            metadata={
+                "dataset": name,
+                "output": output,
+                "rows": len(data),
+                "columns": len(data.columns),
+            },
+        )
+
+        print(f"\nDataset {name} exported to {output}")
         
         
     def correlation(self, min_abs_correlation: float = 0.3):
@@ -2116,6 +2144,35 @@ class AutoDQ:
         name: str,
         reset_outputs: bool = True,
     ) -> pd.DataFrame:
+        entry = self.dataset_manager.get(name)
+        active = self.dataset_manager.primary()
+        already_active = (
+            active is not None
+            and active.name == entry.name
+        )
+
+        if already_active:
+            if self.state.data is None:
+                self.state.data = entry.data.copy()
+
+            if entry.path is not None:
+                self.state.dataset_path = Path(entry.path)
+
+            self.session.log(
+                step="use_dataset",
+                message="Requested dataset is already active.",
+                metadata={
+                    "dataset": entry.name,
+                    "rows": entry.rows,
+                    "columns": entry.columns,
+                    "changed": False,
+                },
+            )
+            return self.state.data
+
+        if active is not None and self.state.data is not None:
+            active.data = self.state.data.copy()
+
         entry = self.dataset_manager.set_primary(name)
 
         self.state.dataset_path = (
@@ -2136,6 +2193,7 @@ class AutoDQ:
                 "dataset": entry.name,
                 "rows": entry.rows,
                 "columns": entry.columns,
+                "changed": True,
             },
         )
 

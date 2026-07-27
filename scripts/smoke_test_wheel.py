@@ -115,9 +115,28 @@ def write_adql(path: Path) -> None:
         "# %% [Regional totals]\n"
         "SELECT Region, SUM(Revenue) AS total_revenue, COUNT(*) AS transactions\n"
         "FROM CURRENT WHERE Region IS NOT NULL GROUP BY Region\n"
-        "ORDER BY total_revenue DESC;\n",
+        "ORDER BY total_revenue DESC;\n"
+        "# %% [Additional dataset]\n"
+        "ADD DATASET customers FROM \"customers.csv\";\n"
+        "# %% [Named dataset profile]\n"
+        "PROFILE customers;\n"
+        "# %% [Named dataset query]\n"
+        "SELECT Customer_ID, Spend FROM customers ORDER BY Spend DESC;\n",
         encoding="utf-8",
     )
+
+
+def write_customers(path: Path) -> None:
+    with path.open("w", encoding="utf-8", newline="") as stream:
+        writer = csv.writer(stream)
+        writer.writerow(["Customer_ID", "Segment", "Spend"])
+        writer.writerows(
+            [
+                [101, "Retail", 250.0],
+                [102, "Business", 900.0],
+                [103, "Student", 80.0],
+            ]
+        )
 
 
 def main() -> int:
@@ -143,9 +162,11 @@ def main() -> int:
         python = environment_executable(environment, "python")
         autodq = environment_executable(environment, "autodq")
         dataset = workspace / "acceptance.csv"
+        customers = workspace / "customers.csv"
         workflow = workspace / "acceptance.adql"
         result_path = workspace / "result.json"
         row_count = write_dataset(dataset)
+        write_customers(customers)
         write_adql(workflow)
 
         run(
@@ -191,7 +212,7 @@ def main() -> int:
         if not payload.get("success"):
             raise RuntimeError("The installed wheel failed the ADQL acceptance workflow.")
 
-        if payload.get("completed_cell_count") != 3:
+        if payload.get("completed_cell_count") != 6:
             raise RuntimeError("The ADQL acceptance workflow did not complete all cells.")
 
         api_check = (

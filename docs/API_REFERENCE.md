@@ -79,9 +79,11 @@ file_result = project.run_adql("analysis.adql", through_cell=3)
 ```
 
 `query()` and its `adql()` alias execute allowlisted statements against the
-current project. `run_adql()` executes a cell-based standalone file while
-retaining state between selected cells. See [ADQL_SPEC.md](ADQL_SPEC.md) for
-the language reference.
+current project. Registered datasets can be targeted directly with
+`PROFILE customers`, `AUTO DATASET customers MODE review`, or
+`SELECT * FROM customers`. `run_adql()` executes a cell-based standalone file
+while retaining state between selected cells. See
+[ADQL_SPEC.md](ADQL_SPEC.md) for the language reference.
 
 ## Workspaces and datasets
 
@@ -90,9 +92,11 @@ Create or open a workspace with `AutoDQ.create_workspace()` and
 `AutoDQ.list_workspaces()` for persistence and discovery.
 
 Within a project, use `add_dataset()`, `use_dataset()`, `merge_datasets()`, and
-`concat_datasets()` for multi-dataset analysis.
+`concat_datasets()` for multi-dataset analysis. `use_dataset()` is idempotent:
+selecting the already active dataset keeps its current workflow artifacts.
 
 ## Exports and inspection
 
 Convenience methods include `head()`, `tail()`, `sample()`, `view()`, `info()`,
-`export_current()`, `export_cleaned()`, and `export_predictions()`.
+`export_current()`, `export_cleaned()`, `export_predictions()`, and
+`export_named_dataset()`.
