@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.2.8 - 2026-07-29
+
+- Added syntax highlighting and rich notebook output for `SESSION`.
+- Added tabular output for `SESSION EVENTS [LIMIT n]` and `SESSION DATASETS`.
+- Bundled the AutoDQ 0.1.5 runtime release metadata.
+
 ## 0.2.7 - 2026-07-27
 
 - Documented direct named-dataset workflows such as `PROFILE customers`,

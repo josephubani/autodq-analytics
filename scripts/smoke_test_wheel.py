@@ -121,7 +121,9 @@ def write_adql(path: Path) -> None:
         "# %% [Named dataset profile]\n"
         "PROFILE customers;\n"
         "# %% [Named dataset query]\n"
-        "SELECT Customer_ID, Spend FROM customers ORDER BY Spend DESC;\n",
+        "SELECT Customer_ID, Spend FROM customers ORDER BY Spend DESC;\n"
+        "# %% [Session inspection]\n"
+        "SESSION; SESSION EVENTS LIMIT 5; SESSION DATASETS;\n",
         encoding="utf-8",
     )
 
@@ -212,7 +214,7 @@ def main() -> int:
         if not payload.get("success"):
             raise RuntimeError("The installed wheel failed the ADQL acceptance workflow.")
 
-        if payload.get("completed_cell_count") != 6:
+        if payload.get("completed_cell_count") != 7:
             raise RuntimeError("The ADQL acceptance workflow did not complete all cells.")
 
         api_check = (
@@ -221,6 +223,7 @@ def main() -> int:
             "profile = project.profile(); diagnosis = project.diagnose(); "
             f"assert profile['rows'] == {row_count}; "
             "assert 0 <= diagnosis.quality_score <= 100; "
+            "assert project.session_info()['active_dataset'] == 'main'; "
             "result = project.auto(mode='review', visualize=False, "
             "auto_display=False); assert result.success; print('Python API OK')"
         )

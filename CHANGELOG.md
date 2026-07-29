@@ -5,6 +5,21 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.5 - 2026-07-29
+
+### Added
+
+- Added read-only ADQL session inspection with `SESSION`,
+  `SESSION EVENTS [LIMIT n]`, and `SESSION DATASETS`.
+- Added structured Python APIs for session summaries, recent events, and
+  registered datasets through `session_info()`, `session_events()`, and
+  `session_datasets()`.
+- Added a rich, theme-aware session summary for VS Code ADQL notebooks.
+
+### Changed
+
+- Updated the bundled AutoDQ ADQL VS Code extension to 0.2.8.
+
 ## 0.1.4 - 2026-07-27
 
 ### Added

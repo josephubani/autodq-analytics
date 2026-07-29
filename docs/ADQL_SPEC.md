@@ -401,6 +401,29 @@ EXPORT PREDICTIONS TO "exports/predictions.csv";
 
 Existing files are never replaced unless `OVERWRITE` is explicitly included.
 
+### Session inspection
+
+Use read-only session commands to see the project state retained by the current
+ADQL notebook or file execution:
+
+```adql
+SESSION;
+SESSION EVENTS;
+SESSION EVENTS LIMIT 20;
+SESSION DATASETS;
+```
+
+`SESSION` returns the active dataset, target, dimensions, workspace, session
+start time, event and ADQL run counts, registered datasets, completed steps,
+and the availability of profile, cleaning, feature, model, prediction,
+explanation, visualization, and dashboard artifacts. `SESSION EVENTS` returns
+the newest workflow events first. `SESSION DATASETS` marks the active dataset
+and includes each registered dataset's dimensions and source path.
+
+These commands do not change project state. The current `SESSION` statement is
+recorded only after its output is created, so it appears in a later event or
+history query.
+
 ### Other commands
 
 ```adql

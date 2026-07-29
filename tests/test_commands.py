@@ -131,6 +131,32 @@ class ADQLTests(unittest.TestCase):
             self.assertEqual(dataset, "customers")
             self.assertEqual(rewritten, command)
 
+    def test_parser_supports_session_summary_events_and_datasets(self):
+        statements = ADQLParser().parse(
+            "SESSION; SESSION EVENTS; SESSION EVENTS LIMIT 7; "
+            "SESSION DATASETS;"
+        ).statements
+
+        self.assertEqual(statements[0].parameters, {"action": "summary"})
+        self.assertEqual(
+            statements[1].parameters,
+            {"action": "events", "limit": 20},
+        )
+        self.assertEqual(
+            statements[2].parameters,
+            {"action": "events", "limit": 7},
+        )
+        self.assertEqual(statements[3].parameters, {"action": "datasets"})
+
+        for source in (
+            "SESSION UNKNOWN;",
+            "SESSION EVENTS LIMIT 0;",
+            "SESSION DATASETS LIMIT 2;",
+        ):
+            with self.subTest(source=source):
+                with self.assertRaises(ADQLSyntaxError):
+                    ADQLParser().parse(source)
+
     def test_named_dataset_workflow_targeting_switches_and_reuses_state(self):
         project = self._project(target="Revenue")
         customers_path = self.root / "customers.csv"
@@ -599,6 +625,29 @@ class ADQLTests(unittest.TestCase):
         history = project.query("HISTORY LIMIT 2;", auto_display=False)
         self.assertEqual(len(history.data), 2)
         self.assertIn("status", history.data.columns)
+
+        session = project.query("SESSION;", auto_display=False)
+        self.assertEqual(session.value["active_dataset"], "main")
+        self.assertEqual(session.value["rows"], len(self.data))
+        self.assertGreater(session.value["event_count"], 0)
+        self.assertIn("profile", session.value["workflow_state"])
+
+        events = project.query(
+            "SESSION EVENTS LIMIT 3;",
+            auto_display=False,
+        )
+        self.assertLessEqual(len(events.data), 3)
+        self.assertEqual(
+            list(events.data.columns),
+            ["event", "timestamp", "step", "message", "metadata"],
+        )
+
+        project.add_dataset("customers", data=self.data.head(4))
+        datasets = project.query("SESSION DATASETS;", auto_display=False)
+        self.assertEqual(set(datasets.data["name"]), {"main", "customers"})
+        self.assertTrue(
+            datasets.data.loc[datasets.data["name"] == "main", "active"].iloc[0]
+        )
 
         with self.assertRaisesRegex(ValueError, ".adql"):
             project.run_adql(self.root / "analysis.txt")

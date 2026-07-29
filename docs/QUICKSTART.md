@@ -93,6 +93,9 @@ DATASET "sales.csv" TARGET Revenue;
 # %% [Automatic review]
 AUTO MODE review VISUALIZE false CONTINUE_ON_ERROR false;
 
+# %% [Session state]
+SESSION;
+
 # %% [Regional summary]
 SELECT Region,
        SUM(Revenue) AS total_revenue,

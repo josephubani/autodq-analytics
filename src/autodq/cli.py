@@ -124,6 +124,17 @@ def _render_run(result) -> None:
 
             if statement_result.data is not None:
                 _print_dataframe(statement_result.data)
+            elif (
+                statement_result.statement.kind == "SESSION"
+                and statement_result.value is not None
+            ):
+                print(
+                    json.dumps(
+                        serializable_value(statement_result.value),
+                        indent=2,
+                        ensure_ascii=False,
+                    )
+                )
             elif statement_result.error_message:
                 print(f"    {statement_result.error_message}")
 
@@ -211,6 +222,20 @@ def _notebook_payload(
                 )
 
             rich_value_rendered = False
+
+            if (
+                statement_result.statement.kind == "SESSION"
+                and statement_result.statement.parameters.get("action")
+                == "summary"
+                and isinstance(statement_result.value, dict)
+            ):
+                outputs.append(
+                    _notebook_html_output(
+                        _session_html(statement_result.value),
+                        title="AutoDQ session",
+                    )
+                )
+                rich_value_rendered = True
 
             if (
                 statement_result.statement.kind == "PROFILE"
@@ -508,6 +533,65 @@ def _profile_html(
     </table>
   </div>
   {truncation_note}
+    </section>"""
+
+
+def _session_html(session: dict) -> str:
+    workflow_state = session.get("workflow_state", {})
+    state_badges = []
+
+    for name, available in workflow_state.items():
+        badge_class = "good" if available else "neutral"
+        status = "Ready" if available else "Not run"
+        state_badges.append(
+            '<span class="autodq-data-badge '
+            f'autodq-data-badge--{badge_class}">'
+            f"{html.escape(_humanize(name))}: {status}</span>"
+        )
+
+    datasets = session.get("registered_datasets", [])
+    dataset_chips = "".join(
+        f'<span class="autodq-data-chip">{html.escape(str(name))}</span>'
+        for name in datasets
+    ) or '<span class="autodq-muted">No registered datasets</span>'
+    steps = session.get("steps_completed", [])
+    step_chips = "".join(
+        f'<span class="autodq-data-chip">{html.escape(_humanize(step))}</span>'
+        for step in steps
+    ) or '<span class="autodq-muted">No completed steps</span>'
+
+    details = [
+        ("Dataset path", session.get("dataset_path") or "N/A"),
+        ("Target", session.get("target") or "Not set"),
+        ("Workspace", session.get("workspace") or "Not attached"),
+        ("Started", session.get("started_at") or "N/A"),
+        ("ADQL runs", session.get("adql_run_count", 0)),
+    ]
+    detail_rows = "".join(
+        "<tr>"
+        f"<th>{html.escape(str(label))}</th>"
+        f"<td>{html.escape(str(value))}</td>"
+        "</tr>"
+        for label, value in details
+    )
+
+    return f"""<style>{_REPORT_CSS}</style>
+<section class="autodq-report">
+  <h2>AutoDQ Session</h2>
+  <p class="autodq-muted">Current in-memory project and workflow state.</p>
+  <div class="autodq-metrics">
+    {_metric_card('Active dataset', str(session.get('active_dataset') or 'None'))}
+    {_metric_card('Rows', f"{int(session.get('rows', 0)):,}")}
+    {_metric_card('Columns', f"{int(session.get('columns', 0)):,}")}
+    {_metric_card('Events', f"{int(session.get('event_count', 0)):,}")}
+  </div>
+  <table class="autodq-key-values">{detail_rows}</table>
+  <h3>Registered datasets</h3>
+  <div class="autodq-chip-list">{dataset_chips}</div>
+  <h3>Workflow state</h3>
+  <div class="autodq-chip-list">{''.join(state_badges)}</div>
+  <h3>Completed steps</h3>
+  <div class="autodq-chip-list">{step_chips}</div>
 </section>"""
 
 

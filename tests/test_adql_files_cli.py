@@ -21,6 +21,7 @@ from autodq.cli import (
     _dataframe_html,
     _profile_html,
     _recommendations_html,
+    _session_html,
     _value_html,
     main,
 )
@@ -232,6 +233,48 @@ HEAD 2;
         self.assertIn("Click to show or hide", payload["outputs"][1]["data"])
         self.assertIn("<details", payload["outputs"][1]["data"])
         self.assertNotIn("Profile completed", stdout.getvalue())
+
+    def test_session_summary_uses_rich_notebook_output(self):
+        project = AutoDQ(str(self.dataset), target="Revenue")
+        project.load()
+        summary = project.session_info()
+        markup = _session_html(summary)
+
+        self.assertIn("AutoDQ Session", markup)
+        self.assertIn("Active dataset", markup)
+        self.assertIn("Registered datasets", markup)
+        self.assertIn("Workflow state", markup)
+        self.assertIn("main", markup)
+
+        session_script = self.root / "session.adql"
+        session_script.write_text(
+            "# %% [Dataset]\n"
+            "DATASET \"sales.csv\" TARGET Revenue;\n"
+            "# %% [Session]\n"
+            "SESSION;\n",
+            encoding="utf-8",
+        )
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "run",
+                    str(session_script),
+                    "--through-cell",
+                    "2",
+                    "--notebook-json",
+                ]
+            )
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            [item["mime"] for item in payload["outputs"]],
+            ["text/plain", "text/html"],
+        )
+        self.assertIn("AutoDQ Session", payload["outputs"][1]["data"])
+        self.assertIn("Active dataset", payload["outputs"][1]["data"])
 
     def test_notebook_json_renders_visualization_as_png(self):
         visualization = self.root / "visualization.adql"
@@ -806,7 +849,7 @@ body { background: white; color: black; }
         self.assertNotIn("transientOutputs: true", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.2.7")
+        self.assertEqual(package["version"], "0.2.8")
         language_icon = package["contributes"]["languages"][0]["icon"]
         self.assertEqual(language_icon["light"], "./icons/adql-light.svg")
         self.assertEqual(language_icon["dark"], "./icons/adql-dark.svg")

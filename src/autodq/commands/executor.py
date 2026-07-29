@@ -558,6 +558,49 @@ class ADQLExecutor:
                 ),
             }
 
+        if kind == "SESSION":
+            action = parameters["action"]
+
+            if action == "summary":
+                return {
+                    "value": project.session_info(),
+                    "message": "Returned the active AutoDQ session summary.",
+                }
+
+            if action == "events":
+                data = pd.DataFrame(
+                    project.session_events(parameters["limit"]),
+                    columns=[
+                        "event",
+                        "timestamp",
+                        "step",
+                        "message",
+                        "metadata",
+                    ],
+                )
+                return {
+                    "data": data,
+                    "total_rows": len(data),
+                    "message": f"Returned {len(data):,} session event(s).",
+                }
+
+            data = pd.DataFrame(
+                project.session_datasets(),
+                columns=[
+                    "name",
+                    "active",
+                    "rows",
+                    "columns",
+                    "path",
+                    "added_at",
+                ],
+            )
+            return {
+                "data": data,
+                "total_rows": len(data),
+                "message": f"Returned {len(data):,} session dataset(s).",
+            }
+
         if kind == "HISTORY":
             data = self._history_frame(project, parameters["limit"])
             return {

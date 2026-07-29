@@ -2835,5 +2835,74 @@ class AutoDQ:
         if self.state.validation_report is not None:
             ConsoleValidationRenderer.render(self.state.validation_report)
 
-    def show_session(self) -> None:
+    def session_info(self) -> dict:
+        """Return a structured summary of the active AutoDQ session."""
+        active = self.dataset_manager.primary()
+        data = self.state.data
+        workflow_state = {
+            "profile": self.state.profile_report is not None,
+            "statistics": self.state.statistics_report is not None,
+            "diagnosis": self.state.diagnosis_report is not None,
+            "recommendations": self.state.recommendations is not None,
+            "cleaning_review": self.state.cleaning_review is not None,
+            "cleaned_data": self.state.cleaned_data is not None,
+            "validation": self.state.validation_report is not None,
+            "engineered_data": self.state.engineered_data is not None,
+            "model": self.state.model_bundle is not None,
+            "predictions": self.state.prediction_data is not None,
+            "explanations": self.state.explainability_report is not None,
+            "blue": self.state.blue_report is not None,
+            "dashboard": self.state.dashboard_report is not None,
+            "visualizations": bool(self.visualization_gallery.charts),
+        }
+        steps_completed = list(dict.fromkeys(self.session.steps_completed))
+
+        return {
+            "active_dataset": active.name if active is not None else None,
+            "dataset_path": str(self.state.dataset_path),
+            "target": self.state.target,
+            "rows": len(data) if data is not None else 0,
+            "columns": len(data.columns) if data is not None else 0,
+            "workspace": self.workspace_name,
+            "started_at": self.session.started_at.isoformat(),
+            "event_count": self.session.event_count,
+            "adql_run_count": len(self.state.adql_history),
+            "registered_datasets": self.dataset_manager.names(),
+            "steps_completed": steps_completed,
+            "workflow_state": workflow_state,
+        }
+
+    def session_events(self, limit: int = 20) -> list[dict]:
+        """Return the newest session events first."""
+        if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
+            raise ValueError("Session event limit must be a positive integer.")
+
+        events = self.session.events[-limit:]
+        return [
+            {
+                "event": index,
+                "timestamp": event.timestamp.isoformat(),
+                "step": event.step,
+                "message": event.message,
+                "metadata": dict(event.metadata),
+            }
+            for index, event in enumerate(reversed(events), start=1)
+        ]
+
+    def session_datasets(self) -> list[dict]:
+        """Return registered datasets with the active dataset identified."""
+        return [
+            {
+                "name": entry.name,
+                "active": entry.is_primary,
+                "rows": entry.rows,
+                "columns": entry.columns,
+                "path": entry.path,
+                "added_at": entry.added_at.isoformat(),
+            }
+            for entry in self.dataset_manager.entries()
+        ]
+
+    def show_session(self) -> dict:
         self.session.summary()
+        return self.session_info()

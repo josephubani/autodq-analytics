@@ -17,6 +17,8 @@ workflow.
   charts between cells
 - Direct named-dataset workflows such as `PROFILE customers`,
   `AUTO DATASET customers MODE review`, and `SELECT * FROM customers`
+- Rich session inspection with `SESSION`, `SESSION EVENTS LIMIT n`, and
+  `SESSION DATASETS`
 - Rich tables, quality reports, cleaning recommendations, model explanations,
   and inline charts
 - Saved output restoration for text, HTML, tables, and charts after reopening
@@ -68,6 +70,14 @@ The first code cell automatically initializes the dataset when required.
 Each open ADQL notebook receives one persistent AutoDQ session. Use
 **ADQL: Restart Session** from the Command Palette when you need a completely
 fresh project.
+
+Inspect the retained project state without resetting it:
+
+```adql
+SESSION;
+SESSION EVENTS LIMIT 20;
+SESSION DATASETS;
+```
 
 Large results are shown as bounded previews by default: up to 25 rows or
 collection items and 12,000 structured-output characters. Complete results

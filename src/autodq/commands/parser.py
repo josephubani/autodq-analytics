@@ -463,6 +463,33 @@ class ADQLParser:
 
             return {"command": arguments[0].upper() if arguments else None}
 
+        if kind == "SESSION":
+            if not arguments:
+                return {"action": "summary"}
+
+            action = arguments[0].upper()
+
+            if action == "DATASETS" and len(arguments) == 1:
+                return {"action": "datasets"}
+
+            if action == "EVENTS":
+                if len(arguments) == 1:
+                    return {"action": "events", "limit": 20}
+
+                if len(arguments) == 3 and arguments[1].upper() == "LIMIT":
+                    return {
+                        "action": "events",
+                        "limit": self._positive_integer(
+                            arguments[2],
+                            option="SESSION EVENTS LIMIT",
+                        ),
+                    }
+
+            raise ADQLSyntaxError(
+                "SESSION syntax is SESSION, SESSION EVENTS [LIMIT n], "
+                "or SESSION DATASETS."
+            )
+
         if kind == "HISTORY":
             if not arguments:
                 return {"limit": 10}

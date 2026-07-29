@@ -85,6 +85,21 @@ current project. Registered datasets can be targeted directly with
 while retaining state between selected cells. See
 [ADQL_SPEC.md](ADQL_SPEC.md) for the language reference.
 
+## Session inspection
+
+Use the structured session APIs when a Python workflow needs the same state
+inspection available through ADQL:
+
+```python
+summary = project.session_info()
+events = project.session_events(limit=20)
+datasets = project.session_datasets()
+project.show_session()
+```
+
+In ADQL, the corresponding read-only commands are `SESSION;`,
+`SESSION EVENTS LIMIT 20;`, and `SESSION DATASETS;`.
+
 ## Workspaces and datasets
 
 Create or open a workspace with `AutoDQ.create_workspace()` and

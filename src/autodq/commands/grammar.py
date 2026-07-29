@@ -49,6 +49,7 @@ SUPPORTED_COMMANDS = {
     "SAMPLE",
     "HELP",
     "HISTORY",
+    "SESSION",
 }
 
 SIMPLE_COMMANDS = {
@@ -395,6 +396,15 @@ COMMAND_HELP = [
             "REPORT TO \"report.html\"; EXPORT CLEANED TO \"cleaned.csv\";"
         ),
         "description": "Export project artifacts to an explicit path.",
+    },
+    {
+        "command": "SESSION",
+        "syntax": (
+            "SESSION; SESSION EVENTS [LIMIT n]; SESSION DATASETS"
+        ),
+        "description": (
+            "Inspect the active project session, workflow events, or datasets."
+        ),
     },
     {
         "command": "HELP / HISTORY",

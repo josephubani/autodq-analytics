@@ -26,7 +26,7 @@ Jupyter, the command line, or standalone `.adql` notebooks.
 - Multi-workspace project isolation and model persistence
 - `project.auto()` for an automated workflow
 - ADQL files with executable notebook cells, direct named-dataset workflows,
-  and rich VS Code output
+  session inspection, and rich VS Code output
 
 ## Requirements
 
@@ -48,7 +48,7 @@ autodq --version
 python -c "import autodq; print(autodq.__version__)"
 ```
 
-Version 0.1.4 is available on
+Version 0.1.5 is available on
 [PyPI](https://pypi.org/project/autodq/). To work on AutoDQ itself, install
 directly from the project source:
 
@@ -130,6 +130,9 @@ ORDER BY total_revenue DESC;
 VISUALIZE bar X Region Y Revenue
     TITLE "Revenue by Region"
     THEME journal;
+
+# %% [Session]
+SESSION;
 ```
 
 Run the same automatic workflow available as `project.auto()` directly from
@@ -248,7 +251,7 @@ For the complete release process, see the
 - [Plugin development](https://github.com/josephubani/autodq-analytics/blob/main/docs/PLUGIN_GUIDE.md)
 - [Project roadmap](https://github.com/josephubani/autodq-analytics/blob/main/docs/ROADMAP.md)
 - [Package and release procedure](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASING.md)
-- [AutoDQ 0.1.4 release notes](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.4.md)
+- [AutoDQ 0.1.5 release notes](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.5.md)
 
 ## License
 
