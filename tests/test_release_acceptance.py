@@ -24,21 +24,38 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
     def _write_dataset(self):
         with self.dataset.open("w", encoding="utf-8", newline="") as stream:
             writer = csv.writer(stream)
-            writer.writerow(["Order_ID", "Units", "Price", "Region", "Revenue"])
+            writer.writerow(
+                [
+                    "Order_ID",
+                    "Units",
+                    "Price",
+                    "Region",
+                    "Revenue",
+                    "Created_At",
+                ]
+            )
 
             for index in range(48):
                 units = 1 + index % 12
                 price = 10 + (index % 9) * 3.5
                 region = ("North", "South", "East")[index % 3]
                 revenue = round(units * price, 2)
-                writer.writerow([index + 1, units, price, region, revenue])
+                created_at = (
+                    f"{1 + index % 28:02d}/07/2026 "
+                    f"{8 + index % 12:02d}:30:00"
+                )
+                writer.writerow(
+                    [index + 1, units, price, region, revenue, created_at]
+                )
 
-            writer.writerow([49, "", 24, "", 240])
+            writer.writerow([49, "", 24, "", 240, "29/07/2026 14:45:00"])
 
     def _write_workflow(self):
         self.workflow.write_text(
             "# %% [Dataset]\n"
             "DATASET \"acceptance.csv\" TARGET Revenue;\n"
+            "SET TYPE Created_At datetime FORMAT \"DD/MM/YYYY HH:mm:ss\";\n"
+            "SET TYPE Revenue decimal DECIMALS 2;\n"
             "# %% [Automatic review]\n"
             "AUTO MODE review VISUALIZE false CONTINUE_ON_ERROR false;\n"
             "# %% [Summary]\n"

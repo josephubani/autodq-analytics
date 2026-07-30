@@ -90,7 +90,10 @@ def write_dataset(path: Path) -> int:
         discount = (index % 4) * 0.05
         region = regions[index % len(regions)]
         revenue = round(units * price * (1 - discount), 2)
-        rows.append([index + 1, units, price, discount, region, revenue])
+        recorded_at = f"{1 + index % 28:02d}/07/2026 {8 + index % 12:02d}:30:00"
+        rows.append(
+            [index + 1, units, price, discount, region, revenue, recorded_at]
+        )
 
     rows[8][4] = ""
     rows[12][1] = ""
@@ -99,7 +102,15 @@ def write_dataset(path: Path) -> int:
     with path.open("w", encoding="utf-8", newline="") as stream:
         writer = csv.writer(stream)
         writer.writerow(
-            ["Transaction_ID", "Units", "Price", "Discount", "Region", "Revenue"]
+            [
+                "Transaction_ID",
+                "Units",
+                "Price",
+                "Discount",
+                "Region",
+                "Revenue",
+                "Recorded_At",
+            ]
         )
         writer.writerows(rows)
 
@@ -110,6 +121,8 @@ def write_adql(path: Path) -> None:
     path.write_text(
         "# %% [Dataset]\n"
         "DATASET \"acceptance.csv\" TARGET Revenue;\n"
+        "SET TYPE Recorded_At datetime FORMAT \"DD/MM/YYYY HH:mm:ss\";\n"
+        "SET TYPE Revenue decimal DECIMALS 2;\n"
         "# %% [Automatic review]\n"
         "AUTO MODE review VISUALIZE false CONTINUE_ON_ERROR false;\n"
         "# %% [Regional totals]\n"

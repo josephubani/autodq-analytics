@@ -5,6 +5,23 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.7 - 2026-07-29
+
+### Added
+
+- Added explicit ADQL datetime parsing through `SET TYPE ... datetime FORMAT`,
+  including human-readable patterns, Python `strftime` patterns, `AUTO`,
+  `MIXED`, and `ISO8601` modes.
+- Added `DAYFIRST`, `YEARFIRST`, and `UTC` datetime conversion options.
+- Added `DECIMALS` precision for `float`, `numeric`, `number`, and `decimal`
+  conversions, with safe coercion details returned in command output and the
+  session audit trail.
+
+### Changed
+
+- Updated the bundled AutoDQ ADQL VS Code extension to 0.3.0 with highlighting
+  and notebook documentation for all datatype-formatting options.
+
 ## 0.1.6 - 2026-07-29
 
 ### Added

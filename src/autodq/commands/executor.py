@@ -501,13 +501,41 @@ class ADQLExecutor:
                 value = parameters["target"]
                 message = f"Set the project target to {value}."
             else:
-                project.set_type(parameters["column"], parameters["dtype"])
-                value = {
-                    "column": parameters["column"],
-                    "dtype": parameters["dtype"],
-                }
+                value = project.set_type(
+                    parameters["column"],
+                    parameters["dtype"],
+                    datetime_format=parameters.get("datetime_format"),
+                    dayfirst=parameters.get("dayfirst", False),
+                    yearfirst=parameters.get("yearfirst", False),
+                    utc=parameters.get("utc", False),
+                    decimals=parameters.get("decimals"),
+                )
+                details = []
+
+                display_format = value.get("datetime_format") or value.get(
+                    "datetime_format_input"
+                )
+
+                if display_format is not None:
+                    details.append(
+                        f"format {display_format}"
+                    )
+
+                if value.get("decimals") is not None:
+                    details.append(
+                        f"{value['decimals']} decimal place(s)"
+                    )
+
+                invalid_values = value.get("invalid_values", 0)
+
+                if invalid_values:
+                    details.append(
+                        f"{invalid_values} invalid value(s) converted to missing"
+                    )
+
+                suffix = f" using {', '.join(details)}" if details else ""
                 message = (
-                    f"Set {parameters['column']} to {parameters['dtype']}."
+                    f"Set {parameters['column']} to {value['dtype']}{suffix}."
                 )
 
             return {"value": value, "message": message}

@@ -62,7 +62,7 @@ Documentation = "https://github.com/josephubani/autodq-analytics/tree/main/docs"
 Issues = "https://github.com/josephubani/autodq-analytics/issues"
 Repository = "https://github.com/josephubani/autodq-analytics.git"
 Changelog = "https://github.com/josephubani/autodq-analytics/blob/main/CHANGELOG.md"
-"Release notes" = "https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.6.md"
+"Release notes" = "https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.7.md"
 
 [build-system]
 requires = ["setuptools>=77.0.3"]

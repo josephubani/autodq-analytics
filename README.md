@@ -26,7 +26,7 @@ Jupyter, the command line, or standalone `.adql` notebooks.
 - Multi-workspace project isolation and model persistence
 - `project.auto()` for an automated workflow
 - ADQL files with executable notebook cells, direct named-dataset workflows,
-  session inspection, and rich VS Code output
+  session inspection, explicit datatype formatting, and rich VS Code output
 
 ## Requirements
 
@@ -48,7 +48,7 @@ autodq --version
 python -c "import autodq; print(autodq.__version__)"
 ```
 
-Version 0.1.6 is available on
+Version 0.1.7 is available on
 [PyPI](https://pypi.org/project/autodq/). To work on AutoDQ itself, install
 directly from the project source:
 
@@ -147,6 +147,17 @@ LET regional_summary = SELECT Region, SUM(Revenue) AS total_revenue
                        FROM CURRENT GROUP BY Region;
 SELECT * FROM regional_summary ORDER BY total_revenue DESC;
 ```
+
+Convert string dates with an explicit format and control numeric precision:
+
+```adql
+SET TYPE Created_At datetime FORMAT "DD/MM/YYYY HH:mm:ss";
+SET TYPE Imported_At datetime FORMAT MIXED DAYFIRST true UTC true;
+SET TYPE Revenue decimal DECIMALS 2;
+```
+
+Date patterns may use familiar tokens such as `YYYY`, `MM`, `DD`, `HH`, `mm`,
+and `ss`, or Python `strftime` directives such as `%Y-%m-%d`.
 
 Run the same automatic workflow available as `project.auto()` directly from
 an ADQL cell:
@@ -264,7 +275,7 @@ For the complete release process, see the
 - [Plugin development](https://github.com/josephubani/autodq-analytics/blob/main/docs/PLUGIN_GUIDE.md)
 - [Project roadmap](https://github.com/josephubani/autodq-analytics/blob/main/docs/ROADMAP.md)
 - [Package and release procedure](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASING.md)
-- [AutoDQ 0.1.6 release notes](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.6.md)
+- [AutoDQ 0.1.7 release notes](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.7.md)
 
 ## License
 

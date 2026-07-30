@@ -12,8 +12,26 @@ from autodq import AutoDQ
 project = AutoDQ("sales.csv", target="Revenue")
 ```
 
-Use `load()`, `change_dataset(path)`, `set_target(column)`, and
-`set_type(column, dtype)` to control the active dataset.
+Use `load()`, `change_dataset(path)`, `set_target(column)`, and `set_type()` to
+control the active dataset. Datetime parsing and numeric precision are
+available through the extended conversion API:
+
+```python
+project.set_type(
+    "Created_At",
+    "datetime",
+    datetime_format="DD/MM/YYYY HH:mm:ss",
+    dayfirst=False,
+    yearfirst=False,
+    utc=False,
+)
+project.set_type("Revenue", "decimal", decimals=2)
+```
+
+`datetime_format` accepts human-readable date tokens, Python `strftime`
+directives, `AUTO`, `MIXED`, or `ISO8601`. The returned dictionary reports the
+source/result dtypes, converted count, invalid count, resolved format, timezone
+options, and decimal precision. Invalid values are coerced to missing values.
 
 ## Automatic workflow
 

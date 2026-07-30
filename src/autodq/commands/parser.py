@@ -20,6 +20,7 @@ from autodq.commands.grammar import (
     POSITIONAL_DATASET_COMMANDS,
     SHAP_OPTIONS,
     SIMPLE_COMMANDS,
+    SET_TYPE_OPTIONS,
     SUPPORTED_COMMANDS,
     VISUALIZE_OPTIONS,
 )
@@ -416,15 +417,22 @@ class ADQLParser:
             if len(arguments) == 2 and arguments[0].upper() == "TARGET":
                 return {"setting": "target", "target": arguments[1]}
 
-            if len(arguments) == 3 and arguments[0].upper() == "TYPE":
+            if len(arguments) >= 3 and arguments[0].upper() == "TYPE":
+                options = self._parse_options(
+                    arguments[3:],
+                    SET_TYPE_OPTIONS,
+                )
                 return {
                     "setting": "type",
                     "column": arguments[1],
                     "dtype": arguments[2],
+                    **self._coerce_options(options),
                 }
 
             raise ADQLSyntaxError(
-                "SET syntax is SET TARGET column or SET TYPE column dtype."
+                "SET syntax is SET TARGET column or SET TYPE column dtype "
+                "[FORMAT pattern] [DAYFIRST bool] [YEARFIRST bool] "
+                "[UTC bool] [DECIMALS n]."
             )
 
         if kind == "USE":
@@ -1207,6 +1215,9 @@ class ADQLParser:
             "unique",
             "allow_duplicates",
             "transparent",
+            "dayfirst",
+            "yearfirst",
+            "utc",
         }
         integer_options = {
             "random_state",
@@ -1217,6 +1228,7 @@ class ADQLParser:
             "row",
             "axis",
             "max_features",
+            "decimals",
         }
         float_options = {
             "test_size",

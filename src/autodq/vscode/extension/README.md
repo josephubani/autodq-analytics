@@ -19,6 +19,8 @@ workflow.
   `AUTO DATASET customers MODE review`, and `SELECT * FROM customers`
 - Reusable dataset assignments with `LET`, including cleaned stages and
   safe `SELECT` results
+- Explicit datetime parsing and numeric precision through `SET TYPE`, with
+  human or `strftime` patterns, mixed/ISO modes, UTC, and decimal rounding
 - Rich session inspection with `SESSION`, `SESSION EVENTS LIMIT n`, and
   `SESSION DATASETS`
 - Rich tables, quality reports, cleaning recommendations, model explanations,
@@ -68,6 +70,14 @@ LET regional_totals = SELECT Region,
 
 # %% [Export]
 EXPORT regional_totals TO "regional-totals.csv" OVERWRITE;
+```
+
+Format string dates and numeric precision in a cell before analysis:
+
+```adql
+SET TYPE Created_At datetime FORMAT "DD/MM/YYYY HH:mm:ss";
+SET TYPE Api_Time datetime FORMAT ISO8601 UTC true;
+SET TYPE Revenue decimal DECIMALS 2;
 ```
 
 Open the file with **AutoDQ ADQL Notebook**, then run cells from top to bottom.

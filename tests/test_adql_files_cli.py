@@ -34,6 +34,7 @@ from autodq.commands.grammar import (
     MODEL_OPTIONS,
     PREDICT_OPTIONS,
     SHAP_OPTIONS,
+    SET_TYPE_OPTIONS,
     SUPPORTED_COMMANDS,
     VISUALIZE_OPTIONS,
 )
@@ -882,7 +883,7 @@ body { background: white; color: black; }
         self.assertNotIn("transientOutputs: true", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.2.9")
+        self.assertEqual(package["version"], "0.3.0")
         language_icon = package["contributes"]["languages"][0]["icon"]
         self.assertEqual(language_icon["light"], "./icons/adql-light.svg")
         self.assertEqual(language_icon["dark"], "./icons/adql-dark.svg")
@@ -937,6 +938,7 @@ body { background: white; color: black; }
             BLUE_OPTIONS,
             GALLERY_STYLE_OPTIONS,
             DASHBOARD_OPTIONS,
+            SET_TYPE_OPTIONS,
         )
         parser_options = {
             "ACTIONS",

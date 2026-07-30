@@ -455,6 +455,70 @@ EXPORT PREDICTIONS TO "exports/predictions.csv";
 
 Existing files are never replaced unless `OVERWRITE` is explicitly included.
 
+### Datatype conversion and formatting
+
+Use `SET TYPE` to convert a column in the active or explicitly selected
+dataset. Existing two-argument conversions remain valid:
+
+```adql
+SET TYPE Customer_Age int;
+SET TYPE Region category;
+SET TYPE Revenue float;
+SET TYPE Created_At datetime;
+```
+
+For datetime strings, `FORMAT` may be a familiar pattern, a Python `strftime`
+pattern, or a named parsing mode:
+
+```adql
+SET TYPE Created_At datetime FORMAT "DD/MM/YYYY HH:mm:ss";
+SET TYPE Created_At datetime FORMAT "%d/%m/%Y %H:%M:%S";
+SET TYPE Api_Timestamp datetime FORMAT ISO8601 UTC true;
+SET TYPE Imported_At datetime FORMAT MIXED DAYFIRST true;
+SET TYPE Fiscal_Date datetime FORMAT AUTO YEARFIRST true;
+```
+
+Supported human-readable tokens are:
+
+| Token | Meaning | Example |
+| --- | --- | --- |
+| `YYYY`, `YY` | Four- or two-digit year | `2026`, `26` |
+| `MMMM`, `MMM`, `MM`, `M` | Full, abbreviated, or numeric month | `July`, `Jul`, `07` |
+| `DD`, `D` | Day of month | `29` |
+| `HH`, `hh` | 24-hour or 12-hour clock | `14`, `02` |
+| `mm`, `ss`, `SSS` | Minute, second, fractional second | `35`, `20`, `125` |
+| `A`, `Z` | AM/PM marker or numeric timezone | `PM`, `-0400` |
+
+Pattern tokens are case-sensitive because `MM` means month while `mm` means
+minute. Literal separators and text remain unchanged.
+
+`AUTO` uses pandas inference, `MIXED` permits different formats row by row,
+and `ISO8601` accepts ISO-8601 date/time variants. `DAYFIRST` and `YEARFIRST`
+are valid with `AUTO` or `MIXED`; an explicit pattern already defines the
+order. `UTC true` returns timezone-aware UTC values. Invalid non-empty values
+are coerced to missing datetime values and counted in the command output and
+session event.
+
+Use `DECIMALS` to round numeric values during conversion:
+
+```adql
+SET TYPE Revenue float DECIMALS 2;
+SET TYPE Margin numeric DECIMALS 4;
+SET TYPE Tax decimal DECIMALS 2;
+SET TYPE Units int DECIMALS 0;
+```
+
+Precision must be between 0 and 15 for floating-point types. `decimal` is a
+numeric conversion alias backed by pandas floating-point storage; `DECIMALS`
+rounds stored values but does not convert them to display strings. This keeps
+the column usable by `SELECT`, modeling, visualization, and numeric exports.
+The same operation can target a registered dataset directly:
+
+```adql
+SET DATASET customers TYPE Created_At datetime
+    FORMAT "YYYY-MM-DD HH:mm:ss";
+```
+
 ### Session inspection
 
 Use read-only session commands to see the project state retained by the current
@@ -482,7 +546,8 @@ history query.
 
 ```adql
 SET TARGET Revenue;
-SET TYPE Date datetime;
+SET TYPE Date datetime FORMAT "YYYY-MM-DD";
+SET TYPE Revenue decimal DECIMALS 2;
 USE DATASET main;
 HEAD 10;
 TAIL 10;

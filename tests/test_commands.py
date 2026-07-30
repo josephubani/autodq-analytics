@@ -219,6 +219,180 @@ class ADQLTests(unittest.TestCase):
                 with self.assertRaises(ADQLSyntaxError):
                     ADQLParser().parse(source)
 
+    def test_parser_supports_datetime_formats_and_numeric_decimals(self):
+        statements = ADQLParser().parse(
+            'SET TYPE Created_At datetime '
+            'FORMAT "DD/MM/YYYY HH:mm:ss" UTC true; '
+            'SET DATASET customers TYPE Joined_At datetime '
+            'FORMAT MIXED DAYFIRST true YEARFIRST false; '
+            'SET TYPE Revenue decimal DECIMALS 2;'
+        ).statements
+
+        self.assertEqual(
+            statements[0].parameters,
+            {
+                "setting": "type",
+                "column": "Created_At",
+                "dtype": "datetime",
+                "datetime_format": "DD/MM/YYYY HH:mm:ss",
+                "utc": True,
+            },
+        )
+        self.assertEqual(
+            statements[1].parameters["dataset_name"],
+            "customers",
+        )
+        self.assertEqual(
+            statements[1].parameters["datetime_format"],
+            "MIXED",
+        )
+        self.assertTrue(statements[1].parameters["dayfirst"])
+        self.assertFalse(statements[1].parameters["yearfirst"])
+        self.assertEqual(statements[2].parameters["decimals"], 2)
+
+        for source in (
+            "SET TYPE Revenue float DECIMALS nope;",
+            "SET TYPE Created_At datetime FORMAT;",
+            "SET TYPE Revenue float DECIMALS 2 DECIMALS 3;",
+        ):
+            with self.subTest(source=source):
+                with self.assertRaises(ADQLSyntaxError):
+                    ADQLParser().parse(source)
+
+    def test_set_type_parses_dates_and_rounds_numeric_values(self):
+        conversion_path = self.root / "conversions.csv"
+        pd.DataFrame(
+            {
+                "Created_At": [
+                    "29/07/2026 14:35:20",
+                    "30/07/2026 09:05:01",
+                    "not-a-date",
+                    None,
+                ],
+                "Amount": ["12.3456", "9.876", "bad", None],
+            }
+        ).to_csv(conversion_path, index=False)
+        project = AutoDQ(str(conversion_path))
+
+        result = project.query(
+            'SET TYPE Created_At datetime '
+            'FORMAT "DD/MM/YYYY HH:mm:ss"; '
+            'SET TYPE Amount decimal DECIMALS 2;',
+            auto_display=False,
+        )
+
+        self.assertTrue(result.success)
+        self.assertTrue(
+            pd.api.types.is_datetime64_any_dtype(
+                project.state.data["Created_At"]
+            )
+        )
+        self.assertEqual(
+            project.state.data.loc[0, "Created_At"],
+            pd.Timestamp("2026-07-29 14:35:20"),
+        )
+        self.assertTrue(pd.isna(project.state.data.loc[2, "Created_At"]))
+        self.assertEqual(
+            project.state.data["Amount"].iloc[:2].tolist(),
+            [12.35, 9.88],
+        )
+        self.assertTrue(pd.isna(project.state.data.loc[2, "Amount"]))
+        self.assertEqual(result.results[0].value["invalid_values"], 1)
+        self.assertEqual(
+            result.results[0].value["datetime_format"],
+            "%d/%m/%Y %H:%M:%S",
+        )
+        self.assertEqual(result.results[1].value["decimals"], 2)
+
+    def test_set_type_supports_mixed_iso_and_python_datetime_formats(self):
+        project = self._project()
+        project.state.data = pd.DataFrame(
+            {
+                "Mixed": ["31/07/2026 08:15", "2026-08-01T12:30:00Z"],
+                "ISO": ["2026-07-29T14:35:20Z", "2026-07-30T09:05:01+00:00"],
+                "Python": ["29-Jul-2026 02:35 PM", "30-Jul-2026 09:05 AM"],
+                "Human": [
+                    "29-Jul-2026 02:35 PM",
+                    "30-Jul-2026 09:05 AM",
+                ],
+            }
+        )
+
+        project.set_type(
+            "Mixed",
+            "datetime",
+            datetime_format="MIXED",
+            dayfirst=True,
+            utc=True,
+        )
+        project.set_type(
+            "ISO",
+            "datetime",
+            datetime_format="ISO8601",
+            utc=True,
+        )
+        project.set_type(
+            "Python",
+            "datetime",
+            datetime_format="%d-%b-%Y %I:%M %p",
+        )
+        human_result = project.set_type(
+            "Human",
+            "datetime",
+            datetime_format="DD-MMM-YYYY hh:mm A",
+        )
+
+        self.assertTrue(project.state.data["Mixed"].notna().all())
+        self.assertTrue(project.state.data["ISO"].notna().all())
+        self.assertTrue(project.state.data["Python"].notna().all())
+        self.assertTrue(project.state.data["Human"].notna().all())
+        self.assertEqual(
+            project.state.data.loc[0, "Python"],
+            pd.Timestamp("2026-07-29 14:35:00"),
+        )
+        self.assertEqual(
+            human_result["datetime_format"],
+            "%d-%b-%Y %I:%M %p",
+        )
+        self.assertEqual(
+            AutoDQ._resolve_datetime_format(
+                "YYYY-MM-DDTHH:mm:ss.SSSZ"
+            ),
+            "%Y-%m-%dT%H:%M:%S.%f%z",
+        )
+
+    def test_set_type_rejects_incompatible_formatting_options(self):
+        project = self._project()
+
+        for source in (
+            "SET TYPE Revenue float DECIMALS -1;",
+            "SET TYPE Revenue float DECIMALS 16;",
+            "SET TYPE Region string DECIMALS 2;",
+            "SET TYPE Revenue float FORMAT AUTO;",
+            "SET TYPE Units datetime DECIMALS 2;",
+            'SET TYPE Units datetime FORMAT "DD/MM/YYYY" DAYFIRST true;',
+        ):
+            with self.subTest(source=source):
+                with self.assertRaises(ADQLValidationError):
+                    project.query(source, auto_display=False)
+
+        invalid_api_calls = (
+            lambda: project.set_type("Revenue", "float", decimals=16),
+            lambda: project.set_type("Region", "string", decimals=2),
+            lambda: project.set_type(
+                "Units",
+                "datetime",
+                datetime_format="DD/MM/YYYY",
+                dayfirst=True,
+            ),
+            lambda: project.set_type("Units", "datetime", utc="true"),
+        )
+
+        for call in invalid_api_calls:
+            with self.subTest(call=call):
+                with self.assertRaises((TypeError, ValueError)):
+                    call()
+
     def test_named_dataset_workflow_targeting_switches_and_reuses_state(self):
         project = self._project(target="Revenue")
         customers_path = self.root / "customers.csv"

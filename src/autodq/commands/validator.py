@@ -227,6 +227,95 @@ class ADQLValidator:
                     "EXPORT output must end with .csv or .xlsx."
                 )
 
+        elif statement.kind == "SET":
+            if parameters.get("setting") != "type":
+                return
+
+            dtype = str(parameters.get("dtype", "")).lower().strip()
+            datetime_types = {"datetime", "date", "timestamp"}
+            float_types = {"float", "numeric", "number", "decimal"}
+            integer_types = {"int", "integer"}
+            supported_types = (
+                datetime_types
+                | float_types
+                | integer_types
+                | {"str", "string", "text", "category", "categorical"}
+            )
+
+            if dtype not in supported_types:
+                raise ADQLValidationError(
+                    f"Unsupported SET TYPE dtype: {parameters.get('dtype')}. "
+                    "Supported: datetime, string, int, float, decimal, category."
+                )
+
+            datetime_option_names = {
+                "datetime_format": "FORMAT",
+                "dayfirst": "DAYFIRST",
+                "yearfirst": "YEARFIRST",
+                "utc": "UTC",
+            }
+            supplied_datetime_options = [
+                label
+                for key, label in datetime_option_names.items()
+                if key in parameters
+            ]
+            decimals = parameters.get("decimals")
+
+            if dtype in datetime_types:
+                if decimals is not None:
+                    raise ADQLValidationError(
+                        "DECIMALS is only valid for numeric SET TYPE conversions."
+                    )
+
+                datetime_format = parameters.get("datetime_format")
+
+                if datetime_format is not None and (
+                    not str(datetime_format).strip()
+                    or len(str(datetime_format)) > 255
+                    or any(
+                        character in str(datetime_format)
+                        for character in "\x00\r\n;"
+                    )
+                ):
+                    raise ADQLValidationError(
+                        "SET TYPE FORMAT must be a non-empty datetime pattern "
+                        "of at most 255 characters."
+                    )
+
+                format_key = str(datetime_format or "AUTO").upper()
+
+                if (
+                    format_key not in {"AUTO", "INFER", "MIXED"}
+                    and (
+                        parameters.get("dayfirst")
+                        or parameters.get("yearfirst")
+                    )
+                ):
+                    raise ADQLValidationError(
+                        "DAYFIRST and YEARFIRST are only used with FORMAT AUTO "
+                        "or FORMAT MIXED; an explicit pattern already defines "
+                        "the date order."
+                    )
+            else:
+                if supplied_datetime_options:
+                    raise ADQLValidationError(
+                        ", ".join(supplied_datetime_options)
+                        + " may only be used with datetime SET TYPE conversions."
+                    )
+
+                if decimals is not None:
+                    if dtype in integer_types and decimals == 0:
+                        pass
+                    elif dtype not in float_types:
+                        raise ADQLValidationError(
+                            "DECIMALS is only valid for float, numeric, number, "
+                            "decimal, or integer with DECIMALS 0."
+                        )
+                    elif decimals < 0 or decimals > 15:
+                        raise ADQLValidationError(
+                            "DECIMALS must be between 0 and 15."
+                        )
+
         elif statement.kind == "LET":
             name = str(parameters.get("name", "")).strip()
 

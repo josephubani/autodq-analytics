@@ -275,6 +275,14 @@ DASHBOARD_OPTIONS = {
     "DISPLAY": "auto_display",
 }
 
+SET_TYPE_OPTIONS = {
+    "FORMAT": "datetime_format",
+    "DAYFIRST": "dayfirst",
+    "YEARFIRST": "yearfirst",
+    "UTC": "utc",
+    "DECIMALS": "decimals",
+}
+
 COMMAND_HELP = [
     {
         "command": "DATASET",
@@ -425,11 +433,20 @@ COMMAND_HELP = [
         "description": "Inspect ADQL syntax or recent query runs.",
     },
     {
-        "command": "SET / USE / HEAD / TAIL / SAMPLE",
+        "command": "SET",
         "syntax": (
-            "SET TARGET column; USE DATASET name; HEAD 10; "
-            "TAIL 10; SAMPLE 10"
+            "SET TARGET column; SET TYPE column datetime "
+            "[FORMAT pattern] [DAYFIRST bool] [YEARFIRST bool] [UTC bool]; "
+            "SET TYPE column float [DECIMALS n]"
         ),
-        "description": "Update project context or inspect bounded data rows.",
+        "description": (
+            "Set the target or convert a column with explicit datetime "
+            "parsing and numeric precision."
+        ),
+    },
+    {
+        "command": "USE / HEAD / TAIL / SAMPLE",
+        "syntax": "USE DATASET name; HEAD 10; TAIL 10; SAMPLE 10",
+        "description": "Update dataset context or inspect bounded data rows.",
     },
 ]

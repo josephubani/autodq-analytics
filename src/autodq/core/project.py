@@ -1,3 +1,4 @@
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -476,7 +477,67 @@ class AutoDQ:
             metadata={"target": target},
         )
 
-    def set_type(self, column: str, dtype: str) -> None:
+    _HUMAN_DATETIME_TOKENS = {
+        "YYYY": "%Y",
+        "MMMM": "%B",
+        "MMM": "%b",
+        "SSS": "%f",
+        "YY": "%y",
+        "MM": "%m",
+        "DD": "%d",
+        "HH": "%H",
+        "hh": "%I",
+        "mm": "%M",
+        "ss": "%S",
+        "M": "%m",
+        "D": "%d",
+        "A": "%p",
+        "Z": "%z",
+    }
+
+    @classmethod
+    def _resolve_datetime_format(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+
+        normalized = str(value).strip()
+        alias = normalized.upper()
+
+        if alias in {"AUTO", "INFER"}:
+            return None
+        if alias in {"ISO", "ISO8601", "ISO-8601"}:
+            return "ISO8601"
+        if alias == "MIXED":
+            return "mixed"
+        if "%" in normalized:
+            return normalized
+
+        token_pattern = re.compile(
+            "|".join(
+                re.escape(token)
+                for token in sorted(
+                    cls._HUMAN_DATETIME_TOKENS,
+                    key=len,
+                    reverse=True,
+                )
+            )
+        )
+        return token_pattern.sub(
+            lambda match: cls._HUMAN_DATETIME_TOKENS[match.group(0)],
+            normalized,
+        )
+
+    def set_type(
+        self,
+        column: str,
+        dtype: str,
+        *,
+        datetime_format: str | None = None,
+        dayfirst: bool = False,
+        yearfirst: bool = False,
+        utc: bool = False,
+        decimals: int | None = None,
+    ) -> dict[str, object]:
         if self.state.data is None:
             self.load()
 
@@ -484,39 +545,159 @@ class AutoDQ:
             raise ValueError(f"Column not found: {column}")
 
         dtype_normalized = dtype.lower().strip()
+        datetime_types = {"datetime", "date", "timestamp"}
+        float_types = {"float", "numeric", "number", "decimal"}
+        integer_types = {"int", "integer"}
+        supported_types = (
+            datetime_types
+            | float_types
+            | integer_types
+            | {"str", "string", "text", "category", "categorical"}
+        )
 
-        if dtype_normalized == "datetime":
-            self.state.data[column] = pd.to_datetime(
-                self.state.data[column],
-                errors="coerce",
-            )
-        elif dtype_normalized in ["str", "string", "text"]:
-            self.state.data[column] = self.state.data[column].astype(str)
-        elif dtype_normalized in ["int", "integer"]:
-            self.state.data[column] = pd.to_numeric(
-                self.state.data[column],
-                errors="coerce",
-            ).astype("Int64")
-        elif dtype_normalized in ["float", "numeric", "number"]:
-            self.state.data[column] = pd.to_numeric(
-                self.state.data[column],
-                errors="coerce",
-            )
-        elif dtype_normalized in ["category", "categorical"]:
-            self.state.data[column] = self.state.data[column].astype("category")
-        else:
+        if dtype_normalized not in supported_types:
             raise ValueError(
                 f"Unsupported dtype: {dtype}. "
-                "Supported: datetime, string, int, float, category"
+                "Supported: datetime, string, int, float, decimal, category"
             )
+
+        for option_name, option_value in {
+            "dayfirst": dayfirst,
+            "yearfirst": yearfirst,
+            "utc": utc,
+        }.items():
+            if not isinstance(option_value, bool):
+                raise TypeError(f"{option_name} must be a boolean.")
+
+        supplied_datetime_options = (
+            datetime_format is not None
+            or dayfirst
+            or yearfirst
+            or utc
+        )
+
+        if dtype_normalized not in datetime_types and supplied_datetime_options:
+            raise ValueError(
+                "datetime_format, dayfirst, yearfirst, and utc may only be "
+                "used with datetime conversions."
+            )
+
+        if datetime_format is not None:
+            datetime_format = str(datetime_format).strip()
+
+            if (
+                not datetime_format
+                or len(datetime_format) > 255
+                or any(
+                    character in datetime_format
+                    for character in "\x00\r\n;"
+                )
+            ):
+                raise ValueError(
+                    "datetime_format must be a non-empty pattern of at most "
+                    "255 characters."
+                )
+
+            format_key = datetime_format.upper()
+
+            if (
+                format_key not in {"AUTO", "INFER", "MIXED"}
+                and (dayfirst or yearfirst)
+            ):
+                raise ValueError(
+                    "dayfirst and yearfirst are only used with AUTO or MIXED "
+                    "datetime parsing."
+                )
+
+        if decimals is not None:
+            if not isinstance(decimals, int) or isinstance(decimals, bool):
+                raise TypeError("decimals must be an integer.")
+            if dtype_normalized in integer_types:
+                if decimals != 0:
+                    raise ValueError(
+                        "Integer conversion only supports decimals=0."
+                    )
+            elif dtype_normalized not in float_types:
+                raise ValueError(
+                    "decimals may only be used with float, numeric, number, "
+                    "decimal, or integer conversions."
+                )
+            elif decimals < 0 or decimals > 15:
+                raise ValueError("decimals must be between 0 and 15.")
+
+        original = self.state.data[column]
+        original_dtype = str(original.dtype)
+        source_non_null = original.notna()
+        resolved_format = None
+
+        if dtype_normalized in datetime_types:
+            canonical_dtype = "datetime"
+            resolved_format = self._resolve_datetime_format(datetime_format)
+            conversion_options = {
+                "errors": "coerce",
+                "utc": bool(utc),
+            }
+
+            if resolved_format is not None:
+                conversion_options["format"] = resolved_format
+
+            if resolved_format in {None, "mixed"}:
+                conversion_options["dayfirst"] = bool(dayfirst)
+                conversion_options["yearfirst"] = bool(yearfirst)
+
+            self.state.data[column] = pd.to_datetime(
+                original,
+                **conversion_options,
+            )
+        elif dtype_normalized in ["str", "string", "text"]:
+            canonical_dtype = "string"
+            self.state.data[column] = original.astype(str)
+        elif dtype_normalized in integer_types:
+            canonical_dtype = "int"
+            numeric = pd.to_numeric(original, errors="coerce")
+            non_integral = numeric.notna() & numeric.mod(1).ne(0)
+            numeric = numeric.mask(non_integral)
+            self.state.data[column] = numeric.astype("Int64")
+        elif dtype_normalized in float_types:
+            canonical_dtype = "float"
+            numeric = pd.to_numeric(original, errors="coerce")
+
+            if decimals is not None:
+                numeric = numeric.round(decimals)
+
+            self.state.data[column] = numeric
+        elif dtype_normalized in ["category", "categorical"]:
+            canonical_dtype = "category"
+            self.state.data[column] = original.astype("category")
+
+        converted = self.state.data[column]
+        invalid_values = int((source_non_null & converted.isna()).sum())
+        result = {
+            "column": column,
+            "dtype": canonical_dtype,
+            "source_dtype": original_dtype,
+            "result_dtype": str(converted.dtype),
+            "converted_values": int((source_non_null & converted.notna()).sum()),
+            "invalid_values": invalid_values,
+            "datetime_format_input": (
+                datetime_format if canonical_dtype == "datetime" else None
+            ),
+            "datetime_format": resolved_format,
+            "dayfirst": bool(dayfirst) if canonical_dtype == "datetime" else None,
+            "yearfirst": bool(yearfirst) if canonical_dtype == "datetime" else None,
+            "utc": bool(utc) if canonical_dtype == "datetime" else None,
+            "decimals": decimals if canonical_dtype == "float" else None,
+        }
 
         self.state.reset_outputs()
 
         self.session.log(
             step="set_type",
             message="Column data type manually updated.",
-            metadata={"column": column, "dtype": dtype_normalized},
+            metadata=result,
         )
+
+        return result
 
     def apply_knowledge(self):
         if self.state.data is None:

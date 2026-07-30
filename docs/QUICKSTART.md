@@ -129,6 +129,26 @@ LET cleaned_sales = CLEANED;
 EXPORT cleaned_sales TO "cleaned-sales.csv" OVERWRITE;
 ```
 
+## Convert dates and control numeric precision
+
+Convert a string datetime column before profiling or modeling:
+
+```adql
+SET TYPE Created_At datetime FORMAT "DD/MM/YYYY HH:mm:ss";
+SET TYPE Revenue decimal DECIMALS 2;
+
+PROFILE;
+LET typed_sales = CURRENT;
+EXPORT typed_sales TO "typed-sales.csv" OVERWRITE;
+```
+
+For a column containing several date styles, use mixed parsing. Add `UTC true`
+when all results should be normalized to UTC:
+
+```adql
+SET TYPE Imported_At datetime FORMAT MIXED DAYFIRST true UTC true;
+```
+
 Validate and run it:
 
 ```bash
