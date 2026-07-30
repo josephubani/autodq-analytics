@@ -14,6 +14,7 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
         self.dataset = self.root / "acceptance.csv"
         self.workflow = self.root / "acceptance.adql"
         self.output = self.root / "result.json"
+        self.exported = self.root / "regional-summary.csv"
         self._write_dataset()
         self._write_workflow()
 
@@ -43,7 +44,11 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
             "# %% [Summary]\n"
             "SELECT Region, SUM(Revenue) AS total_revenue, COUNT(*) AS rows\n"
             "FROM CURRENT WHERE Region IS NOT NULL GROUP BY Region\n"
-            "ORDER BY total_revenue DESC;\n",
+            "ORDER BY total_revenue DESC;\n"
+            "# %% [Reusable summary]\n"
+            "LET regional_summary = SELECT Region, SUM(Revenue) AS total_revenue\n"
+            "FROM CURRENT WHERE Region IS NOT NULL GROUP BY Region;\n"
+            "EXPORT regional_summary TO \"regional-summary.csv\";\n",
             encoding="utf-8",
         )
 
@@ -89,8 +94,9 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
         self.assertIn("valid", validation.stdout.lower())
         self.assertIn("ADQL completed", completed.stdout)
         self.assertTrue(payload["success"])
-        self.assertEqual(payload["completed_cell_count"], 3)
+        self.assertEqual(payload["completed_cell_count"], 4)
         self.assertEqual(payload["failed_cell_count"], 0)
+        self.assertTrue(self.exported.is_file())
 
     def test_installed_extension_assets_are_discoverable(self):
         completed = self._run_module("vscode", "path")

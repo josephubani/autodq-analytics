@@ -2134,6 +2134,52 @@ class AutoDQ:
 
         return entry.data
 
+    def assign_dataset(
+        self,
+        name: str,
+        data: pd.DataFrame,
+        overwrite: bool = False,
+    ) -> pd.DataFrame:
+        """Register a reusable in-memory snapshot created by ADQL LET."""
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("LET assignments require a pandas DataFrame.")
+
+        normalized_name = str(name).strip()
+        active = self.dataset_manager.primary()
+
+        if self.dataset_manager.exists(normalized_name) and not overwrite:
+            raise ValueError(
+                f"Dataset '{normalized_name}' already exists. "
+                "Add OVERWRITE to replace it."
+            )
+
+        if (
+            overwrite
+            and active is not None
+            and active.name == normalized_name
+        ):
+            raise ValueError(
+                "LET cannot overwrite the active dataset. "
+                "Assign a different name, then use USE DATASET if needed."
+            )
+
+        entry = self.dataset_manager.add(
+            name=normalized_name,
+            data=data.reset_index(drop=True),
+            overwrite=overwrite,
+        )
+
+        self.session.log(
+            step="let_dataset",
+            message="ADQL LET dataset snapshot assigned.",
+            metadata={
+                **entry.to_dict(),
+                "overwrite": overwrite,
+            },
+        )
+
+        return entry.data
+
     def list_datasets(self) -> None:
         ConsoleDatasetRenderer.render_datasets(
             self.dataset_manager.entries()

@@ -106,6 +106,29 @@ GROUP BY Region
 ORDER BY total_revenue DESC;
 ```
 
+## Save and reuse a result with LET
+
+`LET` turns a stage or query result into a named dataset for later cells:
+
+```adql
+# %% [Reusable regional result]
+LET regional_summary = SELECT Region,
+                              SUM(Revenue) AS total_revenue
+                       FROM CURRENT
+                       WHERE Region IS NOT NULL
+                       GROUP BY Region;
+
+# %% [Export the assigned result]
+EXPORT regional_summary TO "regional-summary.csv" OVERWRITE;
+```
+
+After cleaning, the same pattern captures the complete cleaned stage:
+
+```adql
+LET cleaned_sales = CLEANED;
+EXPORT cleaned_sales TO "cleaned-sales.csv" OVERWRITE;
+```
+
 Validate and run it:
 
 ```bash

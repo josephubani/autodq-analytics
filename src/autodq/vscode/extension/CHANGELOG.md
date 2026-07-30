@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.2.9 - 2026-07-29
+
+- Added syntax highlighting and notebook documentation for ADQL `LET`.
+- Added reusable named snapshots for stages, registered datasets, and safe
+  `SELECT` results through the bundled AutoDQ 0.1.6 runtime.
+
 ## 0.2.8 - 2026-07-29
 
 - Added syntax highlighting and rich notebook output for `SESSION`.

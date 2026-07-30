@@ -17,6 +17,8 @@ workflow.
   charts between cells
 - Direct named-dataset workflows such as `PROFILE customers`,
   `AUTO DATASET customers MODE review`, and `SELECT * FROM customers`
+- Reusable dataset assignments with `LET`, including cleaned stages and
+  safe `SELECT` results
 - Rich session inspection with `SESSION`, `SESSION EVENTS LIMIT n`, and
   `SESSION DATASETS`
 - Rich tables, quality reports, cleaning recommendations, model explanations,
@@ -52,14 +54,20 @@ DATASET "sales.csv" TARGET Revenue;
 # %% [Automatic review]
 AUTO MODE review VISUALIZE false CONTINUE_ON_ERROR false;
 
+# %% [Reusable reviewed data]
+LET reviewed_sales = CURRENT;
+
 # %% [Regional totals]
-SELECT Region,
-       SUM(Revenue) AS total_revenue,
-       COUNT(*) AS transactions
-FROM CURRENT
-WHERE Region IS NOT NULL
-GROUP BY Region
-ORDER BY total_revenue DESC;
+LET regional_totals = SELECT Region,
+                             SUM(Revenue) AS total_revenue,
+                             COUNT(*) AS transactions
+                      FROM CURRENT
+                      WHERE Region IS NOT NULL
+                      GROUP BY Region
+                      ORDER BY total_revenue DESC;
+
+# %% [Export]
+EXPORT regional_totals TO "regional-totals.csv" OVERWRITE;
 ```
 
 Open the file with **AutoDQ ADQL Notebook**, then run cells from top to bottom.

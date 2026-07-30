@@ -329,6 +329,60 @@ name reports all currently registered datasets. `USE DATASET name` remains
 available when you only want to change the active dataset without running
 another operation.
 
+### Reusable dataset assignments with LET
+
+`LET` registers an in-memory dataset snapshot in the current project. The
+assigned name works anywhere a registered dataset name is accepted, including
+`SELECT`, `EXPORT`, `USE DATASET`, concise workflow targeting, `LIST DATASETS`,
+and `SESSION DATASETS`.
+
+Assign the active project stage:
+
+```adql
+CLEAN customers;
+LET cleaned_customers = CLEANED;
+EXPORT cleaned_customers TO "exports/cleaned-customers.csv" OVERWRITE;
+```
+
+Copy a registered dataset without activating it:
+
+```adql
+LET customer_snapshot = DATASET customers;
+SELECT * FROM customer_snapshot LIMIT 25;
+```
+
+Assign a safe SQL-like query result:
+
+```adql
+LET regional_sales = SELECT Region,
+                            SUM(Revenue) AS total_revenue,
+                            COUNT(*) AS transactions
+                     FROM CURRENT
+                     WHERE Region IS NOT NULL
+                     GROUP BY Region;
+
+EXPORT regional_sales TO "exports/regional-sales.xlsx";
+PROFILE regional_sales;
+```
+
+Use `OVERWRITE` to replace an existing non-active assignment:
+
+```adql
+LET regional_sales = SELECT Region, SUM(Revenue) AS total_revenue
+                     FROM CURRENT GROUP BY Region OVERWRITE;
+```
+
+Assignment names use identifier syntax: letters or `_` first, followed by
+letters, numbers, or `_`. Built-in stage names are reserved. `LET` never
+silently replaces an existing name and does not allow overwriting the active
+dataset. It stores a snapshot, so later changes to the source do not mutate the
+assigned data. A `SELECT` assignment uses the same default 1,000-row safety
+limit as an ordinary query; add an explicit `LIMIT` when a different bounded
+size is required. Stage assignments retain the complete available stage.
+
+`LET` assigns tabular data only. It does not evaluate Python, create scalar
+variables, or interpolate arbitrary values into later statements.
+
 ### Interactive cleaning and domain review
 
 ```adql

@@ -122,6 +122,10 @@ def write_adql(path: Path) -> None:
         "PROFILE customers;\n"
         "# %% [Named dataset query]\n"
         "SELECT Customer_ID, Spend FROM customers ORDER BY Spend DESC;\n"
+        "# %% [Reusable query result]\n"
+        "LET priority_customers = SELECT Customer_ID, Spend FROM customers "
+        "WHERE Spend >= 200 ORDER BY Spend DESC;\n"
+        "SELECT * FROM priority_customers;\n"
         "# %% [Session inspection]\n"
         "SESSION; SESSION EVENTS LIMIT 5; SESSION DATASETS;\n",
         encoding="utf-8",
@@ -214,7 +218,7 @@ def main() -> int:
         if not payload.get("success"):
             raise RuntimeError("The installed wheel failed the ADQL acceptance workflow.")
 
-        if payload.get("completed_cell_count") != 7:
+        if payload.get("completed_cell_count") != 8:
             raise RuntimeError("The ADQL acceptance workflow did not complete all cells.")
 
         api_check = (

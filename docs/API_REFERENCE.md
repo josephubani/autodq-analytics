@@ -109,6 +109,9 @@ Create or open a workspace with `AutoDQ.create_workspace()` and
 Within a project, use `add_dataset()`, `use_dataset()`, `merge_datasets()`, and
 `concat_datasets()` for multi-dataset analysis. `use_dataset()` is idempotent:
 selecting the already active dataset keeps its current workflow artifacts.
+Use `assign_dataset(name, data, overwrite=False)` to register a pandas
+DataFrame as an in-memory snapshot. ADQL `LET` calls this API after resolving a
+project stage, registered dataset, or safe `SELECT` result.
 
 ## Exports and inspection
 

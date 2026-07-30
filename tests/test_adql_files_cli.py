@@ -276,6 +276,39 @@ HEAD 2;
         self.assertIn("AutoDQ Session", payload["outputs"][1]["data"])
         self.assertIn("Active dataset", payload["outputs"][1]["data"])
 
+    def test_let_assignment_uses_rich_notebook_table_output(self):
+        let_script = self.root / "let-assignment.adql"
+        let_script.write_text(
+            "# %% [Dataset]\n"
+            "DATASET \"sales.csv\" TARGET Revenue;\n"
+            "# %% [Reusable result]\n"
+            "LET regional_sales = SELECT Region, SUM(Revenue) AS total_revenue "
+            "FROM CURRENT GROUP BY Region ORDER BY total_revenue DESC;\n",
+            encoding="utf-8",
+        )
+        stdout = io.StringIO()
+
+        with redirect_stdout(stdout):
+            exit_code = main(
+                [
+                    "run",
+                    str(let_script),
+                    "--through-cell",
+                    "2",
+                    "--notebook-json",
+                ]
+            )
+
+        payload = json.loads(stdout.getvalue())
+        self.assertEqual(exit_code, 0)
+        self.assertEqual(
+            [item["mime"] for item in payload["outputs"]],
+            ["text/plain", "text/html"],
+        )
+        self.assertIn("dataset regional_sales", payload["outputs"][0]["data"])
+        self.assertIn("total_revenue", payload["outputs"][1]["data"])
+        self.assertIn("autodq-output-toggle", payload["outputs"][1]["data"])
+
     def test_notebook_json_renders_visualization_as_png(self):
         visualization = self.root / "visualization.adql"
         visualization.write_text(
@@ -849,7 +882,7 @@ body { background: white; color: black; }
         self.assertNotIn("transientOutputs: true", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.2.8")
+        self.assertEqual(package["version"], "0.2.9")
         language_icon = package["contributes"]["languages"][0]["icon"]
         self.assertEqual(language_icon["light"], "./icons/adql-light.svg")
         self.assertEqual(language_icon["dark"], "./icons/adql-dark.svg")

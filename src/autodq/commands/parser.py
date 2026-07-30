@@ -71,6 +71,8 @@ class ADQLParser:
 
         if kind == "SELECT":
             parameters = self._parse_select(raw)
+        elif kind == "LET":
+            parameters = self._parse_let(raw)
         else:
             workflow_raw, dataset_name = self._extract_dataset_target(
                 kind,
@@ -505,6 +507,82 @@ class ADQLParser:
             }
 
         raise ADQLSyntaxError(f"Parser is not implemented for {kind}.")
+
+    def _parse_let(self, raw: str) -> dict[str, Any]:
+        match = re.match(
+            r"^\s*LET\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+?)\s*$",
+            raw,
+            flags=re.IGNORECASE | re.DOTALL,
+        )
+
+        if match is None:
+            raise ADQLSyntaxError(
+                "LET syntax is LET name = source [OVERWRITE]."
+            )
+
+        name = match.group(1)
+        expression = match.group(2).strip()
+        overwrite_match = re.search(
+            r"\s+OVERWRITE\s*$",
+            expression,
+            flags=re.IGNORECASE,
+        )
+
+        if not expression:
+            raise ADQLSyntaxError("LET requires an assignment source.")
+
+        if re.match(r"^SELECT\b", expression, flags=re.IGNORECASE):
+            if overwrite_match is None:
+                query = self._parse_select(expression)
+                overwrite = False
+            else:
+                candidate = expression[:overwrite_match.start()].strip()
+
+                try:
+                    query = self._parse_select(candidate)
+                except ADQLSyntaxError:
+                    query = self._parse_select(expression)
+                    overwrite = False
+                else:
+                    overwrite = True
+
+            return {
+                "name": name,
+                "source_kind": "select",
+                "query": query,
+                "overwrite": overwrite,
+            }
+
+        overwrite = overwrite_match is not None
+
+        if overwrite_match is not None:
+            expression = expression[:overwrite_match.start()].strip()
+
+        try:
+            tokens = shlex.split(expression, posix=True)
+        except ValueError as error:
+            raise ADQLSyntaxError(f"Invalid LET quoting: {error}") from error
+
+        if len(tokens) == 1 and tokens[0].upper() in DATA_SOURCES:
+            return {
+                "name": name,
+                "source_kind": "stage",
+                "source": DATA_SOURCES[tokens[0].upper()],
+                "overwrite": overwrite,
+            }
+
+        if len(tokens) == 2 and tokens[0].upper() == "DATASET":
+            return {
+                "name": name,
+                "source_kind": "dataset",
+                "source": tokens[1],
+                "overwrite": overwrite,
+            }
+
+        raise ADQLSyntaxError(
+            "LET source must be CURRENT, CLEANED, ENGINEERED, PREDICTIONS, "
+            "DATASET name, or a SELECT statement."
+        )
 
     def _parse_workspace(self, arguments: list[str]) -> dict[str, Any]:
         if not arguments:

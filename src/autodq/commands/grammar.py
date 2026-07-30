@@ -5,6 +5,7 @@ SUPPORTED_COMMANDS = {
     "DATASET",
     "LOAD",
     "KNOWLEDGE",
+    "LET",
     "PROFILE",
     "STATISTICS",
     "INTERPRET",
@@ -389,6 +390,18 @@ COMMAND_HELP = [
             "GALLERY LIST; GALLERY SAVE TO charts FORMAT png"
         ),
         "description": "Run BLUE diagnostics and manage reusable charts.",
+    },
+    {
+        "command": "LET",
+        "syntax": (
+            "LET cleaned_customers = CLEANED; "
+            "LET regional_sales = SELECT Region, SUM(Revenue) AS total "
+            "FROM CURRENT GROUP BY Region"
+        ),
+        "description": (
+            "Assign a stage, registered dataset, or SELECT result to a "
+            "reusable named dataset snapshot."
+        ),
     },
     {
         "command": "REPORT / EXPORT",

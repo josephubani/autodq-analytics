@@ -227,6 +227,44 @@ class ADQLValidator:
                     "EXPORT output must end with .csv or .xlsx."
                 )
 
+        elif statement.kind == "LET":
+            name = str(parameters.get("name", "")).strip()
+
+            if (
+                not name
+                or len(name) > 128
+                or any(character in name for character in ";\r\n")
+            ):
+                raise ADQLValidationError(
+                    "LET name must be a valid identifier of at most 128 characters."
+                )
+
+            if name.upper() in DATA_SOURCES:
+                raise ADQLValidationError(
+                    "LET name cannot replace a built-in data source."
+                )
+
+            source_kind = parameters.get("source_kind")
+
+            if source_kind == "select":
+                self._validate_select(parameters["query"])
+            elif source_kind == "stage":
+                if parameters.get("source") not in set(DATA_SOURCES.values()):
+                    raise ADQLValidationError("LET stage source is not recognized.")
+            elif source_kind == "dataset":
+                source = str(parameters.get("source", "")).strip()
+
+                if (
+                    not source
+                    or len(source) > 255
+                    or any(character in source for character in ";\r\n")
+                ):
+                    raise ADQLValidationError(
+                        "LET DATASET source must be a valid registered name."
+                    )
+            else:
+                raise ADQLValidationError("LET assignment source is not recognized.")
+
         elif statement.kind == "HELP":
             command = parameters.get("command")
 

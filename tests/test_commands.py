@@ -157,6 +157,68 @@ class ADQLTests(unittest.TestCase):
                 with self.assertRaises(ADQLSyntaxError):
                     ADQLParser().parse(source)
 
+    def test_parser_supports_let_stage_dataset_and_select_assignments(self):
+        statements = ADQLParser().parse(
+            "LET cleaned_customers = CLEANED; "
+            "LET customer_copy = DATASET customers OVERWRITE; "
+            "LET regional_sales = SELECT Region, SUM(Revenue) AS total "
+            "FROM CURRENT GROUP BY Region;"
+        ).statements
+
+        self.assertEqual(
+            statements[0].parameters,
+            {
+                "name": "cleaned_customers",
+                "source_kind": "stage",
+                "source": "cleaned",
+                "overwrite": False,
+            },
+        )
+        self.assertEqual(
+            statements[1].parameters,
+            {
+                "name": "customer_copy",
+                "source_kind": "dataset",
+                "source": "customers",
+                "overwrite": True,
+            },
+        )
+        self.assertEqual(statements[2].parameters["name"], "regional_sales")
+        self.assertEqual(statements[2].parameters["source_kind"], "select")
+        self.assertEqual(
+            statements[2].parameters["query"]["source"],
+            "current",
+        )
+        self.assertEqual(
+            statements[2].parameters["query"]["group_by"],
+            ["Region"],
+        )
+
+        select_overwrite = ADQLParser().parse(
+            "LET latest = SELECT * FROM CURRENT OVERWRITE;"
+        ).statements[0]
+        self.assertTrue(select_overwrite.parameters["overwrite"])
+        self.assertEqual(select_overwrite.parameters["query"]["source"], "current")
+
+        overwrite_dataset = ADQLParser().parse(
+            "LET preserved = SELECT * FROM OVERWRITE;"
+        ).statements[0]
+        self.assertFalse(overwrite_dataset.parameters["overwrite"])
+        self.assertEqual(
+            overwrite_dataset.parameters["query"]["source"],
+            "OVERWRITE",
+        )
+
+        for source in (
+            "LET = CLEANED;",
+            "LET bad-name = CLEANED;",
+            "LET result = PROFILE;",
+            "LET result = DATASET;",
+        ):
+            with self.subTest(source=source):
+                with self.assertRaises(ADQLSyntaxError):
+                    ADQLParser().parse(source)
+
     def test_named_dataset_workflow_targeting_switches_and_reuses_state(self):
         project = self._project(target="Revenue")
         customers_path = self.root / "customers.csv"
@@ -246,6 +308,97 @@ class ADQLTests(unittest.TestCase):
         self.assertTrue(exported.success)
         assert_frame_equal(pd.read_csv(export_path), customers)
         self.assertEqual(project.dataset_manager.primary().name, "main")
+
+    def test_let_assigns_cleaned_data_and_exports_named_snapshot(self):
+        project = self._project()
+        project.load()
+        expected = project.data.dropna(subset=["Region", "Units"]).head(12)
+        expected = expected.reset_index(drop=True)
+        project.state.cleaned_data = expected.copy()
+        output = self.root / "cleaned-customers.csv"
+
+        run = project.query(
+            "LET cleaned_customers = CLEANED; "
+            f'EXPORT cleaned_customers TO "{output}";',
+            auto_display=False,
+        )
+
+        self.assertTrue(run.success)
+        self.assertEqual(run.results[0].statement.kind, "LET")
+        self.assertIn("dataset cleaned_customers", run.results[0].message)
+        assert_frame_equal(
+            project.dataset_manager.get_data("cleaned_customers"),
+            expected,
+        )
+        assert_frame_equal(
+            pd.read_csv(output),
+            expected,
+            check_dtype=False,
+        )
+        self.assertEqual(project.dataset_manager.primary().name, "main")
+        self.assertIn(
+            "cleaned_customers",
+            project.query("SESSION DATASETS;", auto_display=False).data["name"].tolist(),
+        )
+        self.assertTrue(
+            any(event.step == "let_dataset" for event in project.session.events)
+        )
+
+    def test_let_select_and_dataset_snapshots_are_reusable(self):
+        project = self._project()
+        project.load()
+
+        selected = project.query(
+            "LET regional_sales = SELECT Region, SUM(Revenue) AS total_revenue "
+            "FROM CURRENT WHERE Region IS NOT NULL GROUP BY Region; "
+            "SELECT Region, total_revenue FROM regional_sales "
+            "ORDER BY total_revenue DESC;",
+            auto_display=False,
+        )
+        expected = (
+            self.data.dropna(subset=["Region"])
+            .groupby("Region", dropna=False, sort=False)["Revenue"]
+            .sum()
+            .reset_index(name="total_revenue")
+            .sort_values("total_revenue", ascending=False, kind="mergesort")
+            .reset_index(drop=True)
+        )
+        assert_frame_equal(selected.data, expected)
+
+        copied = project.query(
+            "LET main_copy = DATASET main; "
+            "SELECT COUNT(*) AS rows FROM main_copy;",
+            auto_display=False,
+        )
+        self.assertEqual(int(copied.data.loc[0, "rows"]), len(self.data))
+
+        with self.assertRaisesRegex(ADQLExecutionError, "OVERWRITE"):
+            project.query("LET main_copy = CURRENT;", auto_display=False)
+
+        overwritten = project.query(
+            "LET main_copy = CURRENT OVERWRITE;",
+            auto_display=False,
+        )
+        self.assertTrue(overwritten.success)
+        self.assertEqual(len(overwritten.data), len(self.data))
+
+        with self.assertRaisesRegex(
+            ADQLExecutionError,
+            "cannot overwrite the active dataset",
+        ):
+            project.query("LET main = CURRENT OVERWRITE;", auto_display=False)
+
+        with self.assertRaisesRegex(
+            ADQLValidationError,
+            "built-in data source",
+        ):
+            project.query("LET cleaned = CURRENT;", auto_display=False)
+
+        with self.assertRaisesRegex(ADQLValidationError, "LIMIT"):
+            project.query(
+                "LET too_many = SELECT * FROM CURRENT LIMIT 10001;",
+                auto_display=False,
+            )
 
     def test_named_dataset_target_reports_available_names(self):
         project = self._project()

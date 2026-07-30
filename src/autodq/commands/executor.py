@@ -139,6 +139,9 @@ class ADQLExecutor:
         if kind == "SELECT":
             return self._execute_select(project, parameters)
 
+        if kind == "LET":
+            return self._execute_let(project, parameters)
+
         simple = {
             "LOAD": project.load,
             "KNOWLEDGE": project.apply_knowledge,
@@ -810,6 +813,57 @@ class ADQLExecutor:
         return {
             "data": selected,
             "total_rows": total_rows,
+            "message": message,
+        }
+
+    def _execute_let(self, project, parameters) -> dict[str, Any]:
+        name = parameters["name"]
+        source_kind = parameters["source_kind"]
+        overwrite = bool(parameters.get("overwrite", False))
+        matched_rows = None
+        query_limit = None
+
+        if source_kind == "select":
+            query = parameters["query"]
+            selected = self._execute_select(project, query)
+            data = selected["data"]
+            matched_rows = selected["total_rows"]
+            query_limit = query.get("limit")
+            source_label = "SELECT result"
+        else:
+            source = parameters["source"]
+            data = self._source_frame(project, source).copy()
+            source_label = (
+                f"dataset {source}"
+                if source_kind == "dataset"
+                else f"{source} stage"
+            )
+
+        data = data.reset_index(drop=True)
+        assigned = project.assign_dataset(
+            name=name,
+            data=data,
+            overwrite=overwrite,
+        )
+        message = (
+            f"Assigned {len(assigned):,} row(s) from {source_label} "
+            f"to dataset {name}."
+        )
+
+        if matched_rows is not None and matched_rows > len(assigned):
+            limit_label = (
+                f"LIMIT {query_limit:,}"
+                if query_limit is not None
+                else f"the default query limit of {self.DEFAULT_QUERY_LIMIT:,}"
+            )
+            message += (
+                f" The SELECT matched {matched_rows:,} row(s); "
+                f"{limit_label} retained {len(assigned):,}."
+            )
+
+        return {
+            "data": assigned,
+            "total_rows": len(assigned),
             "message": message,
         }
 

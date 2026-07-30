@@ -48,7 +48,7 @@ autodq --version
 python -c "import autodq; print(autodq.__version__)"
 ```
 
-Version 0.1.5 is available on
+Version 0.1.6 is available on
 [PyPI](https://pypi.org/project/autodq/). To work on AutoDQ itself, install
 directly from the project source:
 
@@ -133,6 +133,19 @@ VISUALIZE bar X Region Y Revenue
 
 # %% [Session]
 SESSION;
+```
+
+Create a reusable dataset snapshot with `LET`, then query, profile, activate,
+or export its assigned name:
+
+```adql
+CLEAN;
+LET cleaned_sales = CLEANED;
+EXPORT cleaned_sales TO "exports/cleaned-sales.csv" OVERWRITE;
+
+LET regional_summary = SELECT Region, SUM(Revenue) AS total_revenue
+                       FROM CURRENT GROUP BY Region;
+SELECT * FROM regional_summary ORDER BY total_revenue DESC;
 ```
 
 Run the same automatic workflow available as `project.auto()` directly from
@@ -251,7 +264,7 @@ For the complete release process, see the
 - [Plugin development](https://github.com/josephubani/autodq-analytics/blob/main/docs/PLUGIN_GUIDE.md)
 - [Project roadmap](https://github.com/josephubani/autodq-analytics/blob/main/docs/ROADMAP.md)
 - [Package and release procedure](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASING.md)
-- [AutoDQ 0.1.5 release notes](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.5.md)
+- [AutoDQ 0.1.6 release notes](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.6.md)
 
 ## License
 

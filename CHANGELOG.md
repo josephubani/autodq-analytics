@@ -5,6 +5,22 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.6 - 2026-07-29
+
+### Added
+
+- Added ADQL `LET` assignments for reusable in-memory dataset snapshots from
+  `CURRENT`, `CLEANED`, `ENGINEERED`, `PREDICTIONS`, registered datasets, and
+  safe `SELECT` results.
+- Added `AutoDQ.assign_dataset()` as the core project API used by `LET`.
+- Added end-to-end acceptance coverage for assigning cleaned data, querying a
+  saved result, exporting it, and inspecting it through session datasets.
+
+### Changed
+
+- Updated the bundled AutoDQ ADQL VS Code extension to 0.2.9 with `LET`
+  highlighting and notebook documentation.
+
 ## 0.1.5 - 2026-07-29
 
 ### Added
