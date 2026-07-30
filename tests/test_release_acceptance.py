@@ -58,6 +58,11 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
             "SET TYPE Revenue decimal DECIMALS 2;\n"
             "# %% [Automatic review]\n"
             "AUTO MODE review VISUALIZE false CONTINUE_ON_ERROR false;\n"
+            "# %% [Missing-value completion]\n"
+            "MISSING SUMMARY;\n"
+            "MISSING FILL ALL STRATEGY auto;\n"
+            "CLEANING APPLY;\n"
+            "MISSING SUMMARY;\n"
             "# %% [Summary]\n"
             "SELECT Region, SUM(Revenue) AS total_revenue, COUNT(*) AS rows\n"
             "FROM CURRENT WHERE Region IS NOT NULL GROUP BY Region\n"
@@ -111,7 +116,7 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
         self.assertIn("valid", validation.stdout.lower())
         self.assertIn("ADQL completed", completed.stdout)
         self.assertTrue(payload["success"])
-        self.assertEqual(payload["completed_cell_count"], 4)
+        self.assertEqual(payload["completed_cell_count"], 5)
         self.assertEqual(payload["failed_cell_count"], 0)
         self.assertTrue(self.exported.is_file())
 

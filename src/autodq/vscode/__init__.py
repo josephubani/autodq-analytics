@@ -5,7 +5,7 @@ from importlib.resources import as_file, files
 from pathlib import Path
 
 
-EXTENSION_VERSION = "0.3.0"
+EXTENSION_VERSION = "0.3.1"
 
 
 def extension_path() -> Path:

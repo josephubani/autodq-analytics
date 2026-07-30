@@ -157,6 +157,57 @@ class ADQLTests(unittest.TestCase):
                 with self.assertRaises(ADQLSyntaxError):
                     ADQLParser().parse(source)
 
+    def test_parser_supports_missing_value_workflows(self):
+        statements = ADQLParser().parse(
+            'MISSING SUMMARY; '
+            'MISSING FILL City VALUE "Not provided" REASON "Required"; '
+            'MISSING FILL COLUMNS Units,Revenue STRATEGY median; '
+            'MISSING FILL ALL STRATEGY auto; '
+            'MISSING DROP ROWS COLUMNS City,Region HOW all; '
+            'MISSING DROP COLUMNS Notes,Unused; '
+            'MISSING DROP COLUMNS MIN_PERCENT 50; '
+            'MISSING DATASET customers SUMMARY;'
+        ).statements
+
+        self.assertEqual(statements[0].parameters, {"action": "summary"})
+        self.assertEqual(
+            statements[1].parameters,
+            {
+                "action": "fill",
+                "columns": ["City"],
+                "value": "Not provided",
+                "reason": "Required",
+                "strategy": "constant",
+            },
+        )
+        self.assertEqual(
+            statements[2].parameters["columns"],
+            ["Units", "Revenue"],
+        )
+        self.assertIsNone(statements[3].parameters["columns"])
+        self.assertEqual(statements[4].parameters["how"], "all")
+        self.assertEqual(
+            statements[5].parameters["columns"],
+            ["Notes", "Unused"],
+        )
+        self.assertEqual(statements[6].parameters["min_percent"], 50.0)
+        self.assertEqual(
+            statements[7].parameters["dataset_name"],
+            "customers",
+        )
+
+        for source in (
+            "MISSING;",
+            "MISSING FILL;",
+            "MISSING DROP COLUMNS;",
+            "MISSING DROP COLUMNS City MIN_PERCENT 50;",
+            "MISSING FILL City VALUE NULL;",
+        ):
+            with self.subTest(source=source):
+                with self.assertRaises((ADQLSyntaxError, ADQLValidationError)):
+                    project = self._project()
+                    project.query(source, auto_display=False)
+
     def test_parser_supports_let_stage_dataset_and_select_assignments(self):
         statements = ADQLParser().parse(
             "LET cleaned_customers = CLEANED; "
@@ -809,6 +860,54 @@ class ADQLTests(unittest.TestCase):
         )
         self.assertTrue(audit_path.is_file())
         self.assertGreater(project.state.cleaning_review.audit_count, 0)
+
+    def test_adql_missing_workflow_reaches_zero_and_applies_cleaning(self):
+        project = self._project()
+        run = project.query(
+            """
+            MISSING SUMMARY;
+            MISSING FILL Region VALUE "Not provided";
+            MISSING FILL Units STRATEGY median;
+            MISSING SUMMARY;
+            CLEANING APPLY;
+            """,
+            auto_display=False,
+        )
+
+        self.assertTrue(run.success)
+        self.assertEqual(
+            int(project.state.cleaned_data[["Region", "Units"]].isna().sum().sum()),
+            0,
+        )
+        events = [
+            item.event_type
+            for item in project.state.cleaning_review.audit_trail
+        ]
+        self.assertEqual(events.count("missing_value_filled"), 2)
+
+    def test_adql_missing_drop_rows_and_named_dataset_targeting(self):
+        project = self._project()
+        customers_path = self.root / "customers-missing.csv"
+        pd.DataFrame(
+            {
+                "Customer": ["A", "B", "C"],
+                "City": ["Toronto", None, "Lagos"],
+            }
+        ).to_csv(customers_path, index=False)
+        run = project.query(
+            f"""
+            ADD DATASET customers FROM "{customers_path}";
+            MISSING DATASET customers SUMMARY;
+            MISSING DATASET customers DROP ROWS COLUMNS City;
+            CLEANING DATASET customers APPLY;
+            """,
+            auto_display=False,
+        )
+
+        self.assertTrue(run.success)
+        self.assertEqual(project.dataset_manager.primary().name, "customers")
+        self.assertEqual(len(project.state.cleaned_data), 2)
+        self.assertEqual(int(project.state.cleaned_data["City"].isna().sum()), 0)
 
     def test_extended_adql_model_persistence_workspace_and_intelligence(self):
         project = self._project(target="Revenue")

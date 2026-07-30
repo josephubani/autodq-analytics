@@ -129,6 +129,30 @@ LET cleaned_sales = CLEANED;
 EXPORT cleaned_sales TO "cleaned-sales.csv" OVERWRITE;
 ```
 
+## Resolve remaining missing values
+
+Automatic cleaning may intentionally leave domain-sensitive values for review.
+Use `MISSING SUMMARY` to see what remains, then choose a fill or removal policy:
+
+```adql
+# %% [Missing-value review]
+MISSING SUMMARY;
+MISSING FILL City VALUE "Not provided";
+MISSING FILL Customer_Age STRATEGY median;
+MISSING FILL ALL STRATEGY auto;
+
+# %% [Finalize and retain]
+CLEANING APPLY;
+MISSING SUMMARY;
+LET complete_sales = CLEANED;
+EXPORT complete_sales TO "complete-sales.csv" OVERWRITE;
+AUDIT EXPORT TO "missing-value-audit.json";
+```
+
+Use `MISSING DROP ROWS COLUMNS City HOW any` when complete cases are required,
+or `MISSING DROP COLUMNS MIN_PERCENT 50` when a highly incomplete field is not
+analytically useful.
+
 ## Convert dates and control numeric precision
 
 Convert a string datetime column before profiling or modeling:

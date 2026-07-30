@@ -21,6 +21,8 @@ workflow.
   safe `SELECT` results
 - Explicit datetime parsing and numeric precision through `SET TYPE`, with
   human or `strftime` patterns, mixed/ISO modes, UTC, and decimal rounding
+- Audited `MISSING` summaries, datatype-aware fills, interpolation, and
+  row/column removal staged through the cleaning review
 - Rich session inspection with `SESSION`, `SESSION EVENTS LIMIT n`, and
   `SESSION DATASETS`
 - Rich tables, quality reports, cleaning recommendations, model explanations,
@@ -78,6 +80,16 @@ Format string dates and numeric precision in a cell before analysis:
 SET TYPE Created_At datetime FORMAT "DD/MM/YYYY HH:mm:ss";
 SET TYPE Api_Time datetime FORMAT ISO8601 UTC true;
 SET TYPE Revenue decimal DECIMALS 2;
+```
+
+Resolve remaining missing values in a review cell:
+
+```adql
+MISSING SUMMARY;
+MISSING FILL City VALUE "Not provided";
+MISSING FILL ALL STRATEGY auto;
+CLEANING APPLY;
+MISSING SUMMARY;
 ```
 
 Open the file with **AutoDQ ADQL Notebook**, then run cells from top to bottom.

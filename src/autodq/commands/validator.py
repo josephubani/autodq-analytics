@@ -162,6 +162,89 @@ class ADQLValidator:
             if multiplier is not None and multiplier <= 0:
                 raise ADQLValidationError("OUTLIERS IQR must be positive.")
 
+        elif statement.kind == "MISSING":
+            action = parameters.get("action")
+
+            if action == "summary":
+                return
+
+            columns = parameters.get("columns")
+
+            if columns is not None and (
+                not columns
+                or any(
+                    not str(column).strip()
+                    or len(str(column)) > 255
+                    or any(
+                        character in str(column)
+                        for character in ";\r\n"
+                    )
+                    for column in columns
+                )
+            ):
+                raise ADQLValidationError(
+                    "MISSING columns must be valid non-empty column names."
+                )
+
+            if action == "fill":
+                strategy = str(
+                    parameters.get("strategy", "auto")
+                ).lower()
+                supported = {
+                    "auto",
+                    "constant",
+                    "mean",
+                    "median",
+                    "mode",
+                    "zero",
+                    "ffill",
+                    "bfill",
+                    "interpolate",
+                }
+
+                if strategy not in supported:
+                    raise ADQLValidationError(
+                        "MISSING FILL STRATEGY must be auto, constant, mean, "
+                        "median, mode, zero, ffill, bfill, or interpolate."
+                    )
+
+                has_value = "value" in parameters
+
+                if strategy == "constant" and (
+                    not has_value or parameters.get("value") is None
+                ):
+                    raise ADQLValidationError(
+                        "MISSING FILL constant requires a non-null VALUE."
+                    )
+
+                if strategy != "constant" and has_value:
+                    raise ADQLValidationError(
+                        "MISSING FILL VALUE may only be used with "
+                        "STRATEGY constant."
+                    )
+
+            elif action == "drop_rows":
+                if str(parameters.get("how", "any")).lower() not in {
+                    "any",
+                    "all",
+                }:
+                    raise ADQLValidationError(
+                        "MISSING DROP ROWS HOW must be any or all."
+                    )
+
+            elif action == "drop_columns":
+                min_percent = parameters.get("min_percent")
+
+                if min_percent is not None and not 0 <= min_percent <= 100:
+                    raise ADQLValidationError(
+                        "MISSING DROP COLUMNS MIN_PERCENT must be between "
+                        "0 and 100."
+                    )
+            else:
+                raise ADQLValidationError(
+                    "MISSING action is not recognized."
+                )
+
         elif statement.kind == "CORRELATION":
             threshold = parameters.get("min_abs_correlation")
             if threshold is not None and not 0 <= threshold <= 1:

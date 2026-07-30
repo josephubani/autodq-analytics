@@ -129,6 +129,116 @@ class CleaningReviewTests(unittest.TestCase):
         self.assertEqual(cleaned.loc[2, "Age"], 5)
         self.assertEqual(cleaned.loc[2, "Region"], "North")
 
+    def test_missing_fills_are_staged_type_aware_and_audited(self):
+        review = self._review()
+        quantity = self.project.fill_missing(
+            "Quantity",
+            strategy="interpolate",
+            reason="Preserve the observed numeric trend.",
+        )
+        region = self.project.fill_missing(
+            "Region",
+            strategy="constant",
+            value="Not provided",
+            reason="Business-approved missing category.",
+        )
+
+        self.assertEqual(quantity.loc[0, "filled"], 1)
+        self.assertEqual(quantity.loc[0, "missing_after"], 0)
+        self.assertEqual(review.working_data.loc[3, "Quantity"], 4.0)
+        self.assertEqual(region.loc[0, "filled"], 1)
+        self.assertEqual(
+            review.working_data.loc[3, "Region"],
+            "Not provided",
+        )
+        fills = [
+            item
+            for item in review.audit_trail
+            if item.event_type == "missing_value_filled"
+        ]
+        self.assertEqual(len(fills), 2)
+        self.assertEqual(
+            {item.details["strategy"] for item in fills},
+            {"interpolate", "constant"},
+        )
+
+        cleaned = self.project.apply_cleaning_review()
+        self.assertEqual(int(cleaned[["Quantity", "Region"]].isna().sum().sum()), 0)
+
+    def test_missing_auto_fill_reports_unresolved_all_null_columns(self):
+        review = self._review()
+        review.working_data["Empty"] = np.nan
+        result = self.project.fill_missing(strategy="auto")
+        empty = result.loc[result["column"] == "Empty"].iloc[0]
+
+        self.assertEqual(empty["strategy"], "median")
+        self.assertEqual(empty["filled"], 0)
+        self.assertEqual(empty["status"], "no_replacement_available")
+        self.assertGreater(int(result["filled"].sum()), 0)
+
+    def test_missing_row_and_column_removal_are_audited_and_safe(self):
+        review = self._review()
+        row_result = self.project.drop_missing_rows(
+            columns=["Region"],
+            how="any",
+            reason="Region is required for this analysis.",
+        )
+
+        self.assertEqual(row_result["rows_removed"], 1)
+        self.assertNotIn(3, review.working_data.index)
+        self.assertEqual(
+            len(
+                [
+                    item
+                    for item in review.audit_trail
+                    if item.event_type == "missing_row_removed"
+                ]
+            ),
+            1,
+        )
+
+        review.working_data["MostlyMissing"] = pd.Series(
+            [None] * len(review.working_data),
+            index=review.working_data.index,
+            dtype="object",
+        )
+        review.working_data.loc[0, "MostlyMissing"] = "keep"
+        dropped = self.project.drop_missing_columns(min_percent=50)
+
+        self.assertEqual(dropped["column"].tolist(), ["MostlyMissing"])
+        self.assertNotIn("MostlyMissing", review.working_data)
+        self.assertTrue(
+            any(
+                item.event_type == "missing_column_removed"
+                and item.column == "MostlyMissing"
+                for item in review.audit_trail
+            )
+        )
+
+        protected = AutoDQ(str(self.dataset_path), target="Region")
+        protected.review_cleaning(auto_display=False)
+
+        with self.assertRaisesRegex(ValueError, "target"):
+            protected.drop_missing_columns(columns=["Region"])
+
+    def test_missing_fill_is_atomic_when_a_later_column_is_incompatible(self):
+        review = self._review()
+        before = review.working_data.copy(deep=True)
+
+        with self.assertRaisesRegex(ValueError, "requires a numeric column"):
+            self.project.fill_missing(
+                columns=["Quantity", "Region"],
+                strategy="median",
+            )
+
+        pd.testing.assert_frame_equal(review.working_data, before)
+        self.assertFalse(
+            any(
+                item.event_type == "missing_value_filled"
+                for item in review.audit_trail
+            )
+        )
+
     def test_domain_rules_find_ranges_values_patterns_nulls_and_duplicates(self):
         review = self._review()
         self.project.add_domain_rule(

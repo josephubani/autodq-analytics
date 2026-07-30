@@ -973,6 +973,103 @@ class AutoDQ:
         )
         return row
 
+    def missing_summary(self) -> pd.DataFrame:
+        """Summarize missing values in the latest cleaning-stage data."""
+        if self.state.data is None:
+            self.load()
+
+        review = self.state.cleaning_review
+        active_data = (
+            review.working_data
+            if review is not None
+            else self.state.cleaned_data
+            if self.state.cleaned_data is not None
+            else self.state.data
+        )
+        summary = self.cleaning_review_engine.missing_summary(active_data)
+        self.session.log(
+            step="missing_summary",
+            message="Missing-value summary generated.",
+            metadata={
+                "columns": len(summary),
+                "missing_cells": int(summary["missing"].sum()),
+            },
+        )
+        return summary
+
+    def fill_missing(
+        self,
+        columns: list[str] | str | None = None,
+        strategy: str = "auto",
+        value=None,
+        reason: str | None = None,
+    ) -> pd.DataFrame:
+        """Stage audited missing-value replacements for cleaning review."""
+        review = self.review_cleaning(auto_display=False)
+        result = review.fill_missing(
+            columns=columns,
+            strategy=strategy,
+            value=value,
+            reason=reason,
+        )
+        self.state.cleaned_data = None
+        self.session.log(
+            step="fill_missing",
+            message="Missing-value replacements staged for review.",
+            metadata={
+                "columns": result["column"].tolist(),
+                "filled_cells": int(result["filled"].sum()),
+                "strategy": strategy,
+            },
+        )
+        return result
+
+    def drop_missing_rows(
+        self,
+        columns: list[str] | str | None = None,
+        how: str = "any",
+        reason: str | None = None,
+    ) -> dict[str, object]:
+        """Stage audited removal of rows containing missing values."""
+        review = self.review_cleaning(auto_display=False)
+        result = review.drop_missing_rows(
+            columns=columns,
+            how=how,
+            reason=reason,
+        )
+        self.state.cleaned_data = None
+        self.session.log(
+            step="drop_missing_rows",
+            message="Missing-value rows staged for removal.",
+            metadata=result,
+        )
+        return result
+
+    def drop_missing_columns(
+        self,
+        columns: list[str] | str | None = None,
+        min_percent: float | None = None,
+        reason: str | None = None,
+    ) -> pd.DataFrame:
+        """Stage audited removal of columns selected by missing values."""
+        review = self.review_cleaning(auto_display=False)
+        result = review.drop_missing_columns(
+            columns=columns,
+            min_percent=min_percent,
+            protected_columns=[self.target] if self.target is not None else [],
+            reason=reason,
+        )
+        self.state.cleaned_data = None
+        self.session.log(
+            step="drop_missing_columns",
+            message="Missing-value columns staged for removal.",
+            metadata={
+                "columns": result["column"].tolist(),
+                "min_percent": min_percent,
+            },
+        )
+        return result
+
     def add_domain_rule(self, column: str, **constraints):
         """Add a range, allowed-value, pattern, null, or uniqueness rule."""
         review = self.review_cleaning(auto_display=False)

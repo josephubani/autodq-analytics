@@ -32,6 +32,7 @@ SUPPORTED_COMMANDS = {
     "MERGE",
     "CONCAT",
     "EDIT",
+    "MISSING",
     "DOMAIN",
     "OUTLIERS",
     "AUDIT",
@@ -101,6 +102,7 @@ DATASET_SCOPED_COMMANDS = {
     "KNOWLEDGE",
     "LOAD",
     "MODEL",
+    "MISSING",
     "OUTLIERS",
     "PREDICT",
     "PREVIEW",
@@ -374,6 +376,19 @@ COMMAND_HELP = [
             "OUTLIERS REVIEW COLUMNS Revenue; AUDIT EXPORT TO audit.json"
         ),
         "description": "Perform traceable manual cleaning and domain review.",
+    },
+    {
+        "command": "MISSING",
+        "syntax": (
+            "MISSING SUMMARY; MISSING FILL column VALUE value; "
+            "MISSING FILL ALL STRATEGY auto; "
+            "MISSING DROP ROWS [COLUMNS a,b] [HOW any|all]; "
+            "MISSING DROP COLUMNS a,b|MIN_PERCENT n"
+        ),
+        "description": (
+            "Summarize, fill, or remove missing data with a cell-level audit "
+            "trail before CLEANING APPLY."
+        ),
     },
     {
         "command": "KNOWLEDGE / CLEANING",

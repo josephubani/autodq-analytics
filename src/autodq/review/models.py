@@ -359,6 +359,52 @@ class CleaningReview:
             reason=reason,
         )
 
+    def missing_summary(self) -> pd.DataFrame:
+        return self._require_engine().missing_summary(self.working_data)
+
+    def fill_missing(
+        self,
+        columns: list[str] | str | None = None,
+        strategy: str = "auto",
+        value: Any | None = None,
+        reason: str | None = None,
+    ) -> pd.DataFrame:
+        return self._require_engine().fill_missing(
+            self,
+            columns=columns,
+            strategy=strategy,
+            value=value,
+            reason=reason,
+        )
+
+    def drop_missing_rows(
+        self,
+        columns: list[str] | str | None = None,
+        how: str = "any",
+        reason: str | None = None,
+    ) -> dict[str, Any]:
+        return self._require_engine().drop_missing_rows(
+            self,
+            columns=columns,
+            how=how,
+            reason=reason,
+        )
+
+    def drop_missing_columns(
+        self,
+        columns: list[str] | str | None = None,
+        min_percent: float | None = None,
+        protected_columns: Iterable[str] | None = None,
+        reason: str | None = None,
+    ) -> pd.DataFrame:
+        return self._require_engine().drop_missing_columns(
+            self,
+            columns=columns,
+            min_percent=min_percent,
+            protected_columns=protected_columns,
+            reason=reason,
+        )
+
     def preview(
         self,
         action_ids=None,

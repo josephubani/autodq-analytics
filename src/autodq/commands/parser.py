@@ -298,6 +298,9 @@ class ADQLParser:
                 **({"reason": options["reason"]} if "reason" in options else {}),
             }
 
+        if kind == "MISSING":
+            return self._parse_missing(arguments)
+
         if kind == "DOMAIN":
             return self._parse_domain(arguments)
 
@@ -771,6 +774,144 @@ class ADQLParser:
 
         raise ADQLSyntaxError("OUTLIERS requires REVIEW or TREAT.")
 
+    def _parse_missing(self, arguments: list[str]) -> dict[str, Any]:
+        if not arguments:
+            raise ADQLSyntaxError(
+                "MISSING requires SUMMARY, FILL, or DROP."
+            )
+
+        action = arguments[0].lower()
+
+        if action == "summary":
+            if len(arguments) != 1:
+                raise ADQLSyntaxError(
+                    "MISSING SUMMARY does not accept arguments."
+                )
+            return {"action": action}
+
+        if action == "fill":
+            if len(arguments) < 2:
+                raise ADQLSyntaxError(
+                    "MISSING FILL requires a column, COLUMNS list, or ALL."
+                )
+
+            target = arguments[1]
+            start = 2
+            parameters: dict[str, Any] = {"action": action}
+
+            if target.upper() == "ALL":
+                parameters["columns"] = None
+            elif target.upper() == "COLUMNS":
+                if len(arguments) < 3:
+                    raise ADQLSyntaxError(
+                        "MISSING FILL COLUMNS requires a comma-separated list."
+                    )
+                parameters["columns"] = self._string_list(
+                    arguments[2],
+                    option="COLUMNS",
+                )
+                start = 3
+            else:
+                parameters["columns"] = [target]
+
+            options = self._parse_options(
+                arguments[start:],
+                {
+                    "STRATEGY": "strategy",
+                    "VALUE": "value",
+                    "REASON": "reason",
+                },
+            )
+
+            if "value" in options:
+                options["value"] = self._literal(options["value"])
+
+            options.setdefault(
+                "strategy",
+                "constant" if "value" in options else "auto",
+            )
+            return {**parameters, **options}
+
+        if action != "drop" or len(arguments) < 2:
+            raise ADQLSyntaxError(
+                "MISSING requires SUMMARY, FILL, or DROP ROWS|COLUMNS."
+            )
+
+        entity = arguments[1].lower()
+
+        if entity == "rows":
+            options = self._parse_options(
+                arguments[2:],
+                {
+                    "COLUMNS": "columns",
+                    "HOW": "how",
+                    "REASON": "reason",
+                },
+            )
+            if "columns" in options:
+                options["columns"] = self._string_list(
+                    options["columns"],
+                    option="COLUMNS",
+                )
+            options.setdefault("columns", None)
+            options.setdefault("how", "any")
+            return {"action": "drop_rows", **options}
+
+        if entity != "columns":
+            raise ADQLSyntaxError(
+                "MISSING DROP requires ROWS or COLUMNS."
+            )
+
+        rest = arguments[2:]
+
+        if not rest:
+            raise ADQLSyntaxError(
+                "MISSING DROP COLUMNS requires a column list or MIN_PERCENT."
+            )
+
+        options: dict[str, Any]
+
+        if self._key(rest[0]) in {"COLUMNS", "MIN_PERCENT", "REASON"}:
+            options = self._parse_options(
+                rest,
+                {
+                    "COLUMNS": "columns",
+                    "MIN_PERCENT": "min_percent",
+                    "REASON": "reason",
+                },
+            )
+        else:
+            options = {
+                "columns": self._string_list(
+                    rest[0],
+                    option="MISSING DROP COLUMNS",
+                ),
+                **self._parse_options(
+                    rest[1:],
+                    {
+                        "MIN_PERCENT": "min_percent",
+                        "REASON": "reason",
+                    },
+                ),
+            }
+
+        if "columns" in options and isinstance(options["columns"], str):
+            options["columns"] = self._string_list(
+                options["columns"],
+                option="COLUMNS",
+            )
+
+        if ("columns" in options) == ("min_percent" in options):
+            raise ADQLSyntaxError(
+                "MISSING DROP COLUMNS requires either a column list or "
+                "MIN_PERCENT, but not both."
+            )
+
+        return {
+            "action": "drop_columns",
+            **self._coerce_options(options),
+        }
+
     def _parse_feature(self, arguments: list[str]) -> dict[str, Any]:
         if not arguments:
             raise ADQLSyntaxError("FEATURE requires CREATE or APPLY.")
@@ -1240,6 +1381,7 @@ class ADQLParser:
             "upper_bound",
             "significance_level",
             "leakage_threshold",
+            "min_percent",
         }
         list_options = {"exclude_features", "chart_ids"}
         coerced = {}

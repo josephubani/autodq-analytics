@@ -1,5 +1,11 @@
 # Change Log
 
+## 0.3.1 - 2026-07-29
+
+- Added highlighting and notebook documentation for ADQL `MISSING` summaries,
+  datatype-aware fills, row removal, and column removal.
+- Bundled AutoDQ 0.1.8 runtime support for audited missing-value workflows.
+
 ## 0.3.0 - 2026-07-29
 
 - Added highlighting and documentation for `SET TYPE` options `FORMAT`,

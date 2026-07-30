@@ -321,6 +321,54 @@ class ADQLExecutor:
                 "message": f"Updated review row {parameters['row_index']}.",
             }
 
+        if kind == "MISSING":
+            action = parameters.pop("action")
+
+            if action == "summary":
+                data = project.missing_summary()
+                missing_cells = int(data["missing"].sum())
+                return {
+                    "data": data,
+                    "total_rows": len(data),
+                    "message": (
+                        f"Found {missing_cells:,} missing cell(s) across "
+                        f"{int((data['missing'] > 0).sum())} column(s)."
+                    ),
+                }
+
+            if action == "fill":
+                data = project.fill_missing(**parameters)
+                filled = int(data["filled"].sum())
+                remaining = int(data["missing_after"].sum())
+                return {
+                    "data": data,
+                    "total_rows": len(data),
+                    "message": (
+                        f"Staged {filled:,} missing-value fill(s); "
+                        f"{remaining:,} remain in the selected columns."
+                    ),
+                }
+
+            if action == "drop_rows":
+                value = project.drop_missing_rows(**parameters)
+                return {
+                    "value": value,
+                    "message": (
+                        f"Staged removal of {value['rows_removed']:,} row(s) "
+                        "containing missing values."
+                    ),
+                }
+
+            data = project.drop_missing_columns(**parameters)
+            return {
+                "data": data,
+                "total_rows": len(data),
+                "message": (
+                    f"Staged removal of {len(data):,} column(s) selected by "
+                    "missing values."
+                ),
+            }
+
         if kind == "DOMAIN":
             action = parameters.pop("action")
             value = (

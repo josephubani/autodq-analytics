@@ -883,7 +883,7 @@ body { background: white; color: black; }
         self.assertNotIn("transientOutputs: true", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.3.0")
+        self.assertEqual(package["version"], "0.3.1")
         language_icon = package["contributes"]["languages"][0]["icon"]
         self.assertEqual(language_icon["light"], "./icons/adql-light.svg")
         self.assertEqual(language_icon["dark"], "./icons/adql-dark.svg")
@@ -961,6 +961,7 @@ body { background: white; color: black; }
             "LOWER",
             "MAKE_ACTIVE",
             "METHOD",
+            "MIN_PERCENT",
             "MIN_ABS",
             "MODEL_NAME",
             "NAMES",
@@ -975,6 +976,7 @@ body { background: white; color: black; }
             "SUFFIXES",
             "UNIQUE",
             "UPPER",
+            "VALUE",
         }
         vocabulary_rules = [
             re.compile(repository[name]["match"])

@@ -5,6 +5,24 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.8 - 2026-07-29
+
+### Added
+
+- Added first-class ADQL `MISSING` workflows for summaries, datatype-aware
+  fills, and audited missing row or column removal.
+- Added matching Python APIs: `missing_summary()`, `fill_missing()`,
+  `drop_missing_rows()`, and `drop_missing_columns()`.
+- Added cell-level audit records for every filled value and row/column removal,
+  with all mutations staged in the cleaning review until `CLEANING APPLY`.
+- Added named-dataset targeting and rich dataframe results for every `MISSING`
+  operation.
+
+### Changed
+
+- Updated the bundled AutoDQ ADQL VS Code extension to 0.3.1 with highlighting
+  and documentation for the complete missing-value vocabulary.
+
 ## 0.1.7 - 2026-07-29
 
 ### Added

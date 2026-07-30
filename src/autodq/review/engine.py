@@ -38,6 +38,17 @@ class CleaningReviewEngine:
         "remove",
         "keep",
     }
+    MISSING_STRATEGIES = {
+        "auto",
+        "constant",
+        "mean",
+        "median",
+        "mode",
+        "zero",
+        "ffill",
+        "bfill",
+        "interpolate",
+    }
 
     def __init__(self):
         self.cleaning_engine = CleaningEngine()
@@ -184,6 +195,329 @@ class CleaningReviewEngine:
         review.domain_report = None
         review.outlier_report = None
         return review.working_data.loc[row_index].copy()
+
+    @staticmethod
+    def missing_summary(df: pd.DataFrame) -> pd.DataFrame:
+        """Return a column-level missing-value summary."""
+        rows = len(df)
+        records = []
+
+        for column in df.columns:
+            missing = int(df[column].isna().sum())
+            records.append(
+                {
+                    "column": str(column),
+                    "dtype": str(df[column].dtype),
+                    "missing": missing,
+                    "missing_percent": round(
+                        (missing / rows * 100) if rows else 0.0,
+                        2,
+                    ),
+                    "non_missing": int(rows - missing),
+                    "recommended_strategy": (
+                        "median"
+                        if pd.api.types.is_numeric_dtype(df[column])
+                        and not pd.api.types.is_bool_dtype(df[column])
+                        else "mode"
+                    ),
+                }
+            )
+
+        return pd.DataFrame(
+            records,
+            columns=[
+                "column",
+                "dtype",
+                "missing",
+                "missing_percent",
+                "non_missing",
+                "recommended_strategy",
+            ],
+        ).sort_values(
+            ["missing", "column"],
+            ascending=[False, True],
+            ignore_index=True,
+        )
+
+    def fill_missing(
+        self,
+        review: CleaningReview,
+        *,
+        columns: list[str] | str | None = None,
+        strategy: str = "auto",
+        value: Any | None = None,
+        reason: str | None = None,
+    ) -> pd.DataFrame:
+        """Stage audited missing-value replacements in review data."""
+        self._require_unique_index(review.working_data)
+        strategy = str(strategy).lower().strip()
+
+        if strategy not in self.MISSING_STRATEGIES:
+            raise ValueError(
+                f"Unsupported missing-value strategy: {strategy}."
+            )
+
+        if strategy == "constant" and value is None:
+            raise ValueError("The constant strategy requires a non-null value.")
+
+        if strategy != "constant" and value is not None:
+            raise ValueError(
+                "VALUE may only be used with the constant strategy."
+            )
+
+        selected = self._selected_columns(
+            review.working_data,
+            columns,
+            operation="Missing-value fill",
+        )
+        candidate = review.working_data.copy(deep=True)
+        changes: list[tuple[Any, str, Any, Any, str]] = []
+        results = []
+
+        for column in selected:
+            series = candidate[column]
+            missing_before = int(series.isna().sum())
+            resolved_strategy = self._resolve_missing_strategy(
+                series,
+                strategy,
+            )
+
+            if missing_before == 0:
+                results.append(
+                    {
+                        "column": column,
+                        "strategy": resolved_strategy,
+                        "missing_before": 0,
+                        "filled": 0,
+                        "missing_after": 0,
+                        "status": "no_missing_values",
+                    }
+                )
+                continue
+
+            replacements = self._missing_replacements(
+                series,
+                resolved_strategy,
+                value=value,
+            )
+
+            for row_index in series.index[series.isna()]:
+                new_value = replacements.get(row_index, np.nan)
+
+                if pd.isna(new_value):
+                    continue
+
+                old_value = candidate.at[row_index, column]
+                self._assign_cell(
+                    candidate,
+                    row_index=row_index,
+                    column=column,
+                    value=new_value,
+                )
+                changes.append(
+                    (
+                        row_index,
+                        column,
+                        old_value,
+                        candidate.at[row_index, column],
+                        resolved_strategy,
+                    )
+                )
+
+            missing_after = int(candidate[column].isna().sum())
+            filled = missing_before - missing_after
+            results.append(
+                {
+                    "column": column,
+                    "strategy": resolved_strategy,
+                    "missing_before": missing_before,
+                    "filled": filled,
+                    "missing_after": missing_after,
+                    "status": (
+                        "filled"
+                        if missing_after == 0
+                        else "partially_filled"
+                        if filled
+                        else "no_replacement_available"
+                    ),
+                }
+            )
+
+        review.working_data = candidate
+
+        for row_index, column, old_value, new_value, used_strategy in changes:
+            self._record(
+                review,
+                event_type="missing_value_filled",
+                row_index=row_index,
+                column=column,
+                old_value=old_value,
+                new_value=new_value,
+                reason=reason,
+                details={"strategy": used_strategy},
+            )
+
+        self._invalidate_review_reports(review)
+        return pd.DataFrame(results)
+
+    def drop_missing_rows(
+        self,
+        review: CleaningReview,
+        *,
+        columns: list[str] | str | None = None,
+        how: str = "any",
+        reason: str | None = None,
+    ) -> dict[str, Any]:
+        """Stage audited removal of rows selected by missing values."""
+        self._require_unique_index(review.working_data)
+        how = str(how).lower().strip()
+
+        if how not in {"any", "all"}:
+            raise ValueError("Missing-row HOW must be any or all.")
+
+        selected = self._selected_columns(
+            review.working_data,
+            columns,
+            operation="Missing-row removal",
+        )
+        before = review.working_data
+        missing = before[selected].isna()
+        mask = missing.any(axis=1) if how == "any" else missing.all(axis=1)
+        removed_indices = before.index[mask].tolist()
+        removed_rows = {
+            row_index: before.loc[row_index].to_dict()
+            for row_index in removed_indices
+        }
+        candidate = before.loc[~mask].copy(deep=True)
+        review.working_data = candidate
+
+        for row_index in removed_indices:
+            self._record(
+                review,
+                event_type="missing_row_removed",
+                row_index=row_index,
+                old_value=removed_rows[row_index],
+                new_value=None,
+                reason=reason,
+                details={"columns": selected, "how": how},
+            )
+
+        self._invalidate_review_reports(review)
+        return {
+            "rows_before": len(before),
+            "rows_removed": len(removed_indices),
+            "rows_after": len(candidate),
+            "columns": selected,
+            "how": how,
+        }
+
+    def drop_missing_columns(
+        self,
+        review: CleaningReview,
+        *,
+        columns: list[str] | str | None = None,
+        min_percent: float | None = None,
+        protected_columns: Iterable[str] | None = None,
+        reason: str | None = None,
+    ) -> pd.DataFrame:
+        """Stage audited removal of explicit or high-missing columns."""
+        df = review.working_data
+
+        if (columns is None) == (min_percent is None):
+            raise ValueError(
+                "Provide either columns or min_percent, but not both."
+            )
+
+        if min_percent is not None:
+            if not 0 <= float(min_percent) <= 100:
+                raise ValueError("min_percent must be between 0 and 100.")
+            denominator = len(df)
+            selected = [
+                column
+                for column in df.columns
+                if (
+                    (int(df[column].isna().sum()) / denominator * 100)
+                    if denominator
+                    else 0.0
+                )
+                >= float(min_percent)
+            ]
+        else:
+            selected = self._selected_columns(
+                df,
+                columns,
+                operation="Missing-column removal",
+            )
+
+        protected = {
+            str(column)
+            for column in (protected_columns or [])
+            if column is not None
+        }
+        blocked = [column for column in selected if column in protected]
+
+        if blocked:
+            raise ValueError(
+                "Cannot drop protected target column(s): "
+                + ", ".join(blocked)
+            )
+
+        if len(selected) >= len(df.columns) and selected:
+            raise ValueError("Missing-column removal cannot drop every column.")
+
+        rows = len(df)
+        results = []
+
+        for column in selected:
+            missing = int(df[column].isna().sum())
+            results.append(
+                {
+                    "column": column,
+                    "dtype": str(df[column].dtype),
+                    "missing": missing,
+                    "missing_percent": round(
+                        (missing / rows * 100) if rows else 0.0,
+                        2,
+                    ),
+                    "status": "dropped",
+                }
+            )
+
+        review.working_data = df.drop(columns=selected).copy(deep=True)
+
+        for result in results:
+            self._record(
+                review,
+                event_type="missing_column_removed",
+                column=result["column"],
+                old_value={
+                    "dtype": result["dtype"],
+                    "missing": result["missing"],
+                    "missing_percent": result["missing_percent"],
+                },
+                new_value=None,
+                reason=reason,
+                details={
+                    "selection": (
+                        "min_percent"
+                        if min_percent is not None
+                        else "explicit"
+                    ),
+                    "min_percent": min_percent,
+                },
+            )
+
+        self._invalidate_review_reports(review)
+        return pd.DataFrame(
+            results,
+            columns=[
+                "column",
+                "dtype",
+                "missing",
+                "missing_percent",
+                "status",
+            ],
+        )
 
     def preview_actions(
         self,
@@ -857,6 +1191,146 @@ class CleaningReviewEngine:
             )
 
         return columns
+
+    @staticmethod
+    def _selected_columns(
+        df: pd.DataFrame,
+        columns: list[str] | str | None,
+        *,
+        operation: str,
+    ) -> list[str]:
+        if columns is None:
+            selected = list(df.columns)
+        elif isinstance(columns, str):
+            selected = [columns]
+        else:
+            selected = list(columns)
+
+        if not selected:
+            raise ValueError(f"{operation} requires at least one column.")
+
+        selected = list(dict.fromkeys(selected))
+        missing = [column for column in selected if column not in df.columns]
+
+        if missing:
+            raise ValueError(f"{operation} columns were not found: {missing}")
+
+        return selected
+
+    @staticmethod
+    def _resolve_missing_strategy(
+        series: pd.Series,
+        strategy: str,
+    ) -> str:
+        if strategy != "auto":
+            if strategy in {"mean", "median", "zero", "interpolate"} and (
+                not pd.api.types.is_numeric_dtype(series)
+                or pd.api.types.is_bool_dtype(series)
+            ):
+                raise ValueError(
+                    f"Missing-value strategy '{strategy}' requires a numeric "
+                    f"column; '{series.name}' is {series.dtype}."
+                )
+            return strategy
+
+        if (
+            pd.api.types.is_numeric_dtype(series)
+            and not pd.api.types.is_bool_dtype(series)
+        ):
+            return "median"
+
+        return "mode"
+
+    @staticmethod
+    def _missing_replacements(
+        series: pd.Series,
+        strategy: str,
+        *,
+        value: Any | None,
+    ) -> pd.Series:
+        missing_indices = series.index[series.isna()]
+
+        if strategy == "constant":
+            replacement = CleaningReviewEngine._coerce_fill_value(
+                series,
+                value,
+            )
+            return pd.Series(replacement, index=missing_indices)
+
+        if strategy in {"mean", "median", "mode", "zero"}:
+            non_missing = series.dropna()
+
+            if strategy == "zero":
+                replacement = 0
+            elif non_missing.empty:
+                replacement = np.nan
+            elif strategy == "mean":
+                replacement = non_missing.mean()
+            elif strategy == "median":
+                replacement = non_missing.median()
+            else:
+                modes = non_missing.mode(dropna=True)
+                replacement = modes.iloc[0] if not modes.empty else np.nan
+
+            return pd.Series(replacement, index=missing_indices)
+
+        if strategy == "ffill":
+            return series.ffill().loc[missing_indices]
+
+        if strategy == "bfill":
+            return series.bfill().loc[missing_indices]
+
+        if strategy == "interpolate":
+            return series.interpolate(limit_direction="both").loc[
+                missing_indices
+            ]
+
+        raise ValueError(f"Unsupported missing-value strategy: {strategy}.")
+
+    @staticmethod
+    def _coerce_fill_value(series: pd.Series, value: Any) -> Any:
+        dtype = series.dtype
+
+        if pd.api.types.is_datetime64_any_dtype(dtype):
+            try:
+                return pd.to_datetime(value, errors="raise")
+            except (TypeError, ValueError) as error:
+                raise ValueError(
+                    f"Value {value!r} is not a valid datetime for "
+                    f"'{series.name}'."
+                ) from error
+
+        if pd.api.types.is_bool_dtype(dtype):
+            if isinstance(value, str):
+                normalized = value.lower().strip()
+                if normalized in {"true", "1", "yes"}:
+                    return True
+                if normalized in {"false", "0", "no"}:
+                    return False
+            if isinstance(value, (bool, np.bool_)):
+                return bool(value)
+            raise ValueError(
+                f"Value {value!r} is not a valid boolean for '{series.name}'."
+            )
+
+        if pd.api.types.is_numeric_dtype(dtype):
+            try:
+                converted = pd.to_numeric(
+                    pd.Series([value]),
+                    errors="raise",
+                ).iloc[0]
+            except (TypeError, ValueError) as error:
+                raise ValueError(
+                    f"Value {value!r} is not numeric for '{series.name}'."
+                ) from error
+            return converted
+
+        return value
+
+    @staticmethod
+    def _invalidate_review_reports(review: CleaningReview) -> None:
+        review.domain_report = None
+        review.outlier_report = None
 
     @staticmethod
     def _frame_records(

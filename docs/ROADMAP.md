@@ -15,6 +15,7 @@
 6. Interactive Cleaning and Domain Review Module
    - Partial approval and rejection of cleaning actions
    - Manual row editing
+   - Audited bulk missing-value filling and row/column removal
    - Outlier review and treatment
    - Domain-based validation
    - Interactive cleaning previews

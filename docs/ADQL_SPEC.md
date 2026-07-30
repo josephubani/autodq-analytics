@@ -383,6 +383,81 @@ size is required. Stage assignments retain the complete available stage.
 `LET` assigns tabular data only. It does not evaluate Python, create scalar
 variables, or interpolate arbitrary values into later statements.
 
+### Explicit missing-value handling
+
+`MISSING` provides deliberate, audited control when automatic recommendations
+leave missing cells for domain review. Start with a column summary:
+
+```adql
+MISSING SUMMARY;
+```
+
+The result shows each column's dtype, missing count and percentage, non-missing
+count, and a datatype-aware recommended strategy.
+
+Fill one or more columns:
+
+```adql
+MISSING FILL City VALUE "Not provided";
+MISSING FILL Customer_Age STRATEGY median;
+MISSING FILL COLUMNS Revenue,Profit STRATEGY mean;
+MISSING FILL Revenue STRATEGY interpolate;
+MISSING FILL Region STRATEGY ffill;
+MISSING FILL ALL STRATEGY auto;
+```
+
+Supported strategies are:
+
+| Strategy | Behavior |
+| --- | --- |
+| `auto` | Uses median for numeric columns and mode for other datatypes. |
+| `constant` / `VALUE` | Uses an explicit non-null value, with safe type coercion. |
+| `mean`, `median` | Fills numeric columns from their observed distribution. |
+| `mode` | Uses the most frequent non-missing value. |
+| `zero` | Fills numeric columns with zero. |
+| `ffill`, `bfill` | Carries the previous or next observed value. |
+| `interpolate` | Interpolates numeric values in both directions. |
+
+`VALUE` automatically selects the `constant` strategy. An all-null column has
+no mean, median, or mode, so the result reports
+`no_replacement_available`; use an explicit `VALUE`, or remove the column.
+
+Remove incomplete rows or columns when filling would be misleading:
+
+```adql
+MISSING DROP ROWS;
+MISSING DROP ROWS COLUMNS City,Region HOW any;
+MISSING DROP ROWS COLUMNS Phone,Email HOW all;
+MISSING DROP COLUMNS Notes,Unused;
+MISSING DROP COLUMNS COLUMNS Legacy_Code,Import_Comment;
+MISSING DROP COLUMNS MIN_PERCENT 50;
+```
+
+`HOW any` removes a row when any selected column is missing; `HOW all` requires
+all selected columns to be missing. `MIN_PERCENT` is inclusive and accepts a
+value from 0 through 100. AutoDQ refuses to remove every column or the active
+model target.
+
+All fills and removals are first staged in `review.working_data`. Every changed
+cell, removed row, and removed column receives an audit entry. Finalize the
+review and export the complete audit with:
+
+```adql
+CLEANING APPLY;
+MISSING SUMMARY;
+LET complete_sales = CLEANED;
+EXPORT complete_sales TO "exports/complete-sales.csv" OVERWRITE;
+AUDIT EXPORT TO "reports/missing-value-audit.json";
+```
+
+Like other stateful commands, `MISSING` accepts a named dataset selector:
+
+```adql
+MISSING DATASET customers SUMMARY;
+MISSING DATASET customers FILL City VALUE "Not provided";
+CLEANING DATASET customers APPLY;
+```
+
 ### Interactive cleaning and domain review
 
 ```adql

@@ -64,8 +64,27 @@ The returned `AutoRunResult` provides `success`, stage counts,
 | Diagnosis | `diagnose()`, `recommend()`, `decide()`, `preview()` |
 | Interactive review | `review_cleaning()`, `approve()`, `reject()`, `approve_all()` |
 | Manual review | `edit_row()`, `cleaning_preview()`, `apply_cleaning_review()` |
+| Missing values | `missing_summary()`, `fill_missing()`, `drop_missing_rows()`, `drop_missing_columns()` |
 | Domains and outliers | `add_domain_rule()`, `validate_domain()`, `review_outliers()`, `treat_outliers()` |
 | Cleaning | `clean()`, `validate_cleaning()`, `export_cleaning_audit()` |
+
+Missing-value mutations use the same staged cleaning review as manual edits:
+
+```python
+project.missing_summary()
+project.fill_missing("City", strategy="constant", value="Not provided")
+project.fill_missing(["Revenue", "Profit"], strategy="median")
+project.fill_missing(strategy="auto")
+project.drop_missing_rows(columns=["City", "Region"], how="any")
+project.drop_missing_columns(min_percent=50)
+
+cleaned = project.apply_cleaning_review()
+project.export_cleaning_audit("reports/missing-value-audit.json")
+```
+
+Each fill, row removal, and column removal is audited. Operations validate a
+candidate copy before replacing review data, and target columns are protected
+from removal.
 
 ## Analysis, features, and modeling
 

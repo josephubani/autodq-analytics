@@ -125,6 +125,11 @@ def write_adql(path: Path) -> None:
         "SET TYPE Revenue decimal DECIMALS 2;\n"
         "# %% [Automatic review]\n"
         "AUTO MODE review VISUALIZE false CONTINUE_ON_ERROR false;\n"
+        "# %% [Missing-value completion]\n"
+        "MISSING SUMMARY;\n"
+        "MISSING FILL ALL STRATEGY auto;\n"
+        "CLEANING APPLY;\n"
+        "MISSING SUMMARY;\n"
         "# %% [Regional totals]\n"
         "SELECT Region, SUM(Revenue) AS total_revenue, COUNT(*) AS transactions\n"
         "FROM CURRENT WHERE Region IS NOT NULL GROUP BY Region\n"
@@ -231,7 +236,7 @@ def main() -> int:
         if not payload.get("success"):
             raise RuntimeError("The installed wheel failed the ADQL acceptance workflow.")
 
-        if payload.get("completed_cell_count") != 8:
+        if payload.get("completed_cell_count") != 9:
             raise RuntimeError("The ADQL acceptance workflow did not complete all cells.")
 
         api_check = (
