@@ -458,6 +458,51 @@ MISSING DATASET customers FILL City VALUE "Not provided";
 CLEANING DATASET customers APPLY;
 ```
 
+### Exact duplicate inspection and removal
+
+`DUPLICATES SUMMARY` displays the complete rows involved in exact matches
+across all columns. Unlike a simple duplicate count, the result contains every
+member of each group, including the occurrence that would normally be kept:
+
+```adql
+DUPLICATES SUMMARY;
+```
+
+The output adds `duplicate_group`, `occurrences`, and `source_index` metadata
+before the original dataset columns. Large results use the notebook's bounded
+preview and **View full output** control.
+
+Stage an audited removal with an explicit retention policy:
+
+```adql
+DUPLICATES DROP KEEP first REASON "Repeated import";
+DUPLICATES DROP KEEP last;
+DUPLICATES DROP KEEP none;
+```
+
+`KEEP first` is the default and retains the first row in each group. `KEEP
+last` retains the final row. `KEEP none` removes every member of every duplicate
+group. Each removed row receives an `exact_duplicate_row_removed` audit entry.
+The operation changes `review.working_data`; finalize and retain it with:
+
+```adql
+DUPLICATES SUMMARY;
+DUPLICATES DROP KEEP first;
+DUPLICATES SUMMARY;
+CLEANING APPLY;
+LET unique_sales = CLEANED;
+EXPORT unique_sales TO "exports/unique-sales.csv" OVERWRITE;
+```
+
+Named-dataset targeting is supported:
+
+```adql
+DUPLICATES DATASET customers SUMMARY;
+DUPLICATES DATASET customers DROP KEEP first;
+CLEANING DATASET customers APPLY;
+LET unique_customers = CLEANED;
+```
+
 ### Interactive cleaning and domain review
 
 ```adql

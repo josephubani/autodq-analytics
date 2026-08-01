@@ -1070,6 +1070,56 @@ class AutoDQ:
         )
         return result
 
+    def duplicate_summary(self) -> pd.DataFrame:
+        """Show every row belonging to an exact-duplicate group."""
+        if self.state.data is None:
+            self.load()
+
+        review = self.state.cleaning_review
+        active_data = (
+            review.working_data
+            if review is not None
+            else self.state.cleaned_data
+            if self.state.cleaned_data is not None
+            else self.state.data
+        )
+        summary = self.cleaning_review_engine.duplicate_summary(active_data)
+        group_column = summary.attrs.get(
+            "duplicate_group_column",
+            "duplicate_group",
+        )
+        groups = (
+            int(summary[group_column].nunique())
+            if group_column in summary.columns
+            else 0
+        )
+        self.session.log(
+            step="duplicate_summary",
+            message="Exact duplicate-row summary generated.",
+            metadata={
+                "duplicate_groups": groups,
+                "duplicate_occurrences": len(summary),
+                "removable_rows_keep_first": max(len(summary) - groups, 0),
+            },
+        )
+        return summary
+
+    def drop_duplicates(
+        self,
+        keep: str = "first",
+        reason: str | None = None,
+    ) -> dict[str, object]:
+        """Stage audited exact-duplicate removal for cleaning review."""
+        review = self.review_cleaning(auto_display=False)
+        result = review.drop_duplicates(keep=keep, reason=reason)
+        self.state.cleaned_data = None
+        self.session.log(
+            step="drop_duplicates",
+            message="Exact duplicate rows staged for removal.",
+            metadata=result,
+        )
+        return result
+
     def add_domain_rule(self, column: str, **constraints):
         """Add a range, allowed-value, pattern, null, or uniqueness rule."""
         review = self.review_cleaning(auto_display=False)

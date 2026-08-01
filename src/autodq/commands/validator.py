@@ -245,6 +245,24 @@ class ADQLValidator:
                     "MISSING action is not recognized."
                 )
 
+        elif statement.kind == "DUPLICATES":
+            action = parameters.get("action")
+
+            if action == "summary":
+                return
+
+            if action != "drop":
+                raise ADQLValidationError(
+                    "DUPLICATES action is not recognized."
+                )
+
+            keep = str(parameters.get("keep", "first")).lower()
+
+            if keep not in {"first", "last", "none"}:
+                raise ADQLValidationError(
+                    "DUPLICATES DROP KEEP must be first, last, or none."
+                )
+
         elif statement.kind == "CORRELATION":
             threshold = parameters.get("min_abs_correlation")
             if threshold is not None and not 0 <= threshold <= 1:

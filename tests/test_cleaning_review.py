@@ -239,6 +239,46 @@ class CleaningReviewTests(unittest.TestCase):
             )
         )
 
+    def test_exact_duplicate_summary_and_removal_are_audited(self):
+        review = self._review()
+        summary = self.project.duplicate_summary()
+
+        self.assertEqual(len(summary), 2)
+        self.assertEqual(summary["duplicate_group"].nunique(), 1)
+        self.assertEqual(summary["occurrences"].tolist(), [2, 2])
+        self.assertEqual(summary["source_index"].tolist(), [0, 12])
+
+        result = self.project.drop_duplicates(
+            keep="last",
+            reason="The last imported copy is authoritative.",
+        )
+
+        self.assertEqual(result["duplicate_groups"], 1)
+        self.assertEqual(result["duplicate_occurrences"], 2)
+        self.assertEqual(result["rows_removed"], 1)
+        self.assertNotIn(0, review.working_data.index)
+        self.assertIn(12, review.working_data.index)
+        audit = [
+            item
+            for item in review.audit_trail
+            if item.event_type == "exact_duplicate_row_removed"
+        ]
+        self.assertEqual(len(audit), 1)
+        self.assertEqual(audit[0].row_index, 0)
+        self.assertEqual(audit[0].details["keep"], "last")
+
+        cleaned = self.project.apply_cleaning_review()
+        self.assertEqual(int(cleaned.duplicated().sum()), 0)
+
+    def test_duplicate_keep_none_removes_every_member_of_each_group(self):
+        review = self._review()
+        result = self.project.drop_duplicates(keep="none")
+
+        self.assertEqual(result["rows_removed"], 2)
+        self.assertNotIn(0, review.working_data.index)
+        self.assertNotIn(12, review.working_data.index)
+        self.assertEqual(len(review.working_data), len(self.data) - 2)
+
     def test_domain_rules_find_ranges_values_patterns_nulls_and_duplicates(self):
         review = self._review()
         self.project.add_domain_rule(

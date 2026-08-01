@@ -65,6 +65,7 @@ The returned `AutoRunResult` provides `success`, stage counts,
 | Interactive review | `review_cleaning()`, `approve()`, `reject()`, `approve_all()` |
 | Manual review | `edit_row()`, `cleaning_preview()`, `apply_cleaning_review()` |
 | Missing values | `missing_summary()`, `fill_missing()`, `drop_missing_rows()`, `drop_missing_columns()` |
+| Exact duplicates | `duplicate_summary()`, `drop_duplicates()` |
 | Domains and outliers | `add_domain_rule()`, `validate_domain()`, `review_outliers()`, `treat_outliers()` |
 | Cleaning | `clean()`, `validate_cleaning()`, `export_cleaning_audit()` |
 
@@ -85,6 +86,18 @@ project.export_cleaning_audit("reports/missing-value-audit.json")
 Each fill, row removal, and column removal is audited. Operations validate a
 candidate copy before replacing review data, and target columns are protected
 from removal.
+
+Exact duplicate rows use the same staged review and audit trail:
+
+```python
+duplicates = project.duplicate_summary()
+result = project.drop_duplicates(keep="first", reason="Repeated import")
+cleaned = project.apply_cleaning_review()
+```
+
+`duplicate_summary()` returns every member of every exact-match group, not
+only the later rows that would be removed. `keep` accepts `first`, `last`, or
+`none`.
 
 ## Analysis, features, and modeling
 

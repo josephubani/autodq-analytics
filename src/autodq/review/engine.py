@@ -519,6 +519,114 @@ class CleaningReviewEngine:
             ],
         )
 
+    @staticmethod
+    def duplicate_summary(df: pd.DataFrame) -> pd.DataFrame:
+        """Return every member of every exact-duplicate row group."""
+        metadata_names = []
+
+        for preferred in (
+            "duplicate_group",
+            "occurrences",
+            "source_index",
+        ):
+            candidate = preferred
+
+            while candidate in df.columns or candidate in metadata_names:
+                candidate = f"_{candidate}"
+
+            metadata_names.append(candidate)
+
+        group_column, count_column, index_column = metadata_names
+        duplicate_mask = df.duplicated(keep=False)
+        duplicates = df.loc[duplicate_mask].copy(deep=True)
+
+        if duplicates.empty:
+            result = pd.DataFrame(
+                columns=[group_column, count_column, index_column, *df.columns]
+            )
+        else:
+            group_ids = (
+                duplicates.groupby(
+                    list(duplicates.columns),
+                    dropna=False,
+                    sort=False,
+                ).ngroup()
+                + 1
+            )
+            occurrence_counts = group_ids.map(group_ids.value_counts())
+            result = duplicates.copy(deep=True)
+            result.insert(0, index_column, duplicates.index.to_list())
+            result.insert(0, count_column, occurrence_counts.astype(int).to_numpy())
+            result.insert(0, group_column, group_ids.astype(int).to_numpy())
+            result = result.sort_values(group_column, kind="stable").reset_index(
+                drop=True
+            )
+
+        result.attrs.update(
+            {
+                "duplicate_group_column": group_column,
+                "occurrences_column": count_column,
+                "source_index_column": index_column,
+            }
+        )
+        return result
+
+    def drop_duplicates(
+        self,
+        review: CleaningReview,
+        *,
+        keep: str = "first",
+        reason: str | None = None,
+    ) -> dict[str, Any]:
+        """Stage audited removal of exact duplicate rows."""
+        self._require_unique_index(review.working_data)
+        keep = str(keep).lower().strip()
+
+        if keep not in {"first", "last", "none"}:
+            raise ValueError("Duplicate KEEP must be first, last, or none.")
+
+        before = review.working_data
+        all_duplicate_mask = before.duplicated(keep=False)
+        duplicate_members = before.loc[all_duplicate_mask]
+        duplicate_groups = (
+            int(len(duplicate_members.drop_duplicates()))
+            if not duplicate_members.empty
+            else 0
+        )
+        pandas_keep: str | bool = False if keep == "none" else keep
+        removal_mask = before.duplicated(keep=pandas_keep)
+        removed_indices = before.index[removal_mask].tolist()
+        removed_rows = {
+            row_index: before.loc[row_index].to_dict()
+            for row_index in removed_indices
+        }
+        candidate = before.loc[~removal_mask].copy(deep=True)
+        review.working_data = candidate
+
+        for row_index in removed_indices:
+            self._record(
+                review,
+                event_type="exact_duplicate_row_removed",
+                row_index=row_index,
+                old_value=removed_rows[row_index],
+                new_value=None,
+                reason=reason,
+                details={
+                    "keep": keep,
+                    "comparison": "all_columns",
+                },
+            )
+
+        self._invalidate_review_reports(review)
+        return {
+            "rows_before": len(before),
+            "duplicate_groups": duplicate_groups,
+            "duplicate_occurrences": int(all_duplicate_mask.sum()),
+            "rows_removed": len(removed_indices),
+            "rows_after": len(candidate),
+            "keep": keep,
+        }
+
     def preview_actions(
         self,
         review: CleaningReview,

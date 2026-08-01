@@ -16,6 +16,7 @@
    - Partial approval and rejection of cleaning actions
    - Manual row editing
    - Audited bulk missing-value filling and row/column removal
+   - Exact duplicate-row inspection and audited removal policies
    - Outlier review and treatment
    - Domain-based validation
    - Interactive cleaning previews

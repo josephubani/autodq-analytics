@@ -301,6 +301,9 @@ class ADQLParser:
         if kind == "MISSING":
             return self._parse_missing(arguments)
 
+        if kind == "DUPLICATES":
+            return self._parse_duplicates(arguments)
+
         if kind == "DOMAIN":
             return self._parse_domain(arguments)
 
@@ -911,6 +914,36 @@ class ADQLParser:
             "action": "drop_columns",
             **self._coerce_options(options),
         }
+
+    def _parse_duplicates(self, arguments: list[str]) -> dict[str, Any]:
+        if not arguments:
+            raise ADQLSyntaxError(
+                "DUPLICATES requires SUMMARY or DROP."
+            )
+
+        action = arguments[0].lower()
+
+        if action == "summary":
+            if len(arguments) != 1:
+                raise ADQLSyntaxError(
+                    "DUPLICATES SUMMARY does not accept arguments."
+                )
+            return {"action": action}
+
+        if action != "drop":
+            raise ADQLSyntaxError(
+                "DUPLICATES requires SUMMARY or DROP."
+            )
+
+        options = self._parse_options(
+            arguments[1:],
+            {
+                "KEEP": "keep",
+                "REASON": "reason",
+            },
+        )
+        options.setdefault("keep", "first")
+        return {"action": action, **options}
 
     def _parse_feature(self, arguments: list[str]) -> dict[str, Any]:
         if not arguments:

@@ -153,6 +153,34 @@ Use `MISSING DROP ROWS COLUMNS City HOW any` when complete cases are required,
 or `MISSING DROP COLUMNS MIN_PERCENT 50` when a highly incomplete field is not
 analytically useful.
 
+## Inspect and remove exact duplicate rows
+
+Show the actual rows before deciding whether repeated records are invalid:
+
+```adql
+# %% [Exact duplicate review]
+DUPLICATES SUMMARY;
+```
+
+The table contains every member of every exact-duplicate group, with its
+original row index, group number, and occurrence count. Stage a removal policy,
+finalize it into `CLEANED`, and preserve the result with `LET`:
+
+```adql
+DUPLICATES DROP KEEP first REASON "Repeated source-system import";
+DUPLICATES SUMMARY;
+CLEANING APPLY;
+
+LET unique_sales = CLEANED;
+EXPORT unique_sales TO "unique-sales.csv" OVERWRITE;
+AUDIT EXPORT TO "duplicate-removal-audit.json";
+```
+
+Use `KEEP last` when the final occurrence is authoritative. `KEEP none`
+removes every member of each duplicate group and should only be used when no
+copy should remain. Named datasets are supported with
+`DUPLICATES DATASET customers SUMMARY`.
+
 ## Convert dates and control numeric precision
 
 Convert a string datetime column before profiling or modeling:

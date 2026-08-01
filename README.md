@@ -16,8 +16,8 @@ Jupyter, the command line, or standalone `.adql` notebooks.
 - Dataset profiling, semantic inference, and quality scoring
 - Missing-value, duplicate, outlier, datatype, and leakage diagnosis
 - Knowledge-aware cleaning recommendations and approval workflows
-- Audited missing-value fills/removals, manual row editing, domain validation,
-  and outlier treatment
+- Audited missing-value fills/removals, exact-duplicate inspection/removal,
+  manual row editing, domain validation, and outlier treatment
 - Descriptive statistics, distribution analysis, and correlations
 - Feature engineering and ML-readiness analysis
 - Regression and classification with prediction uncertainty
@@ -49,7 +49,7 @@ autodq --version
 python -c "import autodq; print(autodq.__version__)"
 ```
 
-Version 0.1.8 is available on
+Version 0.1.9 is available on
 [PyPI](https://pypi.org/project/autodq/). To work on AutoDQ itself, install
 directly from the project source:
 
@@ -122,7 +122,10 @@ RECOMMEND;
 # %% [Complete missing values]
 MISSING SUMMARY;
 MISSING FILL ALL STRATEGY auto;
+DUPLICATES SUMMARY;
+DUPLICATES DROP KEEP first;
 CLEANING APPLY;
+LET cleaned_sales = CLEANED;
 
 # %% [Regional analysis]
 SELECT Region,
@@ -281,7 +284,7 @@ For the complete release process, see the
 - [Plugin development](https://github.com/josephubani/autodq-analytics/blob/main/docs/PLUGIN_GUIDE.md)
 - [Project roadmap](https://github.com/josephubani/autodq-analytics/blob/main/docs/ROADMAP.md)
 - [Package and release procedure](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASING.md)
-- [AutoDQ 0.1.8 release notes](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.8.md)
+- [AutoDQ 0.1.9 release notes](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.9.md)
 
 ## License
 

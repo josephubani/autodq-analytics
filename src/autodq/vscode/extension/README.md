@@ -23,6 +23,8 @@ workflow.
   human or `strftime` patterns, mixed/ISO modes, UTC, and decimal rounding
 - Audited `MISSING` summaries, datatype-aware fills, interpolation, and
   row/column removal staged through the cleaning review
+- Exact-row duplicate tables and audited `DUPLICATES DROP` retention policies
+  that finalize into the reusable `CLEANED` stage
 - Rich session inspection with `SESSION`, `SESSION EVENTS LIMIT n`, and
   `SESSION DATASETS`
 - Rich tables, quality reports, cleaning recommendations, model explanations,
@@ -88,8 +90,11 @@ Resolve remaining missing values in a review cell:
 MISSING SUMMARY;
 MISSING FILL City VALUE "Not provided";
 MISSING FILL ALL STRATEGY auto;
+DUPLICATES SUMMARY;
+DUPLICATES DROP KEEP first;
 CLEANING APPLY;
 MISSING SUMMARY;
+LET cleaned_sales = CLEANED;
 ```
 
 Open the file with **AutoDQ ADQL Notebook**, then run cells from top to bottom.

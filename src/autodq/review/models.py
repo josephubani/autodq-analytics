@@ -405,6 +405,20 @@ class CleaningReview:
             reason=reason,
         )
 
+    def duplicate_summary(self) -> pd.DataFrame:
+        return self._require_engine().duplicate_summary(self.working_data)
+
+    def drop_duplicates(
+        self,
+        keep: str = "first",
+        reason: str | None = None,
+    ) -> dict[str, Any]:
+        return self._require_engine().drop_duplicates(
+            self,
+            keep=keep,
+            reason=reason,
+        )
+
     def preview(
         self,
         action_ids=None,

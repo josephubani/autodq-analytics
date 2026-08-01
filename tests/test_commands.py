@@ -208,6 +208,40 @@ class ADQLTests(unittest.TestCase):
                     project = self._project()
                     project.query(source, auto_display=False)
 
+    def test_parser_supports_exact_duplicate_workflows(self):
+        statements = ADQLParser().parse(
+            'DUPLICATES SUMMARY; '
+            'DUPLICATES DROP; '
+            'DUPLICATES DROP KEEP last REASON "Keep latest import"; '
+            'DUPLICATES DATASET customers SUMMARY;'
+        ).statements
+
+        self.assertEqual(statements[0].parameters, {"action": "summary"})
+        self.assertEqual(
+            statements[1].parameters,
+            {"action": "drop", "keep": "first"},
+        )
+        self.assertEqual(statements[2].parameters["keep"], "last")
+        self.assertEqual(
+            statements[2].parameters["reason"],
+            "Keep latest import",
+        )
+        self.assertEqual(
+            statements[3].parameters["dataset_name"],
+            "customers",
+        )
+
+        for source in (
+            "DUPLICATES;",
+            "DUPLICATES UNKNOWN;",
+            "DUPLICATES SUMMARY KEEP first;",
+            "DUPLICATES DROP KEEP middle;",
+        ):
+            with self.subTest(source=source):
+                with self.assertRaises((ADQLSyntaxError, ADQLValidationError)):
+                    project = self._project()
+                    project.query(source, auto_display=False)
+
     def test_parser_supports_let_stage_dataset_and_select_assignments(self):
         statements = ADQLParser().parse(
             "LET cleaned_customers = CLEANED; "
@@ -908,6 +942,68 @@ class ADQLTests(unittest.TestCase):
         self.assertEqual(project.dataset_manager.primary().name, "customers")
         self.assertEqual(len(project.state.cleaned_data), 2)
         self.assertEqual(int(project.state.cleaned_data["City"].isna().sum()), 0)
+
+    def test_adql_duplicates_show_exact_rows_apply_and_assign_cleaned(self):
+        project = self._project()
+        run = project.query(
+            """
+            DUPLICATES SUMMARY;
+            DUPLICATES DROP KEEP first REASON "Exact repeated import";
+            DUPLICATES SUMMARY;
+            CLEANING APPLY;
+            LET deduplicated_sales = CLEANED;
+            """,
+            auto_display=False,
+        )
+
+        self.assertTrue(run.success)
+        before = run.results[0].data
+        after = run.results[2].data
+        self.assertEqual(len(before), 2)
+        self.assertEqual(before["duplicate_group"].nunique(), 1)
+        self.assertEqual(before["occurrences"].tolist(), [2, 2])
+        self.assertEqual(len(after), 0)
+        self.assertEqual(int(project.state.cleaned_data.duplicated().sum()), 0)
+        self.assertEqual(len(project.state.cleaned_data), len(self.data) - 1)
+        assigned = project.dataset_manager.get_data("deduplicated_sales")
+        self.assertEqual(len(assigned), len(self.data) - 1)
+        self.assertEqual(int(assigned.duplicated().sum()), 0)
+        duplicate_audit = [
+            item
+            for item in project.state.cleaning_review.audit_trail
+            if item.event_type == "exact_duplicate_row_removed"
+        ]
+        self.assertEqual(len(duplicate_audit), 1)
+        self.assertEqual(duplicate_audit[0].reason, "Exact repeated import")
+
+    def test_adql_duplicates_support_named_dataset_targeting(self):
+        project = self._project()
+        customers_path = self.root / "customers-duplicates.csv"
+        pd.DataFrame(
+            {
+                "Customer": ["A", "B", "A"],
+                "City": ["Toronto", "Lagos", "Toronto"],
+            }
+        ).to_csv(customers_path, index=False)
+        run = project.query(
+            f"""
+            ADD DATASET customers FROM "{customers_path}";
+            DUPLICATES DATASET customers SUMMARY;
+            DUPLICATES DATASET customers DROP;
+            CLEANING DATASET customers APPLY;
+            LET unique_customers = CLEANED;
+            """,
+            auto_display=False,
+        )
+
+        self.assertTrue(run.success)
+        self.assertEqual(project.dataset_manager.primary().name, "customers")
+        self.assertEqual(len(run.results[1].data), 2)
+        self.assertEqual(len(project.state.cleaned_data), 2)
+        self.assertEqual(
+            len(project.dataset_manager.get_data("unique_customers")),
+            2,
+        )
 
     def test_extended_adql_model_persistence_workspace_and_intelligence(self):
         project = self._project(target="Revenue")

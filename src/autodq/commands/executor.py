@@ -369,6 +369,42 @@ class ADQLExecutor:
                 ),
             }
 
+        if kind == "DUPLICATES":
+            action = parameters.pop("action")
+
+            if action == "summary":
+                data = project.duplicate_summary()
+                group_column = data.attrs.get(
+                    "duplicate_group_column",
+                    "duplicate_group",
+                )
+                groups = (
+                    int(data[group_column].nunique())
+                    if group_column in data.columns
+                    else 0
+                )
+                removable = max(len(data) - groups, 0)
+                return {
+                    "data": data,
+                    "total_rows": len(data),
+                    "message": (
+                        f"Found {len(data):,} row occurrence(s) across "
+                        f"{groups:,} exact duplicate group(s); keeping the "
+                        f"first occurrence would remove {removable:,} row(s)."
+                    ),
+                }
+
+            value = project.drop_duplicates(**parameters)
+            data = pd.DataFrame([value])
+            return {
+                "data": data,
+                "total_rows": 1,
+                "message": (
+                    f"Staged removal of {value['rows_removed']:,} exact "
+                    f"duplicate row(s), keeping {value['keep']}."
+                ),
+            }
+
         if kind == "DOMAIN":
             action = parameters.pop("action")
             value = (

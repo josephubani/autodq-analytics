@@ -231,14 +231,14 @@ class PackagingTests(unittest.TestCase):
     def test_public_release_documentation_is_current(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         notes = (
-            ROOT / "docs" / "RELEASE_NOTES_0.1.8.md"
+            ROOT / "docs" / "RELEASE_NOTES_0.1.9.md"
         ).read_text(encoding="utf-8")
         roadmap = (ROOT / "docs" / "ROADMAP.md").read_text(encoding="utf-8")
 
         self.assertIn("https://pypi.org/project/autodq/", readme)
         self.assertNotIn("Until the first PyPI release", readme)
-        self.assertIn("## Audited missing-value workflows", notes)
-        self.assertIn("MISSING FILL ALL STRATEGY auto", notes)
+        self.assertIn("## Exact duplicate inspection", notes)
+        self.assertIn("DUPLICATES DROP KEEP first", notes)
         self.assertIn(
             "All items in the original AutoDQ development roadmap are complete.",
             roadmap,

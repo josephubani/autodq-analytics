@@ -33,6 +33,7 @@ SUPPORTED_COMMANDS = {
     "CONCAT",
     "EDIT",
     "MISSING",
+    "DUPLICATES",
     "DOMAIN",
     "OUTLIERS",
     "AUDIT",
@@ -103,6 +104,7 @@ DATASET_SCOPED_COMMANDS = {
     "LOAD",
     "MODEL",
     "MISSING",
+    "DUPLICATES",
     "OUTLIERS",
     "PREDICT",
     "PREVIEW",
@@ -388,6 +390,17 @@ COMMAND_HELP = [
         "description": (
             "Summarize, fill, or remove missing data with a cell-level audit "
             "trail before CLEANING APPLY."
+        ),
+    },
+    {
+        "command": "DUPLICATES",
+        "syntax": (
+            "DUPLICATES SUMMARY; "
+            "DUPLICATES DROP [KEEP first|last|none] [REASON text]"
+        ),
+        "description": (
+            "Show every row in each exact-duplicate group or stage audited "
+            "duplicate removal before CLEANING APPLY."
         ),
     },
     {

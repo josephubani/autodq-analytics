@@ -5,6 +5,24 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.9 - 2026-07-31
+
+### Added
+
+- Added first-class ADQL `DUPLICATES SUMMARY` output that displays every row
+  belonging to each exact-duplicate group, including source index, group ID,
+  and occurrence count.
+- Added audited `DUPLICATES DROP KEEP first|last|none` removal staged through
+  the cleaning review until `CLEANING APPLY`.
+- Added matching Python APIs: `duplicate_summary()` and `drop_duplicates()`.
+- Added named-dataset targeting and end-to-end `LET ... = CLEANED` acceptance
+  coverage for deduplicated results.
+
+### Changed
+
+- Updated the bundled AutoDQ ADQL VS Code extension to 0.3.2 with highlighting
+  and documentation for exact-duplicate workflows.
+
 ## 0.1.8 - 2026-07-29
 
 ### Added

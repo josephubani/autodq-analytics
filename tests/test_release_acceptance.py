@@ -48,6 +48,7 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
                     [index + 1, units, price, region, revenue, created_at]
                 )
 
+            writer.writerow([1, 1, 10, "North", 10, "01/07/2026 08:30:00"])
             writer.writerow([49, "", 24, "", 240, "29/07/2026 14:45:00"])
 
     def _write_workflow(self):
@@ -61,8 +62,12 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
             "# %% [Missing-value completion]\n"
             "MISSING SUMMARY;\n"
             "MISSING FILL ALL STRATEGY auto;\n"
+            "DUPLICATES SUMMARY;\n"
+            "DUPLICATES DROP KEEP first;\n"
             "CLEANING APPLY;\n"
             "MISSING SUMMARY;\n"
+            "DUPLICATES SUMMARY;\n"
+            "LET acceptance_cleaned = CLEANED;\n"
             "# %% [Summary]\n"
             "SELECT Region, SUM(Revenue) AS total_revenue, COUNT(*) AS rows\n"
             "FROM CURRENT WHERE Region IS NOT NULL GROUP BY Region\n"
@@ -88,7 +93,7 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
             "import sys; from autodq import AutoDQ; "
             "project = AutoDQ(sys.argv[1], target='Revenue'); "
             "profile = project.profile(); diagnosis = project.diagnose(); "
-            "assert profile['rows'] == 49; "
+            "assert profile['rows'] == 50; "
             "assert diagnosis.quality_score < 100; "
             "result = project.auto(mode='review', visualize=False, "
             "auto_display=False); assert result.success; print('api-ok')"

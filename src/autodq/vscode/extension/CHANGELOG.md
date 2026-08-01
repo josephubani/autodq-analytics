@@ -1,5 +1,12 @@
 # Change Log
 
+## 0.3.2 - 2026-07-31
+
+- Added highlighting and notebook documentation for `DUPLICATES SUMMARY` and
+  audited `DUPLICATES DROP KEEP first|last|none` workflows.
+- Bundled AutoDQ 0.1.9 runtime support for exact-row duplicate inspection,
+  staged removal, and reusable cleaned snapshots.
+
 ## 0.3.1 - 2026-07-29
 
 - Added highlighting and notebook documentation for ADQL `MISSING` summaries,
