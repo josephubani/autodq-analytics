@@ -1,0 +1,550 @@
+(* AutoDQ Analytics Domain Query Language 2.0 concrete grammar.
+   Keywords and enum terminals are case-insensitive.
+   Command options may appear in any order unless a production fixes an order.
+   Repeated options are syntactically expressible below but are rejected by
+   semantic validation. *)
+
+language-version = "2.0" ;
+
+script = statement, { ";", statement }, [ ";" ] ;
+
+statement =
+    select-statement
+  | dataset-statement
+  | load-statement
+  | knowledge-statement
+  | let-statement
+  | profile-statement
+  | statistics-statement
+  | interpret-statement
+  | diagnose-statement
+  | recommend-statement
+  | decide-statement
+  | preview-statement
+  | review-statement
+  | approve-statement
+  | reject-statement
+  | clean-statement
+  | validate-statement
+  | cleaning-statement
+  | auto-statement
+  | visualize-statement
+  | model-statement
+  | predict-statement
+  | explain-statement
+  | shap-statement
+  | dashboard-statement
+  | workspace-statement
+  | add-statement
+  | list-statement
+  | merge-statement
+  | concat-statement
+  | edit-statement
+  | missing-statement
+  | duplicates-statement
+  | domain-statement
+  | outliers-statement
+  | audit-statement
+  | correlation-statement
+  | readiness-statement
+  | features-statement
+  | feature-statement
+  | blue-statement
+  | gallery-statement
+  | report-statement
+  | export-statement
+  | set-statement
+  | use-statement
+  | head-statement
+  | tail-statement
+  | sample-statement
+  | help-statement
+  | history-statement
+  | session-statement ;
+
+(* Queries ---------------------------------------------------------------- *)
+
+(* command: SELECT *)
+select-statement =
+    "SELECT", [ "DISTINCT" ], select-list,
+    "FROM", data-source,
+    [ "WHERE", condition, { "AND", condition } ],
+    [ "GROUP", "BY", identifier-list ],
+    [ "ORDER", "BY", order-term, { ",", order-term } ],
+    [ "LIMIT", positive-integer ] ;
+
+select-list = select-item, { ",", select-item } ;
+select-item = "*" | column-projection | aggregate-projection ;
+column-projection = identifier, [ "AS", identifier ] ;
+aggregate-projection = aggregate, "(", ( "*" | identifier ), ")",
+                       [ "AS", identifier ] ;
+aggregate = "COUNT" | "SUM" | "AVG" | "MEAN" | "MIN" | "MAX"
+          | "MEDIAN" | "NUNIQUE" ;
+
+condition =
+    identifier, comparison-operator, literal
+  | identifier, ( "IN" | "NOT", "IN" ), "(", literal-list, ")"
+  | identifier, ( "IS", "NULL" | "IS", "NOT", "NULL" )
+  | identifier, ( "CONTAINS" | "STARTS", "WITH" | "ENDS", "WITH" ), literal ;
+
+comparison-operator = "=" | "!=" | "<" | "<=" | ">" | ">=" ;
+order-term = identifier, [ "ASC" | "DESC" ] ;
+
+(* Dataset and workflow commands ------------------------------------------ *)
+
+(* command: DATASET *)
+dataset-statement = "DATASET", path, [ "TARGET", identifier ] ;
+
+(* command: LOAD *)
+load-statement = "LOAD", [ short-dataset-target ] ;
+
+(* command: KNOWLEDGE *)
+knowledge-statement = "KNOWLEDGE", [ short-dataset-target ] ;
+
+(* command: LET *)
+let-statement = "LET", assignment-identifier, "=", let-source,
+                [ "OVERWRITE" ] ;
+let-source = stage-source | "DATASET", dataset-name | select-statement ;
+
+(* command: PROFILE *)
+profile-statement = "PROFILE", [ short-dataset-target ] ;
+
+(* command: STATISTICS *)
+statistics-statement = "STATISTICS", [ short-dataset-target ] ;
+
+(* command: INTERPRET *)
+interpret-statement = "INTERPRET", [ short-dataset-target ] ;
+
+(* command: DIAGNOSE *)
+diagnose-statement = "DIAGNOSE", [ short-dataset-target ] ;
+
+(* command: RECOMMEND *)
+recommend-statement = "RECOMMEND", [ short-dataset-target ] ;
+
+(* command: DECIDE *)
+decide-statement = "DECIDE", [ short-dataset-target ] ;
+
+(* command: PREVIEW *)
+preview-statement = "PREVIEW", [ short-dataset-target ] ;
+
+(* command: REVIEW *)
+review-statement = "REVIEW", [ short-dataset-target ] ;
+
+(* command: APPROVE *)
+approve-statement = "APPROVE", [ dataset-selector ],
+                    ( "ALL" | positive-integer-list ) ;
+
+(* command: REJECT *)
+reject-statement = "REJECT", [ dataset-selector ], positive-integer-list,
+                   [ "REASON", value-token ] ;
+
+(* command: CLEAN *)
+clean-statement = "CLEAN", [ short-dataset-target ] ;
+
+(* command: VALIDATE *)
+validate-statement = "VALIDATE", [ short-dataset-target ] ;
+
+(* command: CLEANING *)
+cleaning-statement = "CLEANING", [ dataset-selector ],
+    ( "APPLY"
+    | "PREVIEW", { cleaning-preview-option } ) ;
+cleaning-preview-option = "ACTIONS", positive-integer-list
+                        | "MAX_ROWS", integer ;
+
+(* command: AUTO *)
+auto-statement = "AUTO", [ dataset-selector ], [ auto-mode ],
+                 { auto-option } ;
+auto-mode = "review" | "clean" | "full" ;
+auto-option =
+    "MODE", auto-mode
+  | "VISUALIZE", boolean
+  | "APPROVE_ALL", boolean
+  | "APPLY_CLEANING", boolean
+  | "APPLY_FEATURES", boolean
+  | "TRAIN_MODEL", boolean
+  | "PREDICT", boolean
+  | "EXPLAIN", boolean
+  | "ALGORITHM", value-token
+  | "TEST_SIZE", number
+  | "RANDOM_STATE", integer
+  | "REPORT", path
+  | "REPORT_OUTPUT", path
+  | "REPORT_STYLE", value-token
+  | "SAVE_WORKSPACE", boolean
+  | "REFRESH", boolean
+  | "CONTINUE_ON_ERROR", boolean
+  | "RAISE_ON_ERROR", boolean ;
+
+(* Visualization and modeling --------------------------------------------- *)
+
+(* command: VISUALIZE *)
+visualize-statement = "VISUALIZE", [ dataset-selector ],
+                      [ chart-type ], { visualize-option } ;
+visualize-option =
+    "CHART", chart-type
+  | "X", identifier
+  | "Y", identifier
+  | "COLUMN", identifier
+  | "STAGE", stage-source
+  | "TITLE", value-token
+  | "SUBTITLE", value-token
+  | "X_LABEL", value-token
+  | "Y_LABEL", value-token
+  | "THEME", value-token
+  | "COLOR", value-token
+  | "PALETTE", value-token
+  | "FIGSIZE", figure-size
+  | "DPI", integer
+  | "GRID", boolean
+  | "LEGEND", boolean
+  | "DISPLAY", boolean
+  | "APPEND", boolean
+  | "SAVE", path
+  | "FORMAT", value-token ;
+
+(* command: MODEL *)
+model-statement = "MODEL", [ dataset-selector ],
+    ( ( "SAVE", "TO", path, [ overwrite-flag ] )
+    | ( "LOAD", "FROM", path, [ overwrite-flag ] )
+    | { model-option } ) ;
+model-option =
+    "TARGET", identifier
+  | "USING", value-token
+  | "ALGORITHM", value-token
+  | "TEST_SIZE", number
+  | "RANDOM_STATE", integer
+  | "USE_ENGINEERED", boolean
+  | "EXCLUDE_LEAKAGE", boolean
+  | "EXCLUDE", identifier-list ;
+
+(* command: PREDICT *)
+predict-statement = "PREDICT", [ dataset-selector ], { predict-option } ;
+predict-option =
+    "CONFIDENCE", number
+  | "CONFIDENCE_LEVEL", number
+  | "UNCERTAINTY", boolean
+  | "LOW_CONFIDENCE", number
+  | "LOW_CONFIDENCE_THRESHOLD", number ;
+
+(* command: EXPLAIN *)
+explain-statement = "EXPLAIN", [ dataset-selector ], { explain-option } ;
+explain-option = "MAX_ROWS", integer | "USE_ENGINEERED", boolean ;
+
+(* command: SHAP *)
+shap-statement = "SHAP", [ dataset-selector ], { shap-option } ;
+shap-option =
+    "CHART", ( "summary" | "bar" | "beeswarm" | "waterfall" | "dependence" )
+  | "ROW", integer
+  | "FEATURE", identifier
+  | "SAVE", path ;
+
+(* command: DASHBOARD *)
+dashboard-statement = "DASHBOARD", [ dataset-selector ],
+                      { dashboard-option } ;
+dashboard-option =
+    "TITLE", value-token
+  | "SUBTITLE", value-token
+  | "THEME", value-token
+  | "STAGE", stage-source
+  | "SAVE", path
+  | "OUTPUT", path
+  | "MAX_CHARTS", integer
+  | "MAX_ROWS", integer
+  | "CHART_IDS", identifier-list
+  | "CHARTS", boolean
+  | "PREVIEW", boolean
+  | "REFRESH", boolean
+  | "OVERWRITE", [ boolean ]
+  | "DISPLAY", boolean ;
+
+(* Workspaces and multiple datasets --------------------------------------- *)
+
+(* command: WORKSPACE *)
+workspace-statement = "WORKSPACE",
+    ( "CREATE", dataset-name, { workspace-create-option }
+    | "OPEN", value-token, { workspace-open-option }
+    | "SAVE", { workspace-save-option }
+    | "INFO"
+    | "LIST", { workspace-list-option } ) ;
+workspace-create-option = "ROOT", path | "TARGET", identifier ;
+workspace-open-option = "ROOT", path | "LOAD_MODEL", boolean ;
+workspace-save-option = "MODEL_NAME", value-token | "INCLUDE_MODEL", boolean ;
+workspace-list-option = "ROOT", path ;
+
+(* command: ADD *)
+add-statement = "ADD", "DATASET", dataset-name, "FROM", path,
+                [ "OVERWRITE", [ boolean ] ] ;
+
+(* command: LIST *)
+list-statement = "LIST", ( "DATASETS" | "WORKSPACES" | "VISUALIZATIONS" ) ;
+
+(* command: MERGE *)
+merge-statement = "MERGE", dataset-name, { merge-option } ;
+merge-option =
+    "WITH", dataset-name
+  | "AS", dataset-name
+  | "HOW", value-token
+  | "ON", identifier-list
+  | "LEFT_ON", identifier-list
+  | "RIGHT_ON", identifier-list
+  | "VALIDATE", value-token
+  | "SUFFIXES", identifier-list
+  | "MAKE_ACTIVE", boolean ;
+
+(* command: CONCAT *)
+concat-statement = "CONCAT", dataset-name-list, { concat-option } ;
+concat-option =
+    "AS", dataset-name
+  | "AXIS", integer
+  | "IGNORE_INDEX", boolean
+  | "JOIN", value-token
+  | "MAKE_ACTIVE", boolean ;
+
+(* Audited review ---------------------------------------------------------- *)
+
+(* command: EDIT *)
+edit-statement = "EDIT", [ dataset-selector ], "ROW", literal,
+                 "CHANGES", mapping-literal, [ "REASON", value-token ] ;
+
+(* command: MISSING *)
+missing-statement = "MISSING", [ dataset-selector ],
+    ( "SUMMARY"
+    | "FILL", missing-fill-target, { missing-fill-option }
+    | "DROP", "ROWS", { missing-drop-rows-option }
+    | "DROP", "COLUMNS", missing-drop-columns-selector,
+      [ "REASON", value-token ] ) ;
+missing-fill-target = "ALL" | identifier | "COLUMNS", identifier-list ;
+missing-fill-option =
+    "STRATEGY", ( "auto" | "constant" | "mean" | "median" | "mode"
+                | "zero" | "ffill" | "bfill" | "interpolate" )
+  | "VALUE", literal
+  | "REASON", value-token ;
+missing-drop-rows-option =
+    "COLUMNS", identifier-list
+  | "HOW", ( "any" | "all" )
+  | "REASON", value-token ;
+missing-drop-columns-selector =
+    identifier-list
+  | "COLUMNS", identifier-list
+  | "MIN_PERCENT", number ;
+
+(* command: DUPLICATES *)
+duplicates-statement = "DUPLICATES", [ dataset-selector ],
+    ( "SUMMARY"
+    | "DROP", [ "KEEP", ( "first" | "last" | "none" ) ],
+      [ "REASON", value-token ] ) ;
+
+(* command: DOMAIN *)
+domain-statement = "DOMAIN", [ dataset-selector ],
+    ( "VALIDATE"
+    | "ADD", identifier, domain-option, { domain-option } ) ;
+domain-option =
+    "MIN", literal
+  | "MAX", literal
+  | "ALLOWED", literal-list
+  | "PATTERN", value-token
+  | "NULLABLE", boolean
+  | "UNIQUE", boolean
+  | "DESCRIPTION", value-token ;
+
+(* command: OUTLIERS *)
+outliers-statement = "OUTLIERS", [ dataset-selector ],
+    ( "REVIEW", { outlier-review-option }
+    | "TREAT", outlier-treat-option, { outlier-treat-option } ) ;
+outlier-review-option = "COLUMNS", identifier-list | "IQR", number ;
+outlier-treat-option =
+    "COLUMN", identifier
+  | "STRATEGY", value-token
+  | "LOWER", number
+  | "UPPER", number
+  | "REASON", value-token
+  | "IQR", number ;
+
+(* command: AUDIT *)
+audit-statement = "AUDIT", [ dataset-selector ], "EXPORT", "TO", path ;
+
+(* Analysis and feature engineering --------------------------------------- *)
+
+(* command: CORRELATION *)
+correlation-statement = "CORRELATION", [ dataset-selector ],
+                        [ "MIN_ABS", number ] ;
+
+(* command: READINESS *)
+readiness-statement = "READINESS", [ short-dataset-target ] ;
+
+(* command: FEATURES *)
+features-statement = "FEATURES", [ short-dataset-target ] ;
+
+(* command: FEATURE *)
+feature-statement = "FEATURE", [ dataset-selector ],
+    ( "APPLY", [ "NAMES", identifier-list ]
+    | "CREATE", identifier, "METHOD", value-token,
+      { feature-create-option } ) ;
+feature-create-option =
+    "COLUMN", identifier
+  | "COLUMNS", identifier-list
+  | "EXPRESSION", value-token
+  | "BINS", number-list
+  | "LABELS", value-list
+  | "USE_ENGINEERED", boolean ;
+
+(* command: BLUE *)
+blue-statement = "BLUE", [ dataset-selector ],
+    ( "VISUALIZE", { blue-visualize-option }
+    | "INTERPRET"
+    | "PRESCRIBE"
+    | { blue-option } ) ;
+blue-visualize-option = "APPEND", boolean | "ALLOW_DUPLICATES", boolean ;
+blue-option =
+    "SOURCE", stage-source
+  | "USE_ENGINEERED", boolean
+  | "EXCLUDE_LEAKAGE", boolean
+  | "MAX_FEATURES", integer
+  | "SIGNIFICANCE", number
+  | "LEAKAGE_THRESHOLD", number
+  | "EXCLUDE", identifier-list ;
+
+(* command: GALLERY *)
+gallery-statement = "GALLERY",
+    ( "LIST", { gallery-list-option }
+    | "GET", identifier
+    | "CUSTOMIZE", identifier, { gallery-style-option }
+    | "SAVE", { gallery-save-option }
+    | "REMOVE", identifier
+    | "CLEAR" ) ;
+gallery-list-option = "TYPE", chart-type | "STAGE", stage-source
+                    | "RECOMMENDED", boolean ;
+gallery-save-option = "TO", path | "FORMAT", value-token ;
+gallery-style-option =
+    "TITLE", value-token
+  | "SUBTITLE", value-token
+  | "X_LABEL", value-token
+  | "Y_LABEL", value-token
+  | "THEME", value-token
+  | "COLOR", value-token
+  | "PALETTE", value-token
+  | "FIGSIZE", figure-size
+  | "DPI", integer
+  | "GRID", boolean
+  | "LEGEND", boolean
+  | "LEGEND_POSITION", value-token
+  | "TEMPLATE", value-token
+  | "TRANSPARENT", boolean ;
+
+(* Export and utility commands -------------------------------------------- *)
+
+(* command: REPORT *)
+report-statement = "REPORT", [ dataset-selector ], "TO", path,
+                   { report-option } ;
+report-option = "STYLE", value-token | "OVERWRITE", [ boolean ] ;
+
+(* command: EXPORT *)
+export-statement = "EXPORT", [ dataset-selector ], data-source, "TO", path,
+                   [ "OVERWRITE", [ boolean ] ] ;
+
+(* command: SET *)
+set-statement = "SET", [ dataset-selector ],
+    ( "TARGET", identifier
+    | "TYPE", identifier, dtype, { set-type-option } ) ;
+set-type-option =
+    "FORMAT", value-token
+  | "DAYFIRST", boolean
+  | "YEARFIRST", boolean
+  | "UTC", boolean
+  | "DECIMALS", integer ;
+dtype = "datetime" | "date" | "timestamp"
+      | "str" | "string" | "text"
+      | "int" | "integer"
+      | "float" | "numeric" | "number" | "decimal"
+      | "category" | "categorical" ;
+
+(* command: USE *)
+use-statement = "USE", "DATASET", dataset-name ;
+
+(* command: HEAD *)
+head-statement = "HEAD", [ dataset-selector ], [ positive-integer ] ;
+
+(* command: TAIL *)
+tail-statement = "TAIL", [ dataset-selector ], [ positive-integer ] ;
+
+(* command: SAMPLE *)
+sample-statement = "SAMPLE", [ dataset-selector ], [ positive-integer ],
+                   [ "RANDOM_STATE", integer ] ;
+
+(* command: HELP *)
+help-statement = "HELP", [ command-name ] ;
+
+(* command: HISTORY *)
+history-statement = "HISTORY", [ "LIMIT", positive-integer ] ;
+
+(* command: SESSION *)
+session-statement = "SESSION",
+                    [ "EVENTS", [ "LIMIT", positive-integer ] | "DATASETS" ] ;
+
+(* Shared productions ------------------------------------------------------ *)
+
+dataset-selector = "DATASET", dataset-name ;
+short-dataset-target = dataset-name | dataset-selector ;
+data-source = stage-source | dataset-name ;
+stage-source = "CURRENT" | "RAW" | "DATA" | "CLEANED"
+             | "ENGINEERED" | "FEATURES" | "PREDICTIONS" ;
+
+command-name = "SELECT" | "DATASET" | "LOAD" | "KNOWLEDGE" | "LET"
+             | "PROFILE" | "STATISTICS" | "INTERPRET" | "DIAGNOSE"
+             | "RECOMMEND" | "DECIDE" | "PREVIEW" | "REVIEW"
+             | "APPROVE" | "REJECT" | "CLEAN" | "VALIDATE" | "CLEANING"
+             | "AUTO" | "VISUALIZE" | "MODEL" | "PREDICT" | "EXPLAIN"
+             | "SHAP" | "DASHBOARD" | "WORKSPACE" | "ADD" | "LIST"
+             | "MERGE" | "CONCAT" | "EDIT" | "MISSING" | "DUPLICATES"
+             | "DOMAIN" | "OUTLIERS" | "AUDIT" | "CORRELATION"
+             | "READINESS" | "FEATURES" | "FEATURE" | "BLUE" | "GALLERY"
+             | "REPORT" | "EXPORT" | "SET" | "USE" | "HEAD" | "TAIL"
+             | "SAMPLE" | "HELP" | "HISTORY" | "SESSION" ;
+
+overwrite-flag = "OVERWRITE", [ boolean ] ;
+chart-type = value-token ;
+figure-size = number, ( "," | "x" | "X" ), number ;
+identifier-list = identifier, { ",", identifier } ;
+dataset-name-list = dataset-name, ",", dataset-name, { ",", dataset-name } ;
+literal-list = literal, { ",", literal } ;
+number-list = number, { ",", number } ;
+value-list = value-token, { ",", value-token } ;
+positive-integer-list = positive-integer, { ",", positive-integer } ;
+
+boolean = "true" | "false" | "yes" | "no" | "1" | "0" | "on" | "off" ;
+null = "NULL" | "NONE" ;
+literal = string-literal | number | boolean | null | bare-token ;
+number = [ "+" | "-" ], ( digit, { digit }, [ ".", { digit } ]
+                            | ".", digit, { digit } ),
+         [ ( "e" | "E" ), [ "+" | "-" ], digit, { digit } ] ;
+integer = [ "+" | "-" ], digit, { digit } ;
+positive-integer = digit-nonzero, { digit } ;
+
+assignment-identifier = ( letter | "_" ), { letter | digit | "_" } ;
+identifier = quoted-token | bare-token ;
+dataset-name = quoted-token | bare-token ;
+path = quoted-token | bare-token ;
+value-token = quoted-token | bare-token ;
+mapping-literal = string-literal ;
+
+quoted-token = single-quoted | double-quoted | backtick-quoted ;
+string-literal = single-quoted | double-quoted ;
+single-quoted = "'", { escaped-character | character-except-single-quote }, "'" ;
+double-quoted = '"', { escaped-character | character-except-double-quote }, '"' ;
+backtick-quoted = "`", { escaped-character | character-except-backtick }, "`" ;
+escaped-character = "\\", any-character ;
+bare-token = bare-character, { bare-character } ;
+
+letter = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I"
+       | "J" | "K" | "L" | "M" | "N" | "O" | "P" | "Q" | "R"
+       | "S" | "T" | "U" | "V" | "W" | "X" | "Y" | "Z"
+       | "a" | "b" | "c" | "d" | "e" | "f" | "g" | "h" | "i"
+       | "j" | "k" | "l" | "m" | "n" | "o" | "p" | "q" | "r"
+       | "s" | "t" | "u" | "v" | "w" | "x" | "y" | "z" ;
+digit = "0" | digit-nonzero ;
+digit-nonzero = "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" ;
+
+(* The host EBNF reader supplies these terminal character classes:
+   any-character, bare-character, character-except-single-quote,
+   character-except-double-quote, and character-except-backtick.
+   bare-character excludes whitespace, semicolon, comma, and parentheses. *)

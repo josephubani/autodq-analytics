@@ -21,6 +21,7 @@ from autodq.review import (
 )
 from autodq.dashboard import Dashboard, DashboardEngine, DashboardMetric
 from autodq.commands import (
+    ADQL_LANGUAGE_VERSION,
     ADQLError,
     ADQLExecutionError,
     ADQLExecutor,
@@ -47,6 +48,7 @@ __all__ = [
     "AutoRunError",
     "AutoRunResult",
     "AutoStageResult",
+    "ADQL_LANGUAGE_VERSION",
     "ADQLError",
     "ADQLExecutionError",
     "ADQLExecutor",

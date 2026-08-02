@@ -5,6 +5,15 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+### Added
+
+- Published the normative ADQL 2.0 language specification, machine-readable
+  EBNF grammar, execution model, data-type rules, error model, and compatibility
+  policy.
+- Exposed `ADQL_LANGUAGE_VERSION` through the public Python API and added
+  conformance tests that keep the runtime command inventory synchronized with
+  the specification and grammar.
+
 ## 0.1.9 - 2026-07-31
 
 ### Added

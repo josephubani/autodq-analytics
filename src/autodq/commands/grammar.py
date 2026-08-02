@@ -1,5 +1,9 @@
 """Grammar constants for the AutoDQ Analytics Domain Query Language."""
 
+# Public language version. This is intentionally independent from the AutoDQ
+# package and VS Code extension versions.
+ADQL_LANGUAGE_VERSION = "2.0"
+
 SUPPORTED_COMMANDS = {
     "SELECT",
     "DATASET",

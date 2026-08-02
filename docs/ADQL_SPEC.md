@@ -1,9 +1,16 @@
-# AutoDQ Analytics Domain Query Language (ADQL) v2
+# AutoDQ Analytics Domain Query Language (ADQL) v2 User Guide
 
 ADQL is a standalone, safe language for querying AutoDQ data and running
 explicit AutoDQ workflow operations. A `.adql` file can replace a notebook for
 repeatable analytics while retaining named, executable cells. ADQL does not
 evaluate Python expressions or expose arbitrary object methods.
+
+This file is the practical command guide. The normative definition of ADQL
+2.0 is the [formal language specification](adql/SPECIFICATION.md), accompanied
+by its [EBNF grammar](adql/grammar.ebnf),
+[execution model](adql/execution-model.md),
+[data-type rules](adql/data-types.md), [error model](adql/errors.md), and
+[compatibility policy](adql/compatibility.md).
 
 ## Standalone `.adql` files
 

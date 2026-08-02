@@ -1227,7 +1227,7 @@ class ADQLParser:
     def _parse_where(self, text: str) -> list[dict[str, Any]]:
         if self._keyword_positions(text, ("OR",)).get("OR"):
             raise ADQLSyntaxError(
-                "OR is not supported in ADQL v1. Use IN (...) or separate queries."
+                "OR is not supported in ADQL 2.0. Use IN (...) or separate queries."
             )
 
         parts = self._split_keyword(text, "AND")

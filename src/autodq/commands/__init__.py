@@ -8,6 +8,7 @@ from autodq.commands.errors import (
 )
 from autodq.commands.executor import ADQLExecutor
 from autodq.commands.cells import ADQLCellParser
+from autodq.commands.grammar import ADQL_LANGUAGE_VERSION
 from autodq.commands.models import (
     ADQLCell,
     ADQLCellRun,
@@ -23,6 +24,7 @@ from autodq.commands.runner import ADQLFileRunner
 from autodq.commands.validator import ADQLValidator
 
 __all__ = [
+    "ADQL_LANGUAGE_VERSION",
     "ADQLError",
     "ADQLExecutionError",
     "ADQLExecutor",

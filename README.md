@@ -260,7 +260,9 @@ python -m unittest discover -s tests
 ```
 
 References: [Python API](docs/API_REFERENCE.md),
-[ADQL language](docs/ADQL_SPEC.md), [troubleshooting](docs/TROUBLESHOOTING.md),
+[ADQL user guide](docs/ADQL_SPEC.md),
+[ADQL 2.0 specification](docs/adql/SPECIFICATION.md),
+[troubleshooting](docs/TROUBLESHOOTING.md),
 [release guide](docs/RELEASING.md), and [changelog](CHANGELOG.md).
 
 Build and verify release artifacts:
@@ -277,6 +279,8 @@ For the complete release process, see the
 ## Documentation
 
 - [ADQL language reference](https://github.com/josephubani/autodq-analytics/blob/main/docs/ADQL_SPEC.md)
+- [Formal ADQL 2.0 specification](https://github.com/josephubani/autodq-analytics/blob/main/docs/adql/SPECIFICATION.md)
+- [Machine-readable ADQL grammar](https://github.com/josephubani/autodq-analytics/blob/main/docs/adql/grammar.ebnf)
 - [Quickstart](https://github.com/josephubani/autodq-analytics/blob/main/docs/QUICKSTART.md)
 - [Troubleshooting](https://github.com/josephubani/autodq-analytics/blob/main/docs/TROUBLESHOOTING.md)
 - [VS Code Marketplace publishing](https://github.com/josephubani/autodq-analytics/blob/main/docs/VSCODE_MARKETPLACE.md)

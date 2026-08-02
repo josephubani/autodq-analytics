@@ -124,6 +124,9 @@ HTML or JSON analytical reports.
 ## ADQL
 
 ```python
+from autodq import ADQL_LANGUAGE_VERSION
+
+print(ADQL_LANGUAGE_VERSION)  # 2.0
 result = project.query("PROFILE; DIAGNOSE;", auto_display=False)
 file_result = project.run_adql("analysis.adql", through_cell=3)
 ```
@@ -132,8 +135,9 @@ file_result = project.run_adql("analysis.adql", through_cell=3)
 current project. Registered datasets can be targeted directly with
 `PROFILE customers`, `AUTO DATASET customers MODE review`, or
 `SELECT * FROM customers`. `run_adql()` executes a cell-based standalone file
-while retaining state between selected cells. See
-[ADQL_SPEC.md](ADQL_SPEC.md) for the language reference.
+while retaining state between selected cells. See the
+[ADQL user guide](ADQL_SPEC.md) and
+[formal ADQL 2.0 specification](adql/SPECIFICATION.md).
 
 ## Session inspection
 
