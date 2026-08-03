@@ -132,6 +132,8 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
         self.assertTrue((extension / "package.json").is_file())
         self.assertTrue((extension / "icons" / "adql-light.svg").is_file())
         self.assertTrue((extension / "icons" / "adql-dark.svg").is_file())
+        self.assertTrue((extension / "review-protocol.js").is_file())
+        self.assertTrue((extension / "review-renderer.mjs").is_file())
         self.assertTrue(
             (extension / "syntaxes" / "adql.tmLanguage.json").is_file()
         )

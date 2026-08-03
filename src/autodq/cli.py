@@ -24,6 +24,8 @@ _NOTEBOOK_DEFAULT_OUTPUT_ROWS = 25
 _NOTEBOOK_DEFAULT_OUTPUT_CHARACTERS = 12_000
 _NOTEBOOK_MAX_OUTPUT_COLUMNS = 20
 _NOTEBOOK_MAX_OUTPUTS = 30
+_NOTEBOOK_REVIEW_MIME = "application/vnd.autodq.review+json"
+_NOTEBOOK_REVIEW_PROTOCOL = "autodq-review-v1"
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -181,6 +183,7 @@ def _notebook_payload(
     *,
     max_output_rows: int | None = None,
     max_output_characters: int | None = None,
+    interactive_review: bool = False,
 ) -> dict:
     """Build the rich-output protocol consumed by the VS Code notebook."""
     row_limit = _notebook_limit(
@@ -222,6 +225,23 @@ def _notebook_payload(
                 )
 
             rich_value_rendered = False
+
+            if (
+                interactive_review
+                and statement_result.statement.kind == "REVIEW"
+                and _is_cleaning_review(statement_result.value)
+            ):
+                outputs.append(
+                    _notebook_review_output(
+                        statement_result.value,
+                        cell_number=(
+                            cell_run.cell.number
+                            if cell_run is not None
+                            else None
+                        ),
+                    )
+                )
+                rich_value_rendered = True
 
             if (
                 statement_result.statement.kind == "SESSION"
@@ -360,6 +380,240 @@ def _notebook_payload(
             else None
         ),
         "outputs": outputs,
+    }
+
+
+def _is_cleaning_review(value) -> bool:
+    return (
+        value is not None
+        and hasattr(value, "actions")
+        and hasattr(value, "audit_trail")
+        and hasattr(value, "working_data")
+        and callable(getattr(value, "to_dict", None))
+    )
+
+
+def _notebook_review_output(
+    review,
+    *,
+    cell_number: int | None,
+    interaction: dict | None = None,
+) -> dict:
+    return {
+        "mime": _NOTEBOOK_REVIEW_MIME,
+        "data": json.dumps(
+            _review_interactive_data(
+                review,
+                cell_number=cell_number,
+                interaction=interaction,
+            ),
+            ensure_ascii=False,
+        ),
+        "metadata": {
+            "protocol": _NOTEBOOK_REVIEW_PROTOCOL,
+            "interactive": True,
+        },
+    }
+
+
+def _review_interactive_data(
+    review,
+    *,
+    cell_number: int | None,
+    interaction: dict | None = None,
+) -> dict:
+    data = review.to_dict()
+    domain_report = data.get("domain_report") or {}
+    outlier_report = data.get("outlier_report") or {}
+    return {
+        "protocol": _NOTEBOOK_REVIEW_PROTOCOL,
+        "cell": {"number": cell_number},
+        "summary": {
+            "rows_original": data.get("rows_original", 0),
+            "rows_working": data.get("rows_working", 0),
+            "action_count": data.get("action_count", 0),
+            "pending_count": data.get("pending_count", 0),
+            "approved_count": data.get("approved_count", 0),
+            "rejected_count": data.get("rejected_count", 0),
+            "changed": bool(data.get("changed")),
+            "audit_count": data.get("audit_count", 0),
+            "domain_violations": domain_report.get("violation_count", 0),
+            "outliers": outlier_report.get("outlier_count", 0),
+        },
+        "actions": data.get("actions", []),
+        "audit_trail": data.get("audit_trail", [])[-25:],
+        "interaction": interaction or {
+            "success": True,
+            "type": "review",
+            "message": (
+                "Select cleaning actions to approve, reject, or preview. "
+                "All changes stay staged until Apply to CLEANED."
+            ),
+        },
+        "commands": {
+            "approve": "APPROVE <action_ids>;",
+            "reject": 'REJECT <action_ids> REASON "...";',
+            "preview": "CLEANING PREVIEW ACTIONS <action_ids>;",
+            "approve_all": "APPROVE ALL;",
+            "apply": "CLEANING APPLY;",
+            "edit": (
+                'EDIT ROW <index> SET <column> = <value> REASON "...";'
+            ),
+        },
+    }
+
+
+def _review_action_ids(value) -> list[int]:
+    if value is None:
+        return []
+
+    if not isinstance(value, list):
+        raise ValueError("Review action_ids must be a list.")
+
+    if len(value) > 100:
+        raise ValueError("At most 100 review actions can be changed at once.")
+
+    action_ids = []
+    for item in value:
+        if isinstance(item, bool) or (
+            isinstance(item, float) and not item.is_integer()
+        ):
+            raise ValueError("Review action IDs must be positive integers.")
+
+        try:
+            action_id = int(item)
+        except (TypeError, ValueError) as error:
+            raise ValueError(
+                "Review action IDs must be positive integers."
+            ) from error
+
+        if action_id < 1:
+            raise ValueError("Review action IDs must be positive integers.")
+
+        if action_id not in action_ids:
+            action_ids.append(action_id)
+
+    return action_ids
+
+
+def _review_reason(value) -> str | None:
+    if value is None:
+        return None
+
+    reason = str(value).strip()
+    if len(reason) > 500:
+        raise ValueError("Review reasons cannot exceed 500 characters.")
+
+    return reason or None
+
+
+def _review_result_data(value) -> dict | list | str | int | float | bool | None:
+    if value is None:
+        return None
+
+    if isinstance(value, pd.DataFrame):
+        return {
+            "row_count": len(value),
+            "columns": [str(column) for column in value.columns],
+            "rows": serializable_value(value.head(25).to_dict("records")),
+        }
+
+    if isinstance(value, pd.Series):
+        return serializable_value(value.to_dict())
+
+    if callable(getattr(value, "to_dict", None)):
+        return serializable_value(value.to_dict())
+
+    return serializable_value(value)
+
+
+def _execute_review_interaction(project, interaction) -> dict:
+    if not isinstance(interaction, dict):
+        raise ValueError("Interactive review request must be an object.")
+
+    action = str(interaction.get("type", "")).strip().lower()
+    allowed = {
+        "refresh",
+        "approve",
+        "approve_all",
+        "reject",
+        "preview",
+        "apply",
+        "edit",
+    }
+    if action not in allowed:
+        raise ValueError(f"Unsupported interactive review action: {action!r}")
+
+    result = None
+    if action == "refresh":
+        message = "Cleaning review refreshed."
+    elif action == "approve_all":
+        project.approve_all()
+        message = "All cleaning actions were approved."
+    elif action in {"approve", "reject", "preview"}:
+        action_ids = _review_action_ids(interaction.get("action_ids"))
+        if not action_ids:
+            raise ValueError("Select at least one cleaning action first.")
+
+        if action == "approve":
+            project.approve(action_ids)
+            message = f"Approved {len(action_ids):,} cleaning action(s)."
+        elif action == "reject":
+            project.reject(
+                action_ids,
+                reason=_review_reason(interaction.get("reason")),
+            )
+            message = f"Rejected {len(action_ids):,} cleaning action(s)."
+        else:
+            max_rows = _notebook_limit(
+                interaction.get("max_rows"),
+                default=5,
+                minimum=1,
+                maximum=25,
+            )
+            result = project.cleaning_preview(
+                action_ids,
+                max_rows=max_rows,
+            )
+            message = f"Previewed {len(action_ids):,} cleaning action(s)."
+    elif action == "apply":
+        cleaned = project.apply_cleaning_review()
+        result = {
+            "stage": "CLEANED",
+            "rows": len(cleaned),
+            "columns": len(cleaned.columns),
+        }
+        message = "Approved actions and staged edits were applied to CLEANED."
+    else:
+        changes = interaction.get("changes")
+        if not isinstance(changes, dict) or not changes:
+            raise ValueError("Manual row changes must be a non-empty object.")
+        if len(changes) > 100:
+            raise ValueError("A manual edit can change at most 100 columns.")
+
+        row_index = interaction.get("row_index")
+        if isinstance(row_index, (dict, list)) or row_index is None:
+            raise ValueError("Manual row index must be a scalar value.")
+
+        result = project.edit_row(
+            row_index,
+            changes,
+            reason=_review_reason(interaction.get("reason")),
+        )
+        message = (
+            f"Staged {len(changes):,} manual change(s) for row "
+            f"{row_index}."
+        )
+
+    review = project.review_cleaning(auto_display=False)
+    return {
+        "review": review,
+        "interaction": {
+            "success": True,
+            "type": action,
+            "message": message,
+            "result": _review_result_data(result),
+        },
     }
 
 
@@ -1659,6 +1913,58 @@ def _run_kernel(path: str) -> int:
                         {"mime": "text/plain", "data": "ADQL session restarted."}
                     ],
                 }
+            elif action == "review":
+                if project is None:
+                    raise RuntimeError(
+                        "The ADQL session is not ready. Run the REVIEW cell "
+                        "before using its controls."
+                    )
+
+                cell = int(request["cell"])
+                interaction = request.get("interaction")
+                try:
+                    with redirect_stdout(io.StringIO()), redirect_stderr(
+                        io.StringIO()
+                    ):
+                        response = _execute_review_interaction(
+                            project,
+                            interaction,
+                        )
+                    interaction_result = response["interaction"]
+                    success = True
+                except Exception as review_error:
+                    interaction_result = {
+                        "success": False,
+                        "type": (
+                            interaction.get("type", "unknown")
+                            if isinstance(interaction, dict)
+                            else "unknown"
+                        ),
+                        "message": f"{type(review_error).__name__}: {review_error}",
+                    }
+                    success = False
+
+                review = project.review_cleaning(auto_display=False)
+                payload = {
+                    "protocol": "autodq-notebook-v1",
+                    "success": success,
+                    "cell": {"number": cell, "title": "Cleaning review"},
+                    "outputs": [
+                        {
+                            "mime": "text/plain",
+                            "data": interaction_result["message"],
+                        },
+                        _notebook_review_output(
+                            review,
+                            cell_number=cell,
+                            interaction=interaction_result,
+                        ),
+                    ],
+                }
+                payload["session"] = {
+                    "persistent": True,
+                    "executed_cells": sorted(executed_cells),
+                }
             else:
                 cell = int(request["cell"])
 
@@ -1689,6 +1995,9 @@ def _run_kernel(path: str) -> int:
                     max_output_rows=request.get("max_output_rows"),
                     max_output_characters=request.get(
                         "max_output_characters"
+                    ),
+                    interactive_review=bool(
+                        request.get("interactive_review", False)
                     ),
                 )
                 payload["session"] = {

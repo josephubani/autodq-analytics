@@ -883,13 +883,22 @@ body { background: white; color: black; }
         self.assertNotIn("transientOutputs: true", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.3.2")
+        self.assertEqual(package["version"], "0.3.3")
+        renderer = package["contributes"]["notebookRenderer"][0]
+        self.assertEqual(renderer["id"], "autodq-adql-review-renderer")
+        self.assertEqual(renderer["requiresMessaging"], "always")
+        self.assertIn(
+            "application/vnd.autodq.review+json",
+            renderer["mimeTypes"],
+        )
         language_icon = package["contributes"]["languages"][0]["icon"]
         self.assertEqual(language_icon["light"], "./icons/adql-light.svg")
         self.assertEqual(language_icon["dark"], "./icons/adql-dark.svg")
         self.assertTrue((source / "icons" / "adql-light.svg").is_file())
         self.assertTrue((source / "icons" / "adql-dark.svg").is_file())
         self.assertTrue((source / "notebook-persistence.js").is_file())
+        self.assertTrue((source / "review-protocol.js").is_file())
+        self.assertTrue((source / "review-renderer.mjs").is_file())
         self.assertEqual(
             package["contributes"]["configuration"]["properties"]
             ["autodq.notebook.maxOutputRows"]["default"],
@@ -899,6 +908,8 @@ body { background: white; color: black; }
         self.assertTrue((installed / "icons" / "adql-light.svg").is_file())
         self.assertTrue((installed / "icons" / "adql-dark.svg").is_file())
         self.assertTrue((installed / "notebook-persistence.js").is_file())
+        self.assertTrue((installed / "review-protocol.js").is_file())
+        self.assertTrue((installed / "review-renderer.mjs").is_file())
 
     def test_vscode_grammar_colors_complete_adql_vocabulary(self):
         source = extension_path()

@@ -512,6 +512,12 @@ LET unique_customers = CLEANED;
 
 ### Interactive cleaning and domain review
 
+In the AutoDQ ADQL VS Code notebook, `REVIEW` renders a UI for selecting,
+approving, rejecting, and previewing actions; staging audited row edits; and
+applying the result to `CLEANED`. Each control invokes the same operation as
+the statements below. Other hosts retain the static review representation, so
+the language semantics do not depend on the UI.
+
 ```adql
 KNOWLEDGE;
 REVIEW;

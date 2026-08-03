@@ -5,6 +5,8 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.10 - 2026-08-02
+
 ### Added
 
 - Published the normative ADQL 2.0 language specification, machine-readable
@@ -13,6 +15,17 @@ versioning and Python package releases follow PEP 440.
 - Exposed `ADQL_LANGUAGE_VERSION` through the public Python API and added
   conformance tests that keep the runtime command inventory synchronized with
   the specification and grammar.
+- Added a versioned, allowlisted notebook protocol for interactive cleaning
+  review actions while retaining the existing static HTML representation for
+  the CLI, Jupyter, and older VS Code extensions.
+- Added kernel-level review actions for selected approval, rejection with an
+  audit reason, previews, approve-all, manual row edits, refresh, and applying
+  the staged result to `CLEANED`.
+
+### Changed
+
+- Updated the bundled AutoDQ ADQL VS Code extension to 0.3.3 with a
+  theme-aware interactive `REVIEW` panel and saved-output session restoration.
 
 ## 0.1.9 - 2026-07-31
 

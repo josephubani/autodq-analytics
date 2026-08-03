@@ -75,7 +75,8 @@ tree, installs the wheel and its declared dependencies, and verifies:
 - Python API profiling, diagnosis, and `project.auto(mode="review")`;
 - standalone ADQL validation, `AUTO`, querying, and JSON export;
 - dependency integrity with `pip check`;
-- the bundled VS Code extension manifest, grammar, and icons.
+- the bundled VS Code extension manifest, grammar, icons, interactive review
+  protocol, and notebook renderer.
 
 ## 5. Publish the ADQL VSIX
 

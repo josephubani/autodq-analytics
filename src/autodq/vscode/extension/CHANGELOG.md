@@ -1,5 +1,16 @@
 # Change Log
 
+## 0.3.3 - 2026-08-02
+
+- Made `REVIEW` a true interactive notebook panel with action selection,
+  approve/reject/preview controls, approve-all, and apply-to-`CLEANED`.
+- Added audited manual row editing and a recent audit-trail view directly in
+  the notebook output.
+- Restored the AutoDQ session automatically before a user interacts with a
+  saved review output after reopening the `.adql` notebook.
+- Kept static HTML review output as a compatibility fallback for older
+  extensions, terminal execution, and other notebook environments.
+
 ## 0.3.2 - 2026-07-31
 
 - Added highlighting and notebook documentation for `DUPLICATES SUMMARY` and

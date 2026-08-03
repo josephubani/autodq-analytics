@@ -266,6 +266,8 @@ def main() -> int:
             "icons/adql-light.svg",
             "icons/adql-dark.svg",
             "syntaxes/adql.tmLanguage.json",
+            "review-protocol.js",
+            "review-renderer.mjs",
         ):
             if not (extension / relative).is_file():
                 raise RuntimeError(f"Bundled VS Code asset is missing: {relative}")

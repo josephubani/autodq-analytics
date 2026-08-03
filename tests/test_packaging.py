@@ -167,6 +167,8 @@ class PackagingTests(unittest.TestCase):
         self.assertTrue((extension / "CHANGELOG.md").is_file())
         self.assertTrue((extension / "LICENSE").is_file())
         self.assertTrue((extension / "notebook-persistence.js").is_file())
+        self.assertTrue((extension / "review-protocol.js").is_file())
+        self.assertTrue((extension / "review-renderer.mjs").is_file())
 
         manifest = json.loads(
             (extension / "package.json").read_text(encoding="utf-8")
@@ -181,6 +183,11 @@ class PackagingTests(unittest.TestCase):
         )
         self.assertIn("README.md", manifest["files"])
         self.assertIn("notebook-persistence.js", manifest["files"])
+        self.assertIn("review-protocol.js", manifest["files"])
+        self.assertIn("review-renderer.mjs", manifest["files"])
+        renderer = manifest["contributes"]["notebookRenderer"][0]
+        self.assertEqual(renderer["id"], "autodq-adql-review-renderer")
+        self.assertEqual(renderer["requiresMessaging"], "always")
         self.assertFalse(
             manifest["capabilities"]["untrustedWorkspaces"]["supported"]
         )
@@ -231,14 +238,14 @@ class PackagingTests(unittest.TestCase):
     def test_public_release_documentation_is_current(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         notes = (
-            ROOT / "docs" / "RELEASE_NOTES_0.1.9.md"
+            ROOT / "docs" / "RELEASE_NOTES_0.1.10.md"
         ).read_text(encoding="utf-8")
         roadmap = (ROOT / "docs" / "ROADMAP.md").read_text(encoding="utf-8")
 
         self.assertIn("https://pypi.org/project/autodq/", readme)
         self.assertNotIn("Until the first PyPI release", readme)
-        self.assertIn("## Exact duplicate inspection", notes)
-        self.assertIn("DUPLICATES DROP KEEP first", notes)
+        self.assertIn("## Interactive ADQL cleaning review", notes)
+        self.assertIn("Apply to CLEANED", notes)
         self.assertIn(
             "All items in the original AutoDQ development roadmap are complete.",
             roadmap,

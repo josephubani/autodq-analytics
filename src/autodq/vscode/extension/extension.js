@@ -12,6 +12,10 @@ const {
   normalizeCellSource,
   safeJsonValue
 } = require('./notebook-persistence');
+const {
+  REVIEW_RENDERER_ID,
+  normalizeReviewMessage
+} = require('./review-protocol');
 
 const CELL_MARKER = /^\s*(?:#|--)\s*%%(?:\s*\[(.*?)\])?(?:\s+(.*?))?\s*$/;
 
@@ -216,6 +220,8 @@ class ADQLKernelSession {
     this.pending = new Map();
     this.buffer = '';
     this.stderr = '';
+    this.hasProject = false;
+    this.reviewQueue = Promise.resolve();
     const matplotlibCache = process.env.MPLCONFIGDIR || path.join(os.homedir(), '.cache', 'autodq', 'matplotlib');
     fs.mkdirSync(matplotlibCache, { recursive: true });
     this.child = spawn(
@@ -266,21 +272,49 @@ class ADQLKernelSession {
     }
   }
 
-  execute(cellNumber, outputOptions = {}) {
+  request(requestPayload) {
     const id = this.nextId++;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id);
         reject(new Error('ADQL cell exceeded the 120-second execution limit.'));
       }, 120000);
-      this.pending.set(id, { resolve, reject, timer });
+      this.pending.set(id, {
+        resolve: (payload) => {
+          if (payload.session && payload.session.persistent) this.hasProject = true;
+          resolve(payload);
+        },
+        reject,
+        timer
+      });
       this.child.stdin.write(`${JSON.stringify({
         id,
-        action: 'execute',
-        cell: cellNumber,
-        ...outputOptions
+        ...requestPayload
       })}\n`);
     });
+  }
+
+  execute(cellNumber, outputOptions = {}) {
+    return this.request({
+      action: 'execute',
+      cell: cellNumber,
+      ...outputOptions
+    });
+  }
+
+  review(cellNumber, interaction, outputOptions = {}) {
+    return this.request({
+      action: 'review',
+      cell: cellNumber,
+      interaction,
+      ...outputOptions
+    });
+  }
+
+  enqueueReview(operation) {
+    const queued = this.reviewQueue.then(operation, operation);
+    this.reviewQueue = queued.catch(() => undefined);
+    return queued;
   }
 
   dispose() {
@@ -307,11 +341,7 @@ async function executeNotebookCells(cells, notebook) {
     return;
   }
   await notebook.save();
-  const configuration = vscode.workspace.getConfiguration('autodq');
-  const outputOptions = {
-    max_output_rows: configuration.get('notebook.maxOutputRows', 25),
-    max_output_characters: configuration.get('notebook.maxOutputCharacters', 12000)
-  };
+  const outputOptions = notebookOutputOptions();
 
   for (const cell of cells) {
     const execution = controller.createNotebookCellExecution(cell);
@@ -327,36 +357,121 @@ async function executeNotebookCells(cells, notebook) {
     let succeeded = false;
     try {
       const payload = await kernelFor(notebook).execute(cellNumber, outputOptions);
-      const outputs = (payload.outputs || []).map((item) => {
-              const outputItem = item.mime === 'image/png'
-                ? new vscode.NotebookCellOutputItem(Buffer.from(item.data, 'base64'), 'image/png')
-                : vscode.NotebookCellOutputItem.text(item.data || '', item.mime || 'text/plain');
+      const outputs = notebookOutputsFromPayload(payload);
 
-              return new vscode.NotebookCellOutput([outputItem], item.metadata || {});
-            });
-
-            if (!outputs.length) {
-              outputs.push(new vscode.NotebookCellOutput([
-                vscode.NotebookCellOutputItem.text('ADQL cell completed.', 'text/plain')
-              ]));
-            }
+      if (!outputs.length) {
+        outputs.push(new vscode.NotebookCellOutput([
+          vscode.NotebookCellOutputItem.text('ADQL cell completed.', 'text/plain')
+        ]));
+      }
 
       await execution.replaceOutput(outputs);
       succeeded = payload.success !== false;
     } catch (renderError) {
-            console.error('[AutoDQ ADQL] Could not display notebook output.', renderError);
-            await execution.replaceOutput([
-              new vscode.NotebookCellOutput([
-                vscode.NotebookCellOutputItem.text(
-                  `AutoDQ produced output but VS Code could not display it: ${renderError}`,
-                  'text/plain'
-                )
-              ])
-            ]);
+      console.error('[AutoDQ ADQL] Could not display notebook output.', renderError);
+      await execution.replaceOutput([
+        new vscode.NotebookCellOutput([
+          vscode.NotebookCellOutputItem.text(
+            `AutoDQ produced output but VS Code could not display it: ${renderError}`,
+            'text/plain'
+          )
+        ])
+      ]);
     } finally {
       execution.end(succeeded, Date.now());
     }
   }
+}
+
+function notebookOutputsFromPayload(payload) {
+  return (payload.outputs || []).map((item) => {
+    const outputItem = item.mime === 'image/png'
+      ? new vscode.NotebookCellOutputItem(Buffer.from(item.data, 'base64'), 'image/png')
+      : vscode.NotebookCellOutputItem.text(item.data || '', item.mime || 'text/plain');
+
+    return new vscode.NotebookCellOutput([outputItem], item.metadata || {});
+  });
+}
+
+function notebookOutputOptions() {
+  const configuration = vscode.workspace.getConfiguration('autodq');
+  return {
+    max_output_rows: configuration.get('notebook.maxOutputRows', 25),
+    max_output_characters: configuration.get('notebook.maxOutputCharacters', 12000),
+    interactive_review: true
+  };
+}
+
+async function handleReviewMessage(event) {
+  let request;
+  try {
+    request = normalizeReviewMessage(event.message);
+  } catch (error) {
+    vscode.window.showErrorMessage(`AutoDQ review: ${error.message}`);
+    return;
+  }
+
+  const editor = event.editor;
+  const notebook = editor && editor.notebook;
+  if (!notebook || notebook.notebookType !== 'autodq-adql-notebook') return;
+  if (request.cell > notebook.cellCount) {
+    vscode.window.showErrorMessage('AutoDQ review: the source cell no longer exists. Run REVIEW again.');
+    return;
+  }
+  if (notebook.isUntitled) {
+    vscode.window.showErrorMessage('Save the .adql file before using review controls.');
+    return;
+  }
+
+  await notebook.save();
+  const cell = notebook.cellAt(request.cell - 1);
+  const session = kernelFor(notebook);
+  const outputOptions = notebookOutputOptions();
+
+  return session.enqueueReview(async () => {
+    const execution = controller.createNotebookCellExecution(cell);
+    execution.start(Date.now());
+    execution.executionOrder = request.cell;
+    await execution.replaceOutput([
+      new vscode.NotebookCellOutput([
+        vscode.NotebookCellOutputItem.text('Updating cleaning review…', 'text/plain')
+      ])
+    ]);
+
+    let succeeded = false;
+    try {
+      if (!session.hasProject) {
+        const bootstrap = await session.execute(request.cell, outputOptions);
+        if (bootstrap.success === false) {
+          throw new Error('The saved ADQL workflow could not rebuild its review session. Run the notebook through the REVIEW cell and try again.');
+        }
+      }
+
+      const payload = await session.review(
+        request.cell,
+        request.interaction,
+        outputOptions
+      );
+      const outputs = notebookOutputsFromPayload(payload);
+      if (!outputs.length) {
+        outputs.push(new vscode.NotebookCellOutput([
+          vscode.NotebookCellOutputItem.text('Cleaning review updated.', 'text/plain')
+        ]));
+      }
+      await execution.replaceOutput(outputs);
+      succeeded = payload.success !== false;
+    } catch (error) {
+      console.error('[AutoDQ ADQL] Interactive review failed.', error);
+      await execution.replaceOutput([
+        new vscode.NotebookCellOutput([
+          vscode.NotebookCellOutputItem.text(`Interactive review failed: ${error.message || error}`, 'text/plain')
+        ])
+      ]);
+      vscode.window.showErrorMessage(`AutoDQ review: ${error.message || error}`);
+    } finally {
+      execution.end(succeeded, Date.now());
+    }
+  });
 }
 
 let controller;
@@ -380,6 +495,8 @@ function activate(context) {
   controller.supportsExecutionOrder = true;
   controller.executeHandler = executeNotebookCells;
   context.subscriptions.push(controller);
+  const reviewMessaging = vscode.notebooks.createRendererMessaging(REVIEW_RENDERER_ID);
+  context.subscriptions.push(reviewMessaging.onDidReceiveMessage(handleReviewMessage));
   context.subscriptions.push(vscode.workspace.onDidCloseNotebookDocument((notebook) => {
     const key = notebook.uri.toString();
     const session = kernelSessions.get(key);

@@ -106,6 +106,10 @@ simulates selected actions without committing a stage. `CLEAN` and
 `CLEANING APPLY` finalize the working copy plus approved automatic actions into
 `CLEANED`. Finalization also appends execution events to the audit trail.
 
+A host MAY expose these operations as interactive controls. Such controls MUST
+route through the same project operations, preserve validation and audit
+effects, and MUST NOT change the transaction semantics described here.
+
 The transaction is intentionally non-destructive: `CURRENT` remains the
 before-cleaning comparison source. `VALIDATE` compares `CURRENT` to `CLEANED`.
 

@@ -2,7 +2,7 @@
   "name": "adql",
   "displayName": "AutoDQ ADQL",
   "description": "ADQL language support and executable notebook cells for AutoDQ.",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "publisher": "autodq",
   "author": {
     "name": "Joseph Ubani"
@@ -35,6 +35,8 @@
   "files": [
     "extension.js",
     "notebook-persistence.js",
+    "review-protocol.js",
+    "review-renderer.mjs",
     "language-configuration.json",
     "syntaxes/**",
     "icons/**",
@@ -65,7 +67,8 @@
   ],
   "activationEvents": [
     "onLanguage:adql",
-    "onNotebook:autodq-adql-notebook"
+    "onNotebook:autodq-adql-notebook",
+    "onRenderer:autodq-adql-review-renderer"
   ],
   "main": "./extension.js",
   "contributes": {
@@ -98,6 +101,17 @@
           }
         ],
         "priority": "default"
+      }
+    ],
+    "notebookRenderer": [
+      {
+        "id": "autodq-adql-review-renderer",
+        "displayName": "AutoDQ Interactive Cleaning Review",
+        "entrypoint": "./review-renderer.mjs",
+        "mimeTypes": [
+          "application/vnd.autodq.review+json"
+        ],
+        "requiresMessaging": "always"
       }
     ],
     "commands": [
@@ -153,8 +167,8 @@
     }
   },
   "scripts": {
-    "check": "node --check extension.js",
+    "check": "node --check extension.js && node --check review-renderer.mjs",
     "package": "npx --yes @vscode/vsce@3.9.2 package",
-    "test": "node --check extension.js && node --test notebook-persistence.test.js"
+    "test": "node --check extension.js && node --check review-renderer.mjs && node --test notebook-persistence.test.js review-protocol.test.js"
   }
 }

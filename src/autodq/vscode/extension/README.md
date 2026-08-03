@@ -25,6 +25,9 @@ workflow.
   row/column removal staged through the cleaning review
 - Exact-row duplicate tables and audited `DUPLICATES DROP` retention policies
   that finalize into the reusable `CLEANED` stage
+- A theme-aware interactive `REVIEW` panel for selecting actions, approving,
+  rejecting with reasons, previewing, editing rows, inspecting audit history,
+  and applying reviewed changes to `CLEANED`
 - Rich session inspection with `SESSION`, `SESSION EVENTS LIMIT n`, and
   `SESSION DATASETS`
 - Rich tables, quality reports, cleaning recommendations, model explanations,
@@ -99,6 +102,30 @@ LET cleaned_sales = CLEANED;
 
 Open the file with **AutoDQ ADQL Notebook**, then run cells from top to bottom.
 The first code cell automatically initializes the dataset when required.
+
+## Interactive cleaning review
+
+Run `REVIEW;` in a notebook cell to open the interactive panel:
+
+```adql
+RECOMMEND;
+DECIDE;
+PREVIEW;
+REVIEW;
+```
+
+Select one or more recommendations and use **Approve selected**, **Reject
+selected**, or **Preview selected**. **Approve all** changes every action to
+approved, while **Apply to CLEANED** executes approved actions together with
+staged manual edits. The manual row editor accepts a source row index and a
+JSON object such as `{"Region": "North", "Customer_Age": 36}`. Every status
+change and edited cell is recorded in the existing AutoDQ audit trail.
+
+The panel invokes the same project APIs as the equivalent `APPROVE`, `REJECT`,
+`CLEANING PREVIEW`, `EDIT ROW`, and `CLEANING APPLY` statements. It does not
+write back to the source CSV. If a saved notebook is reopened, the first panel
+action rebuilds the in-memory workflow through the `REVIEW` cell before making
+the requested change.
 
 ## Notebook sessions and output
 
