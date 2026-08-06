@@ -5,6 +5,24 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+### Added
+
+- Expanded the built-in knowledge catalog from 11 to 87 conservative semantic
+  rules with more than 390 aliases spanning retail, finance, banking,
+  insurance, healthcare, education, HR, logistics, marketing, geospatial, IoT,
+  and general operational datasets.
+- Added rule metadata for applicable domains, sensitivity, units, scales,
+  formats, and recommended quality checks where those details are useful.
+
+### Changed
+
+- Made knowledge matching aware of snake case, kebab case, punctuation,
+  whitespace, and CamelCase while preserving the existing `KnowledgeRule` and
+  `KnowledgeEngine` APIs.
+- Prefer specific multi-word concepts over generic terms and require token
+  matches, preventing false positives such as treating `average_revenue` as an
+  age column.
+
 ## 0.1.10 - 2026-08-02
 
 ### Added

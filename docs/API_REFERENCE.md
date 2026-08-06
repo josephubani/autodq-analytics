@@ -69,6 +69,36 @@ The returned `AutoRunResult` provides `success`, stage counts,
 | Domains and outliers | `add_domain_rule()`, `validate_domain()`, `review_outliers()`, `treat_outliers()` |
 | Cleaning | `clean()`, `validate_cleaning()`, `export_cleaning_audit()` |
 
+### Built-in knowledge coverage
+
+`apply_knowledge()` uses 87 conservative semantic rules and more than 390
+aliases for common columns found in retail, finance, banking, insurance,
+healthcare, education, HR, logistics, marketing, geospatial, IoT, and general
+operational datasets. It recognizes snake case, kebab case, spaces,
+punctuation, and CamelCase, so names such as `CustomerAge`, `postal-code`,
+`Created At`, and `FICOScore` resolve without renaming the dataset.
+
+Rules can describe semantic type, safe universal bounds, negative-value
+behavior, imputation and outlier preferences, applicable domains, sensitivity,
+formats, scales, and required units. Context-dependent thresholds remain
+recommendations for review; AutoDQ does not impose a universal clinical,
+financial, survey, or institutional range when one would be unsafe.
+
+The existing extension API remains available for project-specific knowledge:
+
+```python
+from autodq.knowledge.engine import KnowledgeEngine
+from autodq.knowledge.rules import KnowledgeRule
+
+lot_rule = KnowledgeRule(
+    name="lot_code",
+    semantic_type="manufacturing_identifier",
+    metadata={"aliases": ["batch_number"]},
+)
+project.knowledge_engine = KnowledgeEngine(rules={"lot_code": lot_rule})
+project.apply_knowledge()
+```
+
 Missing-value mutations use the same staged cleaning review as manual edits:
 
 ```python
