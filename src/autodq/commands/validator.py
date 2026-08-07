@@ -272,6 +272,11 @@ class ADQLValidator:
                 )
 
         elif statement.kind == "BLUE":
+            source = str(parameters.get("source", "data")).lower()
+            if source not in {"data", "trained_model"}:
+                raise ADQLValidationError(
+                    "BLUE SOURCE must be data or trained_model."
+                )
             if parameters.get("max_features", 1) < 1:
                 raise ADQLValidationError("BLUE MAX_FEATURES must be positive.")
             significance = parameters.get("significance_level")

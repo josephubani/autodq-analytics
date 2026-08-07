@@ -1056,6 +1056,58 @@ class ADQLTests(unittest.TestCase):
         )
         self.assertTrue(hasattr(run.value, "savefig"))
 
+    def test_mixed_case_advanced_workflow_executes_through_core_apis(self):
+        project = self._project(target="Revenue")
+        dashboard_path = self.root / "MixedCaseDashboard.html"
+        run = project.query(
+            f"""
+            pRoFiLe;
+            sTaTiStIcS;
+            cOrReLaTiOn mIn_AbS 0.2;
+            rEaDiNeSs;
+            fEaTuReS;
+            bLuE sOuRcE DaTa mAx_FeAtUrEs 4;
+            bLuE vIsUaLiZe aPpEnD No;
+            bLuE iNtErPrEt;
+            bLuE pReScRiBe;
+            vIsUaLiZe BaR x Region y Revenue ThEmE DaRk dIsPlAy OfF;
+            dAsHbOaRd ThEmE ExEcUtIvE sAvE "{dashboard_path}"
+                oVeRwRiTe YeS dIsPlAy OfF;
+            mOdEl uSiNg DeCiSiOn_TrEe_ReGrEsSoR uSe_EnGiNeErEd OfF;
+            pReDiCt CoNfIdEnCe 0.9 uNcErTaInTy On;
+            eXpLaIn MaX_RoWs 4 uSe_EnGiNeErEd No;
+            sHaP cHaRt BaR;
+            aSsErT Revenue nOt nUlL sEvErItY WaRnInG fAiL_On NeVeR;
+            """,
+            auto_display=False,
+        )
+
+        self.assertTrue(run.success)
+        self.assertEqual(run.statement_count, 16)
+        self.assertIsNotNone(project.state.profile_report)
+        self.assertIsNotNone(project.state.statistics_report)
+        self.assertIsNotNone(project.state.correlation_report)
+        self.assertIsNotNone(project.state.ml_readiness_report)
+        self.assertIsNotNone(project.state.feature_report)
+        self.assertIsNotNone(project.state.blue_report)
+        self.assertTrue(project.state.blue_report.prescriptions)
+        self.assertEqual(
+            project.state.visualization_report.latest.style.theme,
+            "dark",
+        )
+        self.assertTrue(dashboard_path.is_file())
+        self.assertEqual(
+            project.state.model_report.algorithm,
+            "decision_tree_regressor",
+        )
+        self.assertTrue(project.state.prediction_report.uncertainty_available)
+        self.assertEqual(
+            project.state.explainability_report.explanation_count,
+            4,
+        )
+        self.assertTrue(hasattr(run.results[-2].value, "savefig"))
+        self.assertTrue(run.results[-1].value.success)
+
     def test_auto_review_and_partial_approval_commands(self):
         project = self._project()
         auto = project.query(

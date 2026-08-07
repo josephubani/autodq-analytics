@@ -443,13 +443,14 @@ blue-statement = "BLUE", [ dataset-selector ],
     | { blue-option } ) ;
 blue-visualize-option = "APPEND", boolean | "ALLOW_DUPLICATES", boolean ;
 blue-option =
-    "SOURCE", stage-source
+    "SOURCE", blue-source
   | "USE_ENGINEERED", boolean
   | "EXCLUDE_LEAKAGE", boolean
   | "MAX_FEATURES", integer
   | "SIGNIFICANCE", number
   | "LEAKAGE_THRESHOLD", number
   | "EXCLUDE", identifier-list ;
+blue-source = "data" | "trained_model" ;
 
 (* command: GALLERY *)
 gallery-statement = "GALLERY",

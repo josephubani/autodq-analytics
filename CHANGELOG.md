@@ -5,6 +5,19 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+### Changed
+
+- Completed a cross-feature runtime audit covering AutoDQ analysis, cleaning,
+  workspaces, visualization, dashboards, modeling, persistence, uncertainty,
+  SHAP, BLUE, quality suites, and the ADQL notebook surface.
+- Made all ADQL-controlled command words, actions, clauses, options, boolean
+  forms, and enum values consistently case-insensitive while preserving the
+  exact spelling of dataset names, columns, aliases, paths, titles, and string
+  values.
+- Expanded ADQL help coverage to every public command and completed VS Code
+  semantic highlighting for SHAP chart names, datatype aliases, boolean forms,
+  and built-in visualization values.
+
 ## 0.1.11 - 2026-08-07
 
 ### Added

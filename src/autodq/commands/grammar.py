@@ -309,12 +309,19 @@ COMMAND_HELP = [
         "description": "Run a safe pandas-backed analytical query.",
     },
     {
-        "command": "PROFILE / DIAGNOSE / RECOMMEND",
-        "syntax": (
-            "PROFILE [dataset]; DIAGNOSE [dataset]; "
-            "RECOMMEND [dataset];"
+        "command": (
+            "LOAD / PROFILE / STATISTICS / INTERPRET / DIAGNOSE / "
+            "RECOMMEND / DECIDE / PREVIEW"
         ),
-        "description": "Run an AutoDQ analysis step on the active or named dataset.",
+        "syntax": (
+            "LOAD [dataset]; PROFILE [dataset]; STATISTICS [dataset]; "
+            "INTERPRET [dataset]; DIAGNOSE [dataset]; "
+            "RECOMMEND [dataset]; DECIDE [dataset]; PREVIEW [dataset]"
+        ),
+        "description": (
+            "Load data or run an AutoDQ analysis and decision step on the "
+            "active or named dataset."
+        ),
     },
     {
         "command": "ASSERT",

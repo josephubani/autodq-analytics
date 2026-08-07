@@ -26,6 +26,7 @@ from autodq.cli import (
     main,
 )
 from autodq.commands.grammar import (
+    AGGREGATE_FUNCTIONS,
     AUTO_OPTIONS,
     BLUE_OPTIONS,
     DASHBOARD_OPTIONS,
@@ -925,6 +926,14 @@ body { background: white; color: black; }
             grammar["patterns"][-1]["include"],
             "#identifiers",
         )
+        self.assertLess(
+            [item["include"] for item in grammar["patterns"]].index(
+                "#booleanOptions"
+            ),
+            [item["include"] for item in grammar["patterns"]].index(
+                "#numbers"
+            ),
+        )
 
         command_pattern = re.compile(repository["commands"]["match"])
         option_pattern = re.compile(repository["options"]["match"])
@@ -937,6 +946,11 @@ body { background: white; color: black; }
         quality_predicate_pattern = re.compile(
             repository["qualityPredicates"]["match"]
         )
+        constant_pattern = re.compile(repository["constants"]["match"])
+        boolean_option_pattern = re.compile(
+            repository["booleanOptions"]["match"]
+        )
+        enum_pattern = re.compile(repository["enumValues"]["match"])
         identifier_pattern = re.compile(repository["identifiers"]["match"])
 
         for command in sorted(SUPPORTED_COMMANDS):
@@ -1077,6 +1091,41 @@ body { background: white; color: black; }
                 f"Missing quality-predicate highlighting for {predicate}",
             )
 
+        for constant in ("TRUE", "false", "YeS", "nO", "On", "oFf"):
+            self.assertIsNotNone(
+                constant_pattern.fullmatch(constant),
+                f"Missing constant highlighting for {constant}",
+            )
+
+        for expression in (
+            "UNCERTAINTY ON",
+            "DISPLAY off",
+            "OVERWRITE YeS",
+            "USE_ENGINEERED nO",
+        ):
+            self.assertIsNotNone(
+                boolean_option_pattern.fullmatch(expression),
+                f"Missing contextual boolean highlighting for {expression}",
+            )
+
+        for enum_value in (
+            "BeEsWaRm",
+            "dEpEnDeNcE",
+            "str",
+            "BOXPLOT",
+            "cleaning_status",
+            "comparison",
+            "correlation_heatmap",
+            "distribution",
+            "issue_breakdown",
+            "missing_values",
+            "quality_score",
+        ):
+            self.assertIsNotNone(
+                enum_pattern.fullmatch(enum_value),
+                f"Missing enum highlighting for {enum_value}",
+            )
+
         for identifier in (
             "Customer_Age",
             "Revenue",
@@ -1094,6 +1143,66 @@ body { background: white; color: black; }
         }
         for name, scope in expected_scopes.items():
             self.assertEqual(repository[name]["name"], scope)
+
+        grammar_source = (
+            Path(__file__).resolve().parents[1]
+            / "docs"
+            / "adql"
+            / "grammar.ebnf"
+        ).read_text(encoding="utf-8")
+        terminals = {
+            value.upper()
+            for value in re.findall(
+                r'"([A-Za-z_][A-Za-z0-9_]*)"',
+                grammar_source,
+            )
+            if len(value) > 1 or value.upper() in {"X", "Y"}
+        }
+        contextual_phrase_parts = {
+            "BY",
+            "ENDS",
+            "GROUP",
+            "IS",
+            "NOT",
+            "ORDER",
+            "STARTS",
+        }
+        specialized_rules = [
+            re.compile(repository[name]["match"])
+            for name in (
+                "commands",
+                "aggregateFunctions",
+                "qualityMetrics",
+                "qualityPredicates",
+                "operators",
+                "clauses",
+                "actions",
+                "options",
+                "entities",
+                "dataSources",
+                "constants",
+                "enumValues",
+            )
+        ]
+        missing = set()
+
+        for terminal in terminals - contextual_phrase_parts:
+            if terminal in AGGREGATE_FUNCTIONS:
+                matched = function_pattern.match(f"{terminal}(") is not None
+            else:
+                matched = any(
+                    pattern.fullmatch(terminal)
+                    for pattern in specialized_rules
+                )
+
+            if not matched:
+                missing.add(terminal)
+
+        self.assertSetEqual(
+            missing,
+            set(),
+            "Normative ADQL words missing a semantic TextMate scope.",
+        )
 
     def test_persistent_kernel_bootstraps_once_and_retains_project(self):
         process = subprocess.Popen(

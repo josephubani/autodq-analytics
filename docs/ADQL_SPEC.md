@@ -203,7 +203,19 @@ LIMIT 25;
 
 ## Workflow commands
 
-Statements are case-insensitive. Option values with spaces must be quoted.
+ADQL's own language words are case-insensitive: commands, actions, clauses,
+options, operators, types, booleans, and built-in enum values may use upper,
+lower, or mixed case. Dataset names, column names, aliases, paths, chart
+titles, and quoted strings retain their exact spelling. Option values with
+spaces must be quoted.
+
+These statements are equivalent:
+
+```adql
+VISUALIZE BAR X Region Y Revenue THEME DARK;
+visualize bar x Region y Revenue theme dark;
+vIsUaLiZe BaR x Region y Revenue tHeMe DaRk;
+```
 
 ```adql
 LOAD;
@@ -606,7 +618,7 @@ FEATURE CREATE RevenueBand METHOD bin COLUMN Revenue
 ### BLUE diagnostics and visualization gallery
 
 ```adql
-BLUE MAX_FEATURES 12 SIGNIFICANCE 0.05;
+BLUE SOURCE data MAX_FEATURES 12 SIGNIFICANCE 0.05;
 BLUE VISUALIZE APPEND true;
 BLUE INTERPRET;
 BLUE PRESCRIBE;
@@ -619,6 +631,9 @@ GALLERY SAVE TO "charts" FORMAT png;
 GALLERY REMOVE bar_Region_by_Revenue_current;
 GALLERY CLEAR;
 ```
+
+`BLUE SOURCE` accepts `data` for dataframe diagnostics or `trained_model` for
+diagnostics based on an already-trained compatible linear model.
 
 ### Dashboard and report export
 

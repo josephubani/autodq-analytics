@@ -32,6 +32,27 @@ class ADQLParser:
     """Parse ADQL text into a safe, structured syntax tree."""
 
     SELECT_CLAUSES = ("FROM", "WHERE", "GROUP BY", "ORDER BY", "LIMIT")
+    CASE_INSENSITIVE_OPTION_VALUES = {
+        "algorithm",
+        "chart",
+        "chart_type",
+        "format",
+        "how",
+        "join",
+        "keep",
+        "legend_position",
+        "method",
+        "mode",
+        "report_style",
+        "save_format",
+        "source",
+        "stage",
+        "strategy",
+        "style",
+        "template",
+        "theme",
+        "validate",
+    }
 
     def parse(self, source: str) -> ADQLScript:
         if not isinstance(source, str):
@@ -397,7 +418,7 @@ class ADQLParser:
             if "output" not in options:
                 raise ADQLSyntaxError("REPORT requires TO followed by a path.")
 
-            return options
+            return self._coerce_options(options)
 
         if kind == "EXPORT":
             if not arguments:
@@ -435,7 +456,7 @@ class ADQLParser:
                 return {
                     "setting": "type",
                     "column": arguments[1],
-                    "dtype": arguments[2],
+                    "dtype": arguments[2].lower(),
                     **self._coerce_options(options),
                 }
 
@@ -543,7 +564,7 @@ class ADQLParser:
                     expression,
                     options=options,
                 ),
-                "fail_on": options.get("fail_on", "error"),
+                "fail_on": str(options.get("fail_on", "error")).lower(),
             }
 
         if len(arguments) < 2:
@@ -584,7 +605,7 @@ class ADQLParser:
             return {
                 "action": "suite_run",
                 "suite_name": rest[0],
-                "fail_on": options.get("fail_on", "error"),
+                "fail_on": str(options.get("fail_on", "error")).lower(),
             }
 
         if action in {"show", "drop"}:
@@ -1124,7 +1145,10 @@ class ADQLParser:
                 "strategy",
                 "constant" if "value" in options else "auto",
             )
-            return {**parameters, **options}
+            return {
+                **parameters,
+                **self._coerce_options(options),
+            }
 
         if action != "drop" or len(arguments) < 2:
             raise ADQLSyntaxError(
@@ -1149,7 +1173,10 @@ class ADQLParser:
                 )
             options.setdefault("columns", None)
             options.setdefault("how", "any")
-            return {"action": "drop_rows", **options}
+            return {
+                "action": "drop_rows",
+                **self._coerce_options(options),
+            }
 
         if entity != "columns":
             raise ADQLSyntaxError(
@@ -1234,7 +1261,10 @@ class ADQLParser:
             },
         )
         options.setdefault("keep", "first")
-        return {"action": action, **options}
+        return {
+            "action": action,
+            **self._coerce_options(options),
+        }
 
     def _parse_feature(self, arguments: list[str]) -> dict[str, Any]:
         if not arguments:
@@ -1342,7 +1372,10 @@ class ADQLParser:
             options = self._parse_options(
                 rest, {"TO": "output_dir", "FORMAT": "format"}
             )
-            return {"action": action, **options}
+            return {
+                "action": action,
+                **self._coerce_options(options),
+            }
 
         if action == "clear":
             if rest:
@@ -1631,7 +1664,17 @@ class ADQLParser:
                 if (
                     index + 1 < len(tokens)
                     and self._key(tokens[index + 1]) not in option_map
-                    and tokens[index + 1].lower() in {"true", "false"}
+                    and tokens[index + 1].lower()
+                    in {
+                        "true",
+                        "false",
+                        "yes",
+                        "no",
+                        "1",
+                        "0",
+                        "on",
+                        "off",
+                    }
                 ):
                     options[destination] = tokens[index + 1]
                     index += 2
@@ -1722,6 +1765,11 @@ class ADQLParser:
                 coerced[key] = self._string_list(value, option=key)
             elif key == "figsize":
                 coerced[key] = self._figsize(value)
+            elif (
+                key in self.CASE_INSENSITIVE_OPTION_VALUES
+                and isinstance(value, str)
+            ):
+                coerced[key] = value.lower()
             else:
                 coerced[key] = value
 

@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Completed case-insensitive highlighting coverage for every ADQL command and
+  language word, including SHAP chart names, `str`, boolean aliases, and
+  built-in visualization values.
+- Added conformance checks that keep the TextMate grammar synchronized with
+  the normative ADQL grammar and runtime command inventory.
+
 ## 0.3.4 - 2026-08-07
 
 - Added complete ADQL 2.1 highlighting for `ASSERT`, quality metrics,
