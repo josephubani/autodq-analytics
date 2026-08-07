@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.5 - 2026-08-07
+
 - Completed case-insensitive highlighting coverage for every ADQL command and
   language word, including SHAP chart names, `str`, boolean aliases, and
   built-in visualization values.

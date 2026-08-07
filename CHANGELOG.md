@@ -5,6 +5,8 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.12 - 2026-08-07
+
 ### Changed
 
 - Completed a cross-feature runtime audit covering AutoDQ analysis, cleaning,
@@ -17,6 +19,14 @@ versioning and Python package releases follow PEP 440.
 - Expanded ADQL help coverage to every public command and completed VS Code
   semantic highlighting for SHAP chart names, datatype aliases, boolean forms,
   and built-in visualization values.
+
+### Fixed
+
+- Aligned `BLUE SOURCE` validation, the formal grammar, runtime execution, and
+  documentation around the supported `data` and `trained_model` sources.
+- Normalized ADQL-controlled enum values before dispatch so mixed-case chart,
+  model, cleaning, report, dashboard, and formatting values execute exactly
+  like their lowercase equivalents.
 
 ## 0.1.11 - 2026-08-07
 
