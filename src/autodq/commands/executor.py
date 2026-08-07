@@ -8,7 +8,7 @@ from typing import Any
 
 import pandas as pd
 
-from autodq.commands.errors import ADQLExecutionError
+from autodq.commands.errors import ADQLAssertionError, ADQLExecutionError
 from autodq.commands.grammar import COMMAND_HELP, DATA_SOURCES
 from autodq.commands.models import ADQLResult, ADQLRunResult
 
@@ -69,6 +69,35 @@ class ADQLExecutor:
                     total_rows=output.get("total_rows"),
                     duration_seconds=round(perf_counter() - started, 4),
                 )
+            except ADQLAssertionError as error:
+                result = ADQLResult(
+                    statement=statement,
+                    status="failed",
+                    message=str(error),
+                    data=error.data,
+                    value=error.report,
+                    total_rows=(
+                        len(error.data)
+                        if isinstance(error.data, pd.DataFrame)
+                        else None
+                    ),
+                    duration_seconds=round(perf_counter() - started, 4),
+                    error_type=type(error).__name__,
+                    error_message=str(error),
+                )
+                run.results.append(result)
+
+                if not continue_on_error:
+                    run.finished_at = datetime.now()
+                    raise ADQLExecutionError(
+                        f"Statement {statement.statement_number} "
+                        f"({statement.kind}) failed: {error}",
+                        statement=statement,
+                        result=run,
+                        cause=error,
+                    ) from error
+
+                continue
             except Exception as error:
                 result = ADQLResult(
                     statement=statement,
@@ -141,6 +170,9 @@ class ADQLExecutor:
 
         if kind == "LET":
             return self._execute_let(project, parameters)
+
+        if kind == "ASSERT":
+            return self._execute_assert(project, parameters)
 
         simple = {
             "LOAD": project.load,
@@ -726,6 +758,119 @@ class ADQLExecutor:
 
         raise RuntimeError(f"Execution is not implemented for {kind}.")
 
+    def _execute_assert(self, project, parameters) -> dict[str, Any]:
+        parameters = dict(parameters)
+        action = parameters.pop("action")
+
+        if action == "run":
+            report = project.assert_quality(
+                parameters["assertion"],
+                fail_on=parameters.get("fail_on", "error"),
+            )
+            return self._quality_report_output(report)
+
+        if action == "suite_add":
+            suite = project.add_quality_test(
+                parameters["suite_name"],
+                parameters["assertion"],
+            )
+            data = project.quality_suite_frame(suite.name)
+            return {
+                "data": data,
+                "total_rows": len(data),
+                "message": (
+                    f"Added quality test to suite {suite.name}; "
+                    f"the suite now has {suite.test_count} test(s)."
+                ),
+            }
+
+        if action == "suite_run":
+            report = project.run_quality_suite(
+                parameters["suite_name"],
+                fail_on=parameters.get("fail_on", "error"),
+            )
+            return self._quality_report_output(report)
+
+        if action == "suite_show":
+            data = project.quality_suite_frame(parameters["suite_name"])
+            return {
+                "data": data,
+                "total_rows": len(data),
+                "message": (
+                    f"Returned {len(data)} test(s) from quality suite "
+                    f"{parameters['suite_name']}."
+                ),
+            }
+
+        if action == "suite_list":
+            data = project.list_quality_suites()
+            return {
+                "data": data,
+                "total_rows": len(data),
+                "message": f"Returned {len(data)} quality suite(s).",
+            }
+
+        if action == "suite_drop":
+            value = project.drop_quality_suite(parameters["suite_name"])
+            return {
+                "value": value,
+                "message": (
+                    f"Dropped quality suite {value['name']} with "
+                    f"{value['tests_removed']} test(s)."
+                ),
+            }
+
+        if action == "suite_export":
+            value = project.export_quality_suite(
+                parameters["suite_name"],
+                parameters["path"],
+                overwrite=parameters.get("overwrite", False),
+            )
+            return {
+                "value": value,
+                "message": f"Exported quality suite to {value}.",
+            }
+
+        suite = project.load_quality_suite(
+            parameters["suite_name"],
+            parameters["path"],
+            overwrite=parameters.get("overwrite", False),
+        )
+        data = project.quality_suite_frame(suite.name)
+        return {
+            "data": data,
+            "total_rows": len(data),
+            "message": (
+                f"Loaded quality suite {suite.name} with "
+                f"{suite.test_count} test(s)."
+            ),
+        }
+
+    @staticmethod
+    def _quality_report_output(report) -> dict[str, Any]:
+        data = report.to_frame()
+        label = (
+            f"Quality suite {report.suite_name}"
+            if report.suite_name
+            else "Quality assertion"
+        )
+        message = (
+            f"{label} passed {report.passed_count}/{report.test_count} test(s); "
+            f"{report.blocking_failure_count} blocking failure(s)."
+        )
+        if not report.success:
+            raise ADQLAssertionError(
+                message,
+                report=report,
+                data=data,
+            )
+        return {
+            "data": data,
+            "value": report,
+            "total_rows": len(data),
+            "message": message,
+        }
+
     def _execute_workspace(self, project, parameters) -> dict[str, Any]:
         parameters = dict(parameters)
         action = parameters.pop("action")
@@ -1263,6 +1408,7 @@ class ADQLExecutor:
             "SHAP": ("save",),
             "ADD": ("dataset_path",),
             "AUDIT": ("output",),
+            "ASSERT": ("path",),
             "WORKSPACE": ("workspace_root",),
             "GALLERY": ("output_dir",),
         }

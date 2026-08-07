@@ -24,6 +24,7 @@ class HTMLExporter:
         automation = getattr(report, "automation", None)
         dashboard = getattr(report, "dashboard", None)
         adql_history = getattr(report, "adql_history", None)
+        quality_tests = getattr(report, "quality_tests", None)
         diagnosis = report.diagnosis
         recommendations = report.recommendations or []
 
@@ -62,6 +63,7 @@ class HTMLExporter:
         automation_section = self._build_automation_section(automation)
         dashboard_section = self._build_dashboard_section(dashboard)
         adql_section = self._build_adql_section(adql_history)
+        quality_test_section = self._build_quality_test_section(quality_tests)
 
         visualization_cards = self._build_visualization_cards(
             getattr(report, "visualizations", None)
@@ -787,6 +789,8 @@ th {{
     {automation_section}
 
     {dashboard_section}
+
+    {quality_test_section}
 
     {adql_section}
 
@@ -2368,6 +2372,43 @@ th {{
             <table>
                 <tr><th>Source</th><th>Status</th><th>Statements</th>
                     <th>Completed</th><th>Failed</th><th>Duration</th></tr>
+                {''.join(rows)}
+            </table>
+        </div>
+        """
+
+    def _build_quality_test_section(self, report):
+        if report is None:
+            return ""
+
+        rows = []
+        for result in report.results:
+            status_class = "success" if result.passed else "high"
+            rows.append(
+                f"""
+                <tr>
+                    <td>{escape(result.assertion.display_name)}</td>
+                    <td><span class="badge {status_class}">{escape(result.status)}</span></td>
+                    <td>{escape(result.severity)}</td>
+                    <td>{escape(str(result.observed))}</td>
+                    <td>{escape(str(result.expected))}</td>
+                    <td>{result.failed_count}</td>
+                    <td>{escape(result.message)}</td>
+                </tr>
+                """
+            )
+
+        status = "Passed" if report.success else "Failed"
+        return f"""
+        <div class="section card">
+            <h2 class="section-title">Data Quality Tests</h2>
+            <p>{escape(report.suite_name or "Direct assertion")} · {status} ·
+                {report.passed_count}/{report.test_count} passed ·
+                fail on {escape(report.fail_on)}</p>
+            <table>
+                <tr><th>Test</th><th>Status</th><th>Severity</th>
+                    <th>Observed</th><th>Expected</th><th>Failures</th>
+                    <th>Message</th></tr>
                 {''.join(rows)}
             </table>
         </div>

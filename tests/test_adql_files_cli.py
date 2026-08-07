@@ -931,6 +931,12 @@ body { background: white; color: black; }
         function_pattern = re.compile(
             repository["aggregateFunctions"]["match"]
         )
+        quality_metric_pattern = re.compile(
+            repository["qualityMetrics"]["match"]
+        )
+        quality_predicate_pattern = re.compile(
+            repository["qualityPredicates"]["match"]
+        )
         identifier_pattern = re.compile(repository["identifiers"]["match"])
 
         for command in sorted(SUPPORTED_COMMANDS):
@@ -961,6 +967,7 @@ body { background: white; color: black; }
             "COLUMNS",
             "DESCRIPTION",
             "EXPRESSION",
+            "FAIL_ON",
             "HOW",
             "IGNORE_INDEX",
             "INCLUDE_MODEL",
@@ -976,6 +983,7 @@ body { background: white; color: black; }
             "MIN_PERCENT",
             "MIN_ABS",
             "MODEL_NAME",
+            "NAME",
             "NAMES",
             "NULLABLE",
             "PATTERN",
@@ -983,6 +991,7 @@ body { background: white; color: black; }
             "RECOMMENDED",
             "RIGHT_ON",
             "ROOT",
+            "SEVERITY",
             "STRATEGY",
             "STYLE",
             "SUFFIXES",
@@ -1045,6 +1054,27 @@ body { background: white; color: black; }
             self.assertIsNotNone(
                 function_pattern.match(f"{function}("),
                 f"Missing aggregate-function highlighting for {function}",
+            )
+
+        for metric in (
+            "COLUMN_COUNT",
+            "DISTINCT_COUNT",
+            "DUPLICATE_PERCENT",
+            "DUPLICATE_ROWS",
+            "MISSING_COUNT",
+            "MISSING_PERCENT",
+            "QUALITY_SCORE",
+            "ROW_COUNT",
+        ):
+            self.assertIsNotNone(
+                quality_metric_pattern.fullmatch(metric),
+                f"Missing quality-metric highlighting for {metric}",
+            )
+
+        for predicate in ("BETWEEN", "EXISTS", "MATCHES", "NOT NULL"):
+            self.assertIsNotNone(
+                quality_predicate_pattern.fullmatch(predicate),
+                f"Missing quality-predicate highlighting for {predicate}",
             )
 
         for identifier in (

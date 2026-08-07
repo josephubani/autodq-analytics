@@ -3,12 +3,12 @@
 | Field | Value |
 | --- | --- |
 | Language | AutoDQ Analytics Domain Query Language (ADQL) |
-| Language version | 2.0 |
+| Language version | 2.1 |
 | Specification status | Stable |
 | Text encoding | UTF-8 |
 | Canonical file extension | `.adql` |
 
-This document is the normative definition of ADQL 2.0. It defines the
+This document is the normative definition of ADQL 2.1. It defines the
 language independently of a particular user interface or AutoDQ package
 release. The public Python constant `autodq.ADQL_LANGUAGE_VERSION` identifies
 the language version implemented by an installed AutoDQ package.
@@ -213,6 +213,7 @@ defines its purpose and primary state effect.
 | `DATASET`, `LOAD`, `ADD`, `USE`, `LIST` | Declare, load, register, activate, and inspect datasets. |
 | `SELECT`, `HEAD`, `TAIL`, `SAMPLE` | Read bounded tabular results without changing dataset values. |
 | `LET` | Create an independent named dataset snapshot from a stage, dataset, or bounded `SELECT` result. |
+| `ASSERT` | Evaluate a non-mutating data-quality expectation or manage and run a reusable quality suite. |
 | `PROFILE`, `STATISTICS`, `INTERPRET`, `DIAGNOSE`, `KNOWLEDGE`, `RECOMMEND`, `DECIDE`, `PREVIEW`, `REVIEW` | Build ordered quality and review artifacts in project state. |
 | `APPROVE`, `REJECT` | Change the status of proposed cleaning actions. |
 | `EDIT`, `MISSING`, `DUPLICATES`, `DOMAIN`, `OUTLIERS` | Inspect or mutate the audited cleaning-review working copy. |
@@ -259,11 +260,43 @@ appear at most once. The following semantic constraints supplement the EBNF:
 | `REPORT` | Output suffix is `.html` or `.json`. |
 | `EXPORT` | Output suffix is `.csv` or `.xlsx`. |
 | `AUDIT EXPORT` | Output suffix is `.json` or `.csv`. |
+| `ASSERT` | Severity is `error`, `warning`, or `info`; `FAIL_ON` additionally accepts `never`; suite JSON paths end with `.json`; `BETWEEN` bounds are ascending. |
 | `HEAD`, `TAIL`, `SAMPLE`, `HISTORY`, `SESSION EVENTS LIMIT` | Explicit row or event counts are positive integers. |
 
 Boolean flags written as `OVERWRITE` without a value mean true. When the
 grammar permits an optional Boolean after such a flag, an explicit true or
 false spelling overrides that default.
+
+### 7.2 Data-quality assertions and suites
+
+`ASSERT` evaluates `CURRENT` without changing dataset values. Column
+assertions support existence, completeness, uniqueness, dtype, inclusive
+minimum and maximum bounds, inclusive ranges, allowed values, and full-string
+regular-expression matching. Missing values are evaluated only by `NOT NULL`
+and missing metrics; other column predicates ignore missing values so authors
+can state completeness and value-domain requirements independently.
+
+Metric assertions support row count, column count, missing count and percent,
+removable exact-duplicate rows and percent, distinct non-null values, and the
+AutoDQ diagnosis quality score. `MISSING_COUNT` and `MISSING_PERCENT` MAY name
+a column or inspect the complete table. `DISTINCT_COUNT` requires a column.
+Duplicate metrics count rows after the first exact occurrence, matching the
+default `DUPLICATES DROP KEEP first` behavior.
+
+Each assertion has severity `error` by default. A failed assertion blocks when
+its severity is at least the statement's `FAIL_ON` level. `FAIL_ON error` is
+the default; `warning` also blocks warning failures, `info` blocks every
+failure, and `never` records failures without failing the ADQL statement.
+Blocking failures produce a structured failed result and obey normal
+continue-on-error behavior.
+
+`ASSERT SUITE ADD` stores a definition without evaluating it. `RUN` evaluates
+the suite against the active or explicitly selected dataset. `SHOW`, `LIST`,
+and `DROP` inspect or remove in-memory definitions. `EXPORT` and `LOAD` use the
+versioned JSON suite format and require explicit overwrite permission. Suite
+definitions are project-wide and survive active-dataset switches; the most
+recent suite result is a dataset-derived artifact and is invalidated when the
+active dataset changes.
 
 ## 8. SELECT semantics
 
@@ -286,7 +319,7 @@ MUST appear in `GROUP BY`. Output aliases are case-insensitively unique.
 
 `WHERE` conditions are combined only with `AND`. Supported operators are `=`,
 `!=`, `<`, `<=`, `>`, `>=`, `IN`, `NOT IN`, `IS NULL`, `IS NOT NULL`,
-`CONTAINS`, `STARTS WITH`, and `ENDS WITH`. ADQL 2.0 does not support `OR`,
+`CONTAINS`, `STARTS WITH`, and `ENDS WITH`. ADQL 2.1 does not support `OR`,
 joins inside `SELECT`, subqueries, window functions, or arbitrary functions.
 
 `DISTINCT` is applied after projection and aggregation. Ordering is stable,
@@ -322,7 +355,7 @@ overwritten by `LET`.
 
 ## 10. Safety limits
 
-A conforming AutoDQ ADQL 2.0 validator enforces:
+A conforming AutoDQ ADQL 2.1 validator enforces:
 
 | Limit | Value |
 | --- | ---: |
@@ -331,11 +364,15 @@ A conforming AutoDQ ADQL 2.0 validator enforces:
 | Explicit `SELECT LIMIT` | 10,000 rows |
 | `WHERE` conditions | 50 |
 | Default returned query rows | 1,000 |
+| Assertions loaded per quality suite | 500 |
+| Quality-suite JSON size | 1 MB |
+| Values in one `ALLOWED` assertion | 1,000 |
+| Regular-expression length | 1,000 characters |
 
 ADQL MUST NOT expose `eval`, `exec`, imports, attribute access, arbitrary
 Python calls, shell execution, or unregistered command handlers. File writes
 occur only through explicit export, report, dashboard, model, gallery,
-workspace, or audit statements.
+workspace, audit, or quality-suite export statements.
 
 Paths and command-specific numeric ranges MUST pass the validations described
 by the command reference and error specification before the associated
@@ -359,13 +396,13 @@ language behavior.
 
 ## 12. Conformance and extensions
 
-An implementation claiming **ADQL 2.0 parser conformance** MUST implement all
-productions in `grammar.ebnf`. An implementation claiming **AutoDQ ADQL 2.0
+An implementation claiming **ADQL 2.1 parser conformance** MUST implement all
+productions in `grammar.ebnf`. An implementation claiming **AutoDQ ADQL 2.1
 runtime conformance** MUST additionally implement every command listed by the
 runtime command set and the state transitions in this specification.
 
 Implementations MAY provide extra renderers, editors, transport protocols, and
-CLI options. They MUST NOT silently reinterpret valid ADQL 2.0 syntax.
+CLI options. They MUST NOT silently reinterpret valid ADQL 2.1 syntax.
 Language extensions require a later ADQL language version and MUST be rejected
 as unknown syntax by implementations that do not support that version.
 

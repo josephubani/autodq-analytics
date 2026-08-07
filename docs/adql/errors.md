@@ -1,20 +1,21 @@
-# ADQL 2.0 Error Model
+# ADQL 2.1 Error Model
 
 This document defines the stable ADQL error categories and failure reporting
 requirements.
 
 ## 1. Error categories
 
-AutoDQ exposes four public exception classes:
+AutoDQ exposes five public exception classes:
 
 | Class | Phase | Meaning |
 | --- | --- | --- |
 | `ADQLError` | Any | Base class for language-level failures |
 | `ADQLSyntaxError` | Parse | Source cannot be represented by ADQL grammar |
 | `ADQLValidationError` | Validate | Parsed source violates a safety or semantic rule |
+| `ADQLAssertionError` | Execute | A valid quality assertion reached its configured failure level |
 | `ADQLExecutionError` | Execute | A valid statement failed while operating on project state |
 
-The first three are language-facing categories. The underlying cause of an
+All five are language-facing categories. The underlying cause of an
 execution failure MAY be a project exception such as `KeyError`, `ValueError`,
 or `RuntimeError`; the ADQL executor wraps it in `ADQLExecutionError` when
 execution is configured to raise.
@@ -79,6 +80,11 @@ An `ADQLExecutionError` MUST expose:
 
 The partial run retains completed results before the failure and a failed
 result containing `error_type` and `error_message`.
+
+An `ADQLAssertionError` MUST retain the `QualityTestReport` and its tabular
+test results. The executor records that structured result before applying the
+normal stop or continue-on-error policy. Hosts that raise execution failures
+MAY wrap it in `ADQLExecutionError`, retaining it as the original cause.
 
 ## 5. Continue-on-error
 

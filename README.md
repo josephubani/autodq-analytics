@@ -27,7 +27,8 @@ Jupyter, the command line, or standalone `.adql` notebooks.
 - Multi-workspace project isolation and model persistence
 - `project.auto()` for an automated workflow
 - ADQL files with executable notebook cells, direct named-dataset workflows,
-  session inspection, explicit datatype formatting, and rich VS Code output
+  `ASSERT` quality gates and reusable test suites, session inspection,
+  explicit datatype formatting, and rich VS Code output
 
 ## Requirements
 
@@ -128,6 +129,11 @@ DUPLICATES SUMMARY;
 DUPLICATES DROP KEEP first;
 CLEANING APPLY;
 LET cleaned_sales = CLEANED;
+
+# %% [Quality gate]
+ASSERT SUITE ADD sales_gate Transaction_ID UNIQUE;
+ASSERT SUITE ADD sales_gate Revenue MIN 0;
+ASSERT SUITE RUN sales_gate FAIL_ON error;
 
 # %% [Regional analysis]
 SELECT Region,
@@ -263,7 +269,7 @@ python -m unittest discover -s tests
 
 References: [Python API](docs/API_REFERENCE.md),
 [ADQL user guide](docs/ADQL_SPEC.md),
-[ADQL 2.0 specification](docs/adql/SPECIFICATION.md),
+[ADQL 2.1 specification](docs/adql/SPECIFICATION.md),
 [troubleshooting](docs/TROUBLESHOOTING.md),
 [release guide](docs/RELEASING.md), and [changelog](CHANGELOG.md).
 
@@ -281,7 +287,7 @@ For the complete release process, see the
 ## Documentation
 
 - [ADQL language reference](https://github.com/josephubani/autodq-analytics/blob/main/docs/ADQL_SPEC.md)
-- [Formal ADQL 2.0 specification](https://github.com/josephubani/autodq-analytics/blob/main/docs/adql/SPECIFICATION.md)
+- [Formal ADQL 2.1 specification](https://github.com/josephubani/autodq-analytics/blob/main/docs/adql/SPECIFICATION.md)
 - [Machine-readable ADQL grammar](https://github.com/josephubani/autodq-analytics/blob/main/docs/adql/grammar.ebnf)
 - [Quickstart](https://github.com/josephubani/autodq-analytics/blob/main/docs/QUICKSTART.md)
 - [Troubleshooting](https://github.com/josephubani/autodq-analytics/blob/main/docs/TROUBLESHOOTING.md)

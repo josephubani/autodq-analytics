@@ -1,4 +1,4 @@
-# ADQL 2.0 Data Types and Conversion Rules
+# ADQL 2.1 Data Types and Conversion Rules
 
 This document is normative for ADQL literals, option coercion, query values,
 and `SET TYPE` conversions.
@@ -140,7 +140,7 @@ SET TYPE Revenue float DECIMALS 2;
 SET TYPE Margin decimal DECIMALS 4;
 ```
 
-ADQL 2.0 `decimal` is an alias for floating-point conversion; it is not an
+ADQL 2.1 `decimal` is an alias for floating-point conversion; it is not an
 arbitrary-precision decimal type. Rounding changes numeric values, not merely
 their display formatting.
 

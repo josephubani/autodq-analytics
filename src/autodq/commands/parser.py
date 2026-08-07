@@ -7,6 +7,7 @@ from typing import Any
 
 from autodq.commands.errors import ADQLSyntaxError
 from autodq.commands.grammar import (
+    ADQL_LANGUAGE_VERSION,
     AGGREGATE_FUNCTIONS,
     AUTO_OPTIONS,
     BLUE_OPTIONS,
@@ -298,6 +299,9 @@ class ADQLParser:
                 **({"reason": options["reason"]} if "reason" in options else {}),
             }
 
+        if kind == "ASSERT":
+            return self._parse_assert(arguments)
+
         if kind == "MISSING":
             return self._parse_missing(arguments)
 
@@ -521,6 +525,293 @@ class ADQLParser:
             }
 
         raise ADQLSyntaxError(f"Parser is not implemented for {kind}.")
+
+    def _parse_assert(self, arguments: list[str]) -> dict[str, Any]:
+        if not arguments:
+            raise ADQLSyntaxError(
+                "ASSERT requires a quality expression or SUITE operation."
+            )
+
+        if arguments[0].upper() != "SUITE":
+            expression, options = self._assert_options(
+                arguments,
+                allow_fail_on=True,
+            )
+            return {
+                "action": "run",
+                "assertion": self._parse_assert_expression(
+                    expression,
+                    options=options,
+                ),
+                "fail_on": options.get("fail_on", "error"),
+            }
+
+        if len(arguments) < 2:
+            raise ADQLSyntaxError(
+                "ASSERT SUITE requires ADD, RUN, SHOW, LIST, DROP, EXPORT, or LOAD."
+            )
+
+        action = arguments[1].lower()
+        rest = arguments[2:]
+
+        if action == "list":
+            if rest:
+                raise ADQLSyntaxError("ASSERT SUITE LIST does not accept arguments.")
+            return {"action": "suite_list"}
+
+        if action == "add":
+            if len(rest) < 2:
+                raise ADQLSyntaxError(
+                    "ASSERT SUITE ADD requires a suite name and assertion."
+                )
+            expression, options = self._assert_options(rest[1:])
+            return {
+                "action": "suite_add",
+                "suite_name": rest[0],
+                "assertion": self._parse_assert_expression(
+                    expression,
+                    options=options,
+                ),
+            }
+
+        if action == "run":
+            if not rest:
+                raise ADQLSyntaxError("ASSERT SUITE RUN requires a suite name.")
+            options = self._parse_options(
+                rest[1:],
+                {"FAIL_ON": "fail_on"},
+            )
+            return {
+                "action": "suite_run",
+                "suite_name": rest[0],
+                "fail_on": options.get("fail_on", "error"),
+            }
+
+        if action in {"show", "drop"}:
+            if len(rest) != 1:
+                raise ADQLSyntaxError(
+                    f"ASSERT SUITE {action.upper()} requires one suite name."
+                )
+            return {
+                "action": f"suite_{action}",
+                "suite_name": rest[0],
+            }
+
+        if action in {"export", "load"}:
+            if not rest:
+                raise ADQLSyntaxError(
+                    f"ASSERT SUITE {action.upper()} requires a suite name."
+                )
+            path_keyword = "TO" if action == "export" else "FROM"
+            options = self._parse_options(
+                rest[1:],
+                {
+                    path_keyword: "path",
+                    "OVERWRITE": "overwrite",
+                },
+                flags={"OVERWRITE"},
+            )
+            if "path" not in options:
+                raise ADQLSyntaxError(
+                    f"ASSERT SUITE {action.upper()} requires {path_keyword} path."
+                )
+            return {
+                "action": f"suite_{action}",
+                "suite_name": rest[0],
+                **self._coerce_options(options),
+            }
+
+        raise ADQLSyntaxError(
+            "ASSERT SUITE requires ADD, RUN, SHOW, LIST, DROP, EXPORT, or LOAD."
+        )
+
+    def _assert_options(
+        self,
+        tokens: list[str],
+        *,
+        allow_fail_on: bool = False,
+    ) -> tuple[list[str], dict[str, Any]]:
+        option_map = {
+            "SEVERITY": "severity",
+            "NAME": "name",
+        }
+        if allow_fail_on:
+            option_map["FAIL_ON"] = "fail_on"
+
+        expression = []
+        options = {}
+        index = 0
+
+        while index < len(tokens):
+            key = self._key(tokens[index])
+            if key not in option_map:
+                expression.append(tokens[index])
+                index += 1
+                continue
+
+            destination = option_map[key]
+            if destination in options:
+                raise ADQLSyntaxError(
+                    f"ASSERT option {key} was provided more than once."
+                )
+            if index + 1 >= len(tokens):
+                raise ADQLSyntaxError(f"ASSERT option {key} requires a value.")
+            options[destination] = tokens[index + 1]
+            index += 2
+
+        if not expression:
+            raise ADQLSyntaxError("ASSERT quality expression cannot be empty.")
+        return expression, options
+
+    def _parse_assert_expression(
+        self,
+        tokens: list[str],
+        *,
+        options: dict[str, Any],
+    ) -> dict[str, Any]:
+        metrics = {
+            "ROW_COUNT",
+            "COLUMN_COUNT",
+            "MISSING_COUNT",
+            "MISSING_PERCENT",
+            "DUPLICATE_ROWS",
+            "DUPLICATE_PERCENT",
+            "DISTINCT_COUNT",
+            "QUALITY_SCORE",
+        }
+        subject = tokens[0].upper()
+        assertion = {
+            "severity": str(options.get("severity", "error")).lower(),
+            "name": options.get("name"),
+        }
+
+        if subject in metrics:
+            assertion["subject"] = subject.lower()
+            remainder = tokens[1:]
+            column_metrics = {
+                "MISSING_COUNT",
+                "MISSING_PERCENT",
+                "DISTINCT_COUNT",
+            }
+            if (
+                subject in column_metrics
+                and remainder
+                and remainder[0].upper() != "BETWEEN"
+                and remainder[0] not in {"=", "==", "!=", "<", "<=", ">", ">="}
+            ):
+                assertion["column"] = self._identifier(remainder[0])
+                remainder = remainder[1:]
+            if subject == "DISTINCT_COUNT" and "column" not in assertion:
+                raise ADQLSyntaxError("ASSERT DISTINCT_COUNT requires a column.")
+            assertion.update(self._parse_assert_comparison(remainder))
+            return assertion
+
+        column = self._identifier(tokens[0])
+        remainder = tokens[1:]
+        if not remainder:
+            raise ADQLSyntaxError(
+                "Column ASSERT requires EXISTS, NOT NULL, UNIQUE, TYPE, MIN, "
+                "MAX, BETWEEN, ALLOWED, or MATCHES."
+            )
+
+        predicate = remainder[0].upper()
+        assertion.update({"subject": "column", "column": column})
+        if predicate == "EXISTS" and len(remainder) == 1:
+            assertion["predicate"] = "exists"
+        elif (
+            predicate == "NOT"
+            and len(remainder) == 2
+            and remainder[1].upper() == "NULL"
+        ):
+            assertion["predicate"] = "not_null"
+        elif predicate == "UNIQUE" and len(remainder) == 1:
+            assertion["predicate"] = "unique"
+        elif predicate == "TYPE" and len(remainder) == 2:
+            assertion.update(
+                {"predicate": "type", "expected": remainder[1].lower()}
+            )
+        elif predicate in {"MIN", "MAX"} and len(remainder) == 2:
+            assertion.update(
+                {
+                    "predicate": predicate.lower(),
+                    "expected": self._literal(remainder[1]),
+                }
+            )
+        elif (
+            predicate == "BETWEEN"
+            and len(remainder) == 4
+            and remainder[2].upper() == "AND"
+        ):
+            assertion.update(
+                {
+                    "predicate": "between",
+                    "expected": self._literal(remainder[1]),
+                    "expected_max": self._literal(remainder[3]),
+                }
+            )
+        elif predicate == "ALLOWED" and len(remainder) >= 2:
+            raw_values = " ".join(remainder[1:])
+            values = self._string_list(raw_values, option="ASSERT ALLOWED")
+            assertion.update(
+                {
+                    "predicate": "allowed",
+                    "values": [self._literal(value) for value in values],
+                }
+            )
+        elif predicate == "MATCHES" and len(remainder) >= 2:
+            assertion.update(
+                {
+                    "predicate": "matches",
+                    "expected": " ".join(remainder[1:]),
+                }
+            )
+        else:
+            raise ADQLSyntaxError(
+                "Invalid column ASSERT. Use EXISTS, NOT NULL, UNIQUE, TYPE, "
+                "MIN, MAX, BETWEEN low AND high, ALLOWED values, or MATCHES pattern."
+            )
+        return assertion
+
+    def _parse_assert_comparison(
+        self,
+        tokens: list[str],
+    ) -> dict[str, Any]:
+        if (
+            len(tokens) == 3
+            and tokens[0].upper() == "BETWEEN"
+            and tokens[2].upper() != "AND"
+        ):
+            raise ADQLSyntaxError(
+                "ASSERT BETWEEN syntax is BETWEEN lower AND upper."
+            )
+        if (
+            len(tokens) == 4
+            and tokens[0].upper() == "BETWEEN"
+            and tokens[2].upper() == "AND"
+        ):
+            return {
+                "predicate": "between",
+                "expected": self._literal(tokens[1]),
+                "expected_max": self._literal(tokens[3]),
+            }
+        if len(tokens) == 2 and tokens[0] in {
+            "=",
+            "==",
+            "!=",
+            "<",
+            "<=",
+            ">",
+            ">=",
+        }:
+            return {
+                "predicate": "compare",
+                "operator": tokens[0],
+                "expected": self._literal(tokens[1]),
+            }
+        raise ADQLSyntaxError(
+            "Metric ASSERT requires a comparison such as >= 10 or "
+            "BETWEEN 10 AND 20."
+        )
 
     def _parse_let(self, raw: str) -> dict[str, Any]:
         match = re.match(
@@ -1227,7 +1518,8 @@ class ADQLParser:
     def _parse_where(self, text: str) -> list[dict[str, Any]]:
         if self._keyword_positions(text, ("OR",)).get("OR"):
             raise ADQLSyntaxError(
-                "OR is not supported in ADQL 2.0. Use IN (...) or separate queries."
+                f"OR is not supported in ADQL {ADQL_LANGUAGE_VERSION}. "
+                "Use IN (...) or separate queries."
             )
 
         parts = self._split_keyword(text, "AND")

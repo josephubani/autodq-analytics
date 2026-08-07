@@ -23,6 +23,7 @@ from autodq.dashboard import Dashboard, DashboardEngine, DashboardMetric
 from autodq.commands import (
     ADQL_LANGUAGE_VERSION,
     ADQLError,
+    ADQLAssertionError,
     ADQLExecutionError,
     ADQLExecutor,
     ADQLCell,
@@ -40,6 +41,13 @@ from autodq.commands import (
     ADQLValidationError,
     ADQLValidator,
 )
+from autodq.quality_tests import (
+    QualityAssertion,
+    QualityTestEngine,
+    QualityTestReport,
+    QualityTestResult,
+    QualityTestSuite,
+)
 
 __all__ = [
     "__version__",
@@ -50,6 +58,7 @@ __all__ = [
     "AutoStageResult",
     "ADQL_LANGUAGE_VERSION",
     "ADQLError",
+    "ADQLAssertionError",
     "ADQLExecutionError",
     "ADQLExecutor",
     "ADQLCell",
@@ -73,6 +82,11 @@ __all__ = [
     "DomainRule",
     "DomainValidationReport",
     "OutlierReviewReport",
+    "QualityAssertion",
+    "QualityTestEngine",
+    "QualityTestReport",
+    "QualityTestResult",
+    "QualityTestSuite",
     "UncertaintyCalibration",
     "UncertaintyEngine",
     "VisualizationGallery",

@@ -68,6 +68,10 @@ class JSONExporter:
             "validation":
                 report.validation.to_dict()
                 if report.validation else None,
+
+            "quality_tests":
+                report.quality_tests.to_dict()
+                if report.quality_tests else None,
                 
             "visualizations":
                 report.visualizations.to_dict()

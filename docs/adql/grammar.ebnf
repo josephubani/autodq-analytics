@@ -1,10 +1,10 @@
-(* AutoDQ Analytics Domain Query Language 2.0 concrete grammar.
+(* AutoDQ Analytics Domain Query Language 2.1 concrete grammar.
    Keywords and enum terminals are case-insensitive.
    Command options may appear in any order unless a production fixes an order.
    Repeated options are syntactically expressible below but are rejected by
    semantic validation. *)
 
-language-version = "2.0" ;
+language-version = "2.1" ;
 
 script = statement, { ";", statement }, [ ";" ] ;
 
@@ -13,6 +13,7 @@ statement =
   | dataset-statement
   | load-statement
   | knowledge-statement
+  | assert-statement
   | let-statement
   | profile-statement
   | statistics-statement
@@ -100,6 +101,52 @@ load-statement = "LOAD", [ short-dataset-target ] ;
 
 (* command: KNOWLEDGE *)
 knowledge-statement = "KNOWLEDGE", [ short-dataset-target ] ;
+
+(* command: ASSERT *)
+assert-statement = "ASSERT", [ dataset-selector ],
+                   ( quality-assertion | quality-suite-operation ) ;
+
+quality-assertion = ( column-quality-assertion | metric-quality-assertion ),
+                    { quality-assertion-option } ;
+column-quality-assertion = identifier,
+    ( "EXISTS"
+    | "NOT", "NULL"
+    | "UNIQUE"
+    | "TYPE", quality-dtype
+    | "MIN", number
+    | "MAX", number
+    | "BETWEEN", number, "AND", number
+    | "ALLOWED", value-list
+    | "MATCHES", value-token ) ;
+metric-quality-assertion =
+    ( ( "MISSING_COUNT" | "MISSING_PERCENT" ), [ identifier ]
+    | "DISTINCT_COUNT", identifier
+    | "ROW_COUNT" | "COLUMN_COUNT" | "DUPLICATE_ROWS"
+    | "DUPLICATE_PERCENT" | "QUALITY_SCORE" ),
+    quality-comparison ;
+quality-comparison = comparison-operator, number
+                   | "BETWEEN", number, "AND", number ;
+quality-assertion-option = "SEVERITY", quality-severity
+                         | "NAME", value-token
+                         | "FAIL_ON", quality-failure-level ;
+quality-severity = "error" | "warning" | "info" ;
+quality-failure-level = quality-severity | "never" ;
+quality-dtype = "numeric" | "number" | "integer" | "int" | "float"
+              | "string" | "text" | "datetime" | "date"
+              | "boolean" | "bool" | "category" | "categorical" ;
+
+quality-suite-operation =
+    "SUITE",
+    ( "LIST"
+    | "ADD", suite-name, ( column-quality-assertion
+                           | metric-quality-assertion ),
+      { "SEVERITY", quality-severity | "NAME", value-token }
+    | "RUN", suite-name, [ "FAIL_ON", quality-failure-level ]
+    | "SHOW", suite-name
+    | "DROP", suite-name
+    | "EXPORT", suite-name, "TO", path, [ overwrite-flag ]
+    | "LOAD", suite-name, "FROM", path, [ overwrite-flag ] ) ;
+suite-name = bare-token ;
 
 (* command: LET *)
 let-statement = "LET", assignment-identifier, "=", let-source,
@@ -490,6 +537,7 @@ stage-source = "CURRENT" | "RAW" | "DATA" | "CLEANED"
              | "ENGINEERED" | "FEATURES" | "PREDICTIONS" ;
 
 command-name = "SELECT" | "DATASET" | "LOAD" | "KNOWLEDGE" | "LET"
+             | "ASSERT"
              | "PROFILE" | "STATISTICS" | "INTERPRET" | "DIAGNOSE"
              | "RECOMMEND" | "DECIDE" | "PREVIEW" | "REVIEW"
              | "APPROVE" | "REJECT" | "CLEAN" | "VALIDATE" | "CLEANING"

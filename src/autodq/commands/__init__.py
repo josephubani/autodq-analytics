@@ -2,6 +2,7 @@
 
 from autodq.commands.errors import (
     ADQLError,
+    ADQLAssertionError,
     ADQLExecutionError,
     ADQLSyntaxError,
     ADQLValidationError,
@@ -26,6 +27,7 @@ from autodq.commands.validator import ADQLValidator
 __all__ = [
     "ADQL_LANGUAGE_VERSION",
     "ADQLError",
+    "ADQLAssertionError",
     "ADQLExecutionError",
     "ADQLExecutor",
     "ADQLCell",

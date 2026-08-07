@@ -45,6 +45,7 @@ class ReportingEngine:
             dashboard=state.dashboard_report,
             adql_history=list(state.adql_history),
             validation=state.validation_report,
+            quality_tests=state.quality_test_report,
             visualizations=state.visualization_report,
             rendered_visualizations=rendered_visualizations,
             model=state.model_report,

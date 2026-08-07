@@ -1,3 +1,4 @@
+import json
 import re
 from pathlib import Path
 
@@ -56,6 +57,11 @@ from autodq.visualization.notebook_renderer import (NotebookVisualizationRendere
 from autodq.visualization.models import VisualizationReport
 from autodq.persistence.engine import ModelPersistenceEngine
 from autodq.review.engine import CleaningReviewEngine
+from autodq.quality_tests import (
+    QualityAssertion,
+    QualityTestEngine,
+    QualityTestSuite,
+)
 from autodq.workspaces.manager import WorkspaceManager
 from autodq.workspaces.models import WorkspaceContext
 
@@ -94,6 +100,7 @@ class AutoDQ:
         self._blue_prescription_engine = None
         self.model_persistence_engine = ModelPersistenceEngine()
         self.cleaning_review_engine = CleaningReviewEngine()
+        self.quality_test_engine = QualityTestEngine()
         self.auto_engine = AutoEngine()
         self.dashboard_engine = DashboardEngine()
         self.adql_parser = ADQLParser()
@@ -720,9 +727,257 @@ class AutoDQ:
         )
 
         return self.state.knowledge_rules
-    
-    
-    
+
+    def assert_quality(
+        self,
+        assertion: QualityAssertion | dict,
+        *,
+        fail_on: str = "error",
+    ):
+        """Evaluate one non-mutating quality assertion on the active dataset."""
+        assertion = self._quality_assertion(assertion)
+        report = self._run_quality_assertions(
+            [assertion],
+            fail_on=fail_on,
+        )
+        return report
+
+    def add_quality_test(
+        self,
+        suite_name: str,
+        assertion: QualityAssertion | dict,
+    ) -> QualityTestSuite:
+        """Add a reusable assertion to an in-memory quality suite."""
+        suite_name = self._quality_suite_name(suite_name)
+        assertion = self._quality_assertion(assertion)
+        self.quality_test_engine.validate_assertion(assertion)
+        suite = self.state.quality_test_suites.get(suite_name)
+        if suite is None:
+            suite = QualityTestSuite(name=suite_name)
+            self.state.quality_test_suites[suite_name] = suite
+        if suite.test_count >= 500:
+            raise ValueError("A quality suite supports at most 500 assertions.")
+        suite.add(assertion)
+        self.session.log(
+            step="quality_suite_add",
+            message="Quality assertion added to suite.",
+            metadata={
+                "suite": suite_name,
+                "test": assertion.display_name,
+                "test_count": suite.test_count,
+            },
+        )
+        return suite
+
+    def run_quality_suite(
+        self,
+        suite_name: str,
+        *,
+        fail_on: str = "error",
+    ):
+        """Run every assertion in a reusable quality suite."""
+        suite = self.quality_suite(suite_name)
+        if not suite.assertions:
+            raise ValueError(f"Quality suite {suite.name} contains no tests.")
+        return self._run_quality_assertions(
+            suite.assertions,
+            suite_name=suite.name,
+            fail_on=fail_on,
+        )
+
+    def quality_suite(self, suite_name: str) -> QualityTestSuite:
+        """Return a named quality suite or raise an actionable error."""
+        suite_name = self._quality_suite_name(suite_name)
+        suite = self.state.quality_test_suites.get(suite_name)
+        if suite is None:
+            available = ", ".join(self.state.quality_test_suites) or "none"
+            raise KeyError(
+                f"Unknown quality suite: {suite_name}. Available suites: {available}."
+            )
+        return suite
+
+    def quality_suite_frame(self, suite_name: str) -> pd.DataFrame:
+        suite = self.quality_suite(suite_name)
+        return pd.DataFrame(
+            [
+                {
+                    "test": index,
+                    "name": assertion.display_name,
+                    "severity": assertion.severity,
+                    "subject": assertion.subject,
+                    "column": assertion.column,
+                    "predicate": assertion.predicate,
+                    "operator": assertion.operator,
+                    "expected": (
+                        assertion.values
+                        if assertion.predicate == "allowed"
+                        else assertion.expected
+                    ),
+                    "expected_max": assertion.expected_max,
+                }
+                for index, assertion in enumerate(suite.assertions, start=1)
+            ]
+        )
+
+    def list_quality_suites(self) -> pd.DataFrame:
+        latest = self.state.quality_test_report
+        return pd.DataFrame(
+            [
+                {
+                    "name": suite.name,
+                    "tests": suite.test_count,
+                    "last_status": (
+                        "not_run"
+                        if latest is None or latest.suite_name != suite.name
+                        else "passed" if latest.success else "failed"
+                    ),
+                    "created_at": suite.created_at.isoformat(),
+                    "updated_at": suite.updated_at.isoformat(),
+                }
+                for suite in self.state.quality_test_suites.values()
+            ],
+            columns=[
+                "name", "tests", "last_status", "created_at", "updated_at"
+            ],
+        )
+
+    def drop_quality_suite(self, suite_name: str) -> dict:
+        suite = self.quality_suite(suite_name)
+        del self.state.quality_test_suites[suite.name]
+        self.session.log(
+            step="quality_suite_drop",
+            message="Quality suite removed.",
+            metadata={"suite": suite.name, "test_count": suite.test_count},
+        )
+        return {"name": suite.name, "tests_removed": suite.test_count}
+
+    def export_quality_suite(
+        self,
+        suite_name: str,
+        path: str | Path,
+        *,
+        overwrite: bool = False,
+    ) -> Path:
+        suite = self.quality_suite(suite_name)
+        output = Path(path).expanduser().resolve()
+        if output.suffix.lower() != ".json":
+            raise ValueError("Quality suite output must end with .json.")
+        if output.exists() and not overwrite:
+            raise FileExistsError(
+                f"Quality suite output already exists: {output}. "
+                "Use overwrite=True to replace it."
+            )
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(
+            json.dumps(suite.to_dict(), indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        self.session.log(
+            step="quality_suite_export",
+            message="Quality suite exported.",
+            metadata={"suite": suite.name, "path": str(output)},
+        )
+        return output
+
+    def load_quality_suite(
+        self,
+        suite_name: str,
+        path: str | Path,
+        *,
+        overwrite: bool = False,
+    ) -> QualityTestSuite:
+        suite_name = self._quality_suite_name(suite_name)
+        source = Path(path).expanduser().resolve()
+        if source.suffix.lower() != ".json":
+            raise ValueError("Quality suite input must end with .json.")
+        if source.stat().st_size > 1_000_000:
+            raise ValueError("Quality suite JSON cannot exceed 1 MB.")
+        if suite_name in self.state.quality_test_suites and not overwrite:
+            raise FileExistsError(
+                f"Quality suite already exists: {suite_name}. "
+                "Use overwrite=True to replace it."
+            )
+        try:
+            payload = json.loads(source.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as error:
+            raise ValueError(f"Invalid quality suite JSON: {error}") from error
+        suite = QualityTestSuite.from_dict(payload, name=suite_name)
+        if suite.test_count > 500:
+            raise ValueError("A quality suite supports at most 500 assertions.")
+        for assertion in suite.assertions:
+            self.quality_test_engine.validate_assertion(assertion)
+        self.state.quality_test_suites[suite_name] = suite
+        self.session.log(
+            step="quality_suite_load",
+            message="Quality suite loaded.",
+            metadata={
+                "suite": suite_name,
+                "path": str(source),
+                "test_count": suite.test_count,
+            },
+        )
+        return suite
+
+    def _run_quality_assertions(
+        self,
+        assertions: list[QualityAssertion],
+        *,
+        suite_name: str | None = None,
+        fail_on: str = "error",
+    ):
+        if self.state.data is None:
+            self.load()
+        context = {}
+        if any(item.subject == "quality_score" for item in assertions):
+            if self.state.diagnosis_report is None:
+                self.diagnose()
+            context["quality_score"] = self.state.diagnosis_report.quality_score
+        active = self.dataset_manager.primary()
+        report = self.quality_test_engine.run(
+            self.state.data,
+            assertions,
+            dataset=active.name if active is not None else str(self.dataset_path),
+            suite_name=suite_name,
+            fail_on=fail_on,
+            context=context,
+        )
+        self.state.quality_test_report = report
+        self.session.log(
+            step="assert_quality",
+            message="Data-quality assertions evaluated.",
+            metadata={
+                "suite": suite_name,
+                "tests": report.test_count,
+                "passed": report.passed_count,
+                "failed": report.failed_count,
+                "blocking_failures": report.blocking_failure_count,
+                "fail_on": report.fail_on,
+            },
+        )
+        return report
+
+    def _quality_assertion(
+        self,
+        assertion: QualityAssertion | dict,
+    ) -> QualityAssertion:
+        if isinstance(assertion, QualityAssertion):
+            result = assertion
+        elif isinstance(assertion, dict):
+            result = QualityAssertion.from_dict(assertion)
+        else:
+            raise TypeError("Quality assertion must be QualityAssertion or dict.")
+        self.quality_test_engine.validate_assertion(result)
+        return result
+
+    @staticmethod
+    def _quality_suite_name(value: str) -> str:
+        value = str(value).strip()
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]{0,127}", value):
+            raise ValueError(
+                "Quality suite name must begin with a letter or underscore "
+                "and contain only letters, digits, underscores, or hyphens."
+            )
+        return value
 
     def profile(self) -> dict:
         if self.state.data is None:
@@ -3227,6 +3482,7 @@ class AutoDQ:
             "explanations": self.state.explainability_report is not None,
             "blue": self.state.blue_report is not None,
             "dashboard": self.state.dashboard_report is not None,
+            "quality_tests": self.state.quality_test_report is not None,
             "visualizations": bool(self.visualization_gallery.charts),
         }
         steps_completed = list(dict.fromkeys(self.session.steps_completed))
@@ -3242,6 +3498,7 @@ class AutoDQ:
             "event_count": self.session.event_count,
             "adql_run_count": len(self.state.adql_history),
             "registered_datasets": self.dataset_manager.names(),
+            "quality_suites": list(self.state.quality_test_suites),
             "steps_completed": steps_completed,
             "workflow_state": workflow_state,
         }

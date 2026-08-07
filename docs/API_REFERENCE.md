@@ -66,6 +66,7 @@ The returned `AutoRunResult` provides `success`, stage counts,
 | Manual review | `edit_row()`, `cleaning_preview()`, `apply_cleaning_review()` |
 | Missing values | `missing_summary()`, `fill_missing()`, `drop_missing_rows()`, `drop_missing_columns()` |
 | Exact duplicates | `duplicate_summary()`, `drop_duplicates()` |
+| Quality tests | `assert_quality()`, `add_quality_test()`, `run_quality_suite()`, `quality_suite()`, `quality_suite_frame()`, `list_quality_suites()`, `drop_quality_suite()`, `export_quality_suite()`, `load_quality_suite()` |
 | Domains and outliers | `add_domain_rule()`, `validate_domain()`, `review_outliers()`, `treat_outliers()` |
 | Cleaning | `clean()`, `validate_cleaning()`, `export_cleaning_audit()` |
 
@@ -129,6 +130,34 @@ cleaned = project.apply_cleaning_review()
 only the later rows that would be removed. `keep` accepts `first`, `last`, or
 `none`.
 
+Quality assertions are non-mutating and can run directly or as reusable
+suites:
+
+```python
+from autodq import QualityAssertion
+
+project.assert_quality(
+    QualityAssertion(
+        subject="column",
+        column="Revenue",
+        predicate="min",
+        expected=0,
+        name="Revenue is non-negative",
+    )
+)
+project.add_quality_test(
+    "sales_gate",
+    QualityAssertion(subject="column", column="Transaction_ID", predicate="unique"),
+)
+report = project.run_quality_suite("sales_gate", fail_on="error")
+project.export_quality_suite("sales_gate", "tests/sales-gate.json", overwrite=True)
+```
+
+`QualityTestReport.to_frame()` returns one row per check. Its `success`,
+`passed_count`, `failed_count`, and `blocking_failure_count` properties make it
+suitable for CI gates. Suite JSON can be loaded under a new name with
+`load_quality_suite()`.
+
 ## Analysis, features, and modeling
 
 | Area | Methods |
@@ -156,7 +185,7 @@ HTML or JSON analytical reports.
 ```python
 from autodq import ADQL_LANGUAGE_VERSION
 
-print(ADQL_LANGUAGE_VERSION)  # 2.0
+print(ADQL_LANGUAGE_VERSION)  # 2.1
 result = project.query("PROFILE; DIAGNOSE;", auto_display=False)
 file_result = project.run_adql("analysis.adql", through_cell=3)
 ```
@@ -167,7 +196,7 @@ current project. Registered datasets can be targeted directly with
 `SELECT * FROM customers`. `run_adql()` executes a cell-based standalone file
 while retaining state between selected cells. See the
 [ADQL user guide](ADQL_SPEC.md) and
-[formal ADQL 2.0 specification](adql/SPECIFICATION.md).
+[formal ADQL 2.1 specification](adql/SPECIFICATION.md).
 
 ## Session inspection
 

@@ -40,6 +40,8 @@ class AutoDQState:
     blue_report = None
     auto_run_report = None
     dashboard_report = None
+    quality_test_report = None
+    quality_test_suites: dict = field(default_factory=dict)
 
     def reset_outputs(self) -> None:
         self.profile_report = None
@@ -70,6 +72,7 @@ class AutoDQState:
         self.blue_report = None
         self.auto_run_report = None
         self.dashboard_report = None
+        self.quality_test_report = None
 
     def reset_all(self, dataset_path: str | Path) -> None:
         self.dataset_path = Path(dataset_path)

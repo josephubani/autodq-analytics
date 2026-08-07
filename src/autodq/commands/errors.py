@@ -13,6 +13,15 @@ class ADQLValidationError(ADQLError, ValueError):
     """Raised when parsed ADQL violates language safety rules."""
 
 
+class ADQLAssertionError(ADQLError, AssertionError):
+    """Raised when an ASSERT result reaches its configured failure level."""
+
+    def __init__(self, message, *, report=None, data=None):
+        super().__init__(message)
+        self.report = report
+        self.data = data
+
+
 class ADQLExecutionError(ADQLError, RuntimeError):
     """Raised when a valid ADQL statement fails during execution."""
 

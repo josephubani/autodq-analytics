@@ -1,5 +1,11 @@
 # Change Log
 
+## Unreleased
+
+- Added complete ADQL 2.1 highlighting for `ASSERT`, quality metrics,
+  predicates, suite operations, severities, and failure thresholds.
+- Documented executable notebook quality gates and portable JSON suites.
+
 ## 0.3.3 - 2026-08-02
 
 - Made `REVIEW` a true interactive notebook panel with action selection,

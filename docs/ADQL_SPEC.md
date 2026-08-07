@@ -6,7 +6,7 @@ repeatable analytics while retaining named, executable cells. ADQL does not
 evaluate Python expressions or expose arbitrary object methods.
 
 This file is the practical command guide. The normative definition of ADQL
-2.0 is the [formal language specification](adql/SPECIFICATION.md), accompanied
+2.1 is the [formal language specification](adql/SPECIFICATION.md), accompanied
 by its [EBNF grammar](adql/grammar.ebnf),
 [execution model](adql/execution-model.md),
 [data-type rules](adql/data-types.md), [error model](adql/errors.md), and
@@ -509,6 +509,60 @@ DUPLICATES DATASET customers DROP KEEP first;
 CLEANING DATASET customers APPLY;
 LET unique_customers = CLEANED;
 ```
+
+### Data-quality assertions and test suites
+
+`ASSERT` turns data expectations into executable checks without changing the
+dataset. Direct checks return a table containing the observed value, expected
+value, status, severity, failing-row count, and explanation:
+
+```adql
+ASSERT Revenue EXISTS;
+ASSERT Revenue NOT NULL;
+ASSERT Revenue TYPE numeric;
+ASSERT Revenue BETWEEN 0 AND 1000000;
+ASSERT Transaction_ID UNIQUE;
+ASSERT Region ALLOWED North,South,East,West,Central;
+ASSERT Email MATCHES "[^@]+@[^@]+" SEVERITY warning;
+
+ASSERT ROW_COUNT > 0;
+ASSERT COLUMN_COUNT >= 10;
+ASSERT MISSING_PERCENT <= 5;
+ASSERT MISSING_COUNT Region = 0;
+ASSERT DUPLICATE_ROWS = 0;
+ASSERT DISTINCT_COUNT Region >= 4;
+ASSERT QUALITY_SCORE >= 90;
+```
+
+Severity is `error`, `warning`, or `info`. By default only failed `error`
+checks fail the ADQL statement. Use `FAIL_ON warning`, `FAIL_ON info`, or
+`FAIL_ON never` to choose the gate threshold. A blocking failure stops normal
+execution, returns a structured failed result, and works with the host's
+continue-on-error mode.
+
+Group checks into a reusable suite when the same contract should run before
+cleaning, modeling, export, or release:
+
+```adql
+ASSERT SUITE ADD sales_gate Transaction_ID UNIQUE
+    NAME "Transaction IDs are unique";
+ASSERT SUITE ADD sales_gate Revenue MIN 0
+    NAME "Revenue is non-negative";
+ASSERT SUITE ADD sales_gate MISSING_PERCENT Region <= 2
+    SEVERITY warning NAME "Region completeness";
+
+ASSERT SUITE SHOW sales_gate;
+ASSERT SUITE RUN sales_gate FAIL_ON warning;
+ASSERT SUITE LIST;
+ASSERT SUITE EXPORT sales_gate TO "tests/sales-gate.json" OVERWRITE;
+ASSERT SUITE LOAD restored_gate FROM "tests/sales-gate.json" OVERWRITE;
+ASSERT SUITE DROP restored_gate;
+```
+
+Suites are available throughout the current project session and remain intact
+when the active dataset changes. Export suite JSON to keep a contract with the
+project or share it with another machine. Every form supports explicit named
+dataset targeting, for example `ASSERT DATASET customers SUITE RUN customer_gate;`.
 
 ### Interactive cleaning and domain review
 

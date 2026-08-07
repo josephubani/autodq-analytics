@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 from autodq.commands.errors import ADQLValidationError
@@ -455,6 +456,9 @@ class ADQLValidator:
             else:
                 raise ADQLValidationError("LET assignment source is not recognized.")
 
+        elif statement.kind == "ASSERT":
+            self._validate_assert(parameters)
+
         elif statement.kind == "HELP":
             command = parameters.get("command")
 
@@ -462,6 +466,168 @@ class ADQLValidator:
                 raise ADQLValidationError(
                     f"HELP command is not recognized: {command}."
                 )
+
+    def _validate_assert(self, parameters) -> None:
+        action = parameters.get("action")
+        allowed_actions = {
+            "run",
+            "suite_add",
+            "suite_run",
+            "suite_show",
+            "suite_list",
+            "suite_drop",
+            "suite_export",
+            "suite_load",
+        }
+        if action not in allowed_actions:
+            raise ADQLValidationError("ASSERT action is not recognized.")
+
+        suite_name = parameters.get("suite_name")
+        if suite_name is not None and not re.fullmatch(
+            r"[A-Za-z_][A-Za-z0-9_-]{0,127}",
+            str(suite_name),
+        ):
+            raise ADQLValidationError(
+                "ASSERT suite name must begin with a letter or underscore and "
+                "contain at most 128 letters, digits, underscores, or hyphens."
+            )
+
+        fail_on = str(parameters.get("fail_on", "error")).lower()
+        if fail_on not in {"error", "warning", "info", "never"}:
+            raise ADQLValidationError(
+                "ASSERT FAIL_ON must be error, warning, info, or never."
+            )
+
+        if action in {"suite_export", "suite_load"}:
+            path = Path(parameters.get("path", ""))
+            if path.suffix.lower() != ".json":
+                raise ADQLValidationError(
+                    "ASSERT SUITE EXPORT and LOAD paths must end with .json."
+                )
+
+        assertion = parameters.get("assertion")
+        if assertion is None:
+            return
+
+        severity = str(assertion.get("severity", "error")).lower()
+        if severity not in {"error", "warning", "info"}:
+            raise ADQLValidationError(
+                "ASSERT SEVERITY must be error, warning, or info."
+            )
+
+        name = assertion.get("name")
+        if name is not None and (
+            not str(name).strip()
+            or len(str(name)) > 255
+            or any(character in str(name) for character in ";\r\n")
+        ):
+            raise ADQLValidationError(
+                "ASSERT NAME must be non-empty and at most 255 characters."
+            )
+
+        column = assertion.get("column")
+        if column is not None and (
+            not str(column).strip()
+            or len(str(column)) > 255
+            or any(character in str(column) for character in ";\r\n")
+        ):
+            raise ADQLValidationError(
+                "ASSERT column must be a valid non-empty column name."
+            )
+
+        subject = assertion.get("subject")
+        predicate = assertion.get("predicate")
+        metric_subjects = {
+            "row_count",
+            "column_count",
+            "missing_count",
+            "missing_percent",
+            "duplicate_rows",
+            "duplicate_percent",
+            "distinct_count",
+            "quality_score",
+        }
+        column_predicates = {
+            "exists",
+            "not_null",
+            "unique",
+            "type",
+            "min",
+            "max",
+            "between",
+            "allowed",
+            "matches",
+        }
+        if subject == "column":
+            if predicate not in column_predicates:
+                raise ADQLValidationError(
+                    "ASSERT column predicate is not recognized."
+                )
+        elif subject in metric_subjects:
+            if predicate not in {"compare", "between"}:
+                raise ADQLValidationError(
+                    "ASSERT metric requires a comparison."
+                )
+        else:
+            raise ADQLValidationError("ASSERT subject is not recognized.")
+
+        if predicate == "compare":
+            if assertion.get("operator") not in {
+                "=", "==", "!=", "<", "<=", ">", ">="
+            }:
+                raise ADQLValidationError(
+                    "ASSERT comparison operator is not recognized."
+                )
+            if not isinstance(assertion.get("expected"), (int, float)):
+                raise ADQLValidationError(
+                    "ASSERT metric comparison must use a numeric value."
+                )
+        elif predicate in {"min", "max"} and not isinstance(
+            assertion.get("expected"), (int, float)
+        ):
+            raise ADQLValidationError(
+                "ASSERT MIN and MAX require numeric values."
+            )
+        elif predicate == "between":
+            lower = assertion.get("expected")
+            upper = assertion.get("expected_max")
+            if (
+                not isinstance(lower, (int, float))
+                or not isinstance(upper, (int, float))
+                or lower > upper
+            ):
+                raise ADQLValidationError(
+                    "ASSERT BETWEEN requires numeric lower and upper bounds "
+                    "in ascending order."
+                )
+        elif predicate == "type" and str(
+            assertion.get("expected", "")
+        ).lower() not in {
+            "numeric", "number", "integer", "int", "float", "string",
+            "text", "datetime", "date", "boolean", "bool", "category",
+            "categorical",
+        }:
+            raise ADQLValidationError(
+                "ASSERT TYPE is not supported."
+            )
+        elif predicate == "allowed":
+            values = assertion.get("values")
+            if not isinstance(values, list) or not values or len(values) > 1_000:
+                raise ADQLValidationError(
+                    "ASSERT ALLOWED requires between 1 and 1,000 values."
+                )
+        elif predicate == "matches":
+            pattern = assertion.get("expected")
+            if not isinstance(pattern, str) or not pattern or len(pattern) > 1_000:
+                raise ADQLValidationError(
+                    "ASSERT MATCHES requires a pattern of at most 1,000 characters."
+                )
+            try:
+                re.compile(pattern)
+            except re.error as error:
+                raise ADQLValidationError(
+                    f"ASSERT MATCHES pattern is invalid: {error}"
+                ) from error
 
     def _validate_select(self, parameters) -> None:
         items = parameters["select"]

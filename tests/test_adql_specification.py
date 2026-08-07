@@ -23,7 +23,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
         )
         grammar = (SPEC_ROOT / "grammar.ebnf").read_text(encoding="utf-8")
 
-        self.assertEqual(ADQL_LANGUAGE_VERSION, "2.0")
+        self.assertEqual(ADQL_LANGUAGE_VERSION, "2.1")
         self.assertIn(
             f"| Language version | {ADQL_LANGUAGE_VERSION} |",
             specification,
@@ -97,6 +97,9 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
         MISSING DATASET customers FILL ALL STRATEGY auto;
         DUPLICATES DATASET customers SUMMARY;
         DUPLICATES DATASET customers DROP KEEP first REASON "Imported twice";
+        ASSERT DATASET customers ROW_COUNT > 0;
+        ASSERT DATASET customers SUITE ADD release_gate Customer_ID UNIQUE;
+        ASSERT DATASET customers SUITE RUN release_gate FAIL_ON error;
         CLEANING DATASET customers APPLY;
         LET clean_customers = CLEANED;
         SET DATASET customers TYPE Created_At datetime FORMAT ISO8601 UTC true;
@@ -111,7 +114,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
         script = ADQLParser().parse(source)
 
         ADQLValidator().validate(script)
-        self.assertEqual(script.statement_count, 12)
+        self.assertEqual(script.statement_count, 15)
 
     def test_normative_safety_limits_match_runtime(self):
         validator = ADQLValidator()
@@ -128,7 +131,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
             validator.validate(script)
 
     def test_adql_2_rejects_or_with_versioned_diagnostic(self):
-        with self.assertRaisesRegex(ADQLSyntaxError, r"ADQL 2\.0"):
+        with self.assertRaisesRegex(ADQLSyntaxError, r"ADQL 2\.1"):
             ADQLParser().parse(
                 "SELECT * FROM CURRENT WHERE Region = North OR Region = South;"
             )

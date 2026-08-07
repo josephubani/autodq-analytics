@@ -1,6 +1,6 @@
-# ADQL 2.0 Execution Model
+# ADQL 2.1 Execution Model
 
-This document is normative for AutoDQ ADQL 2.0 runtimes.
+This document is normative for AutoDQ ADQL 2.1 runtimes.
 
 ## 1. Runtime unit
 
@@ -13,6 +13,7 @@ project owns:
 - workflow artifacts derived from the active dataset;
 - an optional cleaning-review working copy and audit trail;
 - model, prediction, visualization, report, dashboard, and workspace state;
+- reusable in-memory data-quality suite definitions and the latest test report;
 - session events and bounded ADQL run history.
 
 Statements execute in source order. A later statement observes every
@@ -75,15 +76,19 @@ LET clean_customers = CLEANED;
 Derived artifacts are valid only for the active dataset state from which they
 were produced. Changing the active dataset invalidates profile, diagnosis,
 recommendation, decision, review, cleaning, validation, feature, model,
-prediction, explanation, visualization, BLUE, automatic-run, and dashboard
-artifacts.
+prediction, explanation, visualization, BLUE, automatic-run, dashboard, and
+latest data-quality test artifacts. Reusable quality suite definitions remain
+available because they contain expectations rather than dataset-derived
+values.
 
 Direct changes to `CURRENT`, including `SET TYPE`, MUST invalidate downstream
 artifacts. Review-working-copy mutations invalidate an existing finalized
 `CLEANED` stage until cleaning is finalized again.
 
 Read-only commands such as `SELECT`, `HEAD`, `TAIL`, `SAMPLE`, `SESSION`,
-`HISTORY`, and `HELP` do not invalidate workflow artifacts.
+`HISTORY`, `HELP`, `ASSERT`, and `ASSERT SUITE RUN|SHOW|LIST` do not invalidate
+workflow artifacts. `ASSERT SUITE ADD|DROP|LOAD` changes suite definitions but
+does not change dataset values.
 
 ## 5. Cleaning-review transaction
 
@@ -164,7 +169,7 @@ validation failure MUST leave project state unchanged.
 Statement execution is sequential. Successful prior statements are not rolled
 back when a later statement fails. A runtime SHOULD validate inputs before a
 mutation and SHOULD stage complex changes on a copy so a failed statement does
-not leave a partially modified table. ADQL 2.0 does not define multi-statement
+not leave a partially modified table. ADQL 2.1 does not define multi-statement
 transactions or rollback syntax.
 
 Without host continue-on-error, the first execution failure stops the run.
@@ -192,7 +197,7 @@ when its cell is included in the selected execution.
 
 During `.adql` file execution, relative paths in statements resolve against the
 document directory. This includes dataset, export, report, dashboard, model,
-SHAP, gallery, workspace, and audit paths where applicable.
+SHAP, gallery, workspace, audit, and quality-suite paths where applicable.
 
 External writes require an explicit writing command. Unless `OVERWRITE` is
 accepted by that command, an existing output path MUST cause an error rather

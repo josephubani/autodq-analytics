@@ -7,6 +7,14 @@ versioning and Python package releases follow PEP 440.
 
 ### Added
 
+- Added non-mutating ADQL `ASSERT` checks for column existence, completeness,
+  uniqueness, type, numeric bounds, allowed values, regex patterns, dataset
+  counts, missingness, exact duplicates, distinct values, and quality score.
+- Added reusable data-quality suites with `ADD`, `RUN`, `SHOW`, `LIST`, `DROP`,
+  versioned JSON `EXPORT`/`LOAD`, severity levels, configurable failure
+  thresholds, named-dataset targeting, and structured notebook/CLI results.
+- Added public Python quality-test models and APIs plus quality-test sections
+  in HTML and JSON project reports.
 - Expanded the built-in knowledge catalog from 11 to 87 conservative semantic
   rules with more than 390 aliases spanning retail, finance, banking,
   insurance, healthcare, education, HR, logistics, marketing, geospatial, IoT,
@@ -16,6 +24,9 @@ versioning and Python package releases follow PEP 440.
 
 ### Changed
 
+- Advanced the formal language version to ADQL 2.1 and synchronized the EBNF,
+  compatibility policy, error model, execution model, help, and VS Code syntax
+  vocabulary.
 - Made knowledge matching aware of snake case, kebab case, punctuation,
   whitespace, and CamelCase while preserving the existing `KnowledgeRule` and
   `KnowledgeEngine` APIs.

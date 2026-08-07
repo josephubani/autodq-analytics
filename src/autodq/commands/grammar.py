@@ -2,7 +2,7 @@
 
 # Public language version. This is intentionally independent from the AutoDQ
 # package and VS Code extension versions.
-ADQL_LANGUAGE_VERSION = "2.0"
+ADQL_LANGUAGE_VERSION = "2.1"
 
 SUPPORTED_COMMANDS = {
     "SELECT",
@@ -57,6 +57,7 @@ SUPPORTED_COMMANDS = {
     "HELP",
     "HISTORY",
     "SESSION",
+    "ASSERT",
 }
 
 SIMPLE_COMMANDS = {
@@ -87,6 +88,7 @@ POSITIONAL_DATASET_COMMANDS = SIMPLE_COMMANDS | {
 # executor activates that dataset before dispatching through the project API.
 DATASET_SCOPED_COMMANDS = {
     "APPROVE",
+    "ASSERT",
     "AUDIT",
     "AUTO",
     "BLUE",
@@ -313,6 +315,18 @@ COMMAND_HELP = [
             "RECOMMEND [dataset];"
         ),
         "description": "Run an AutoDQ analysis step on the active or named dataset.",
+    },
+    {
+        "command": "ASSERT",
+        "syntax": (
+            "ASSERT Revenue NOT NULL; ASSERT ROW_COUNT > 0; "
+            "ASSERT SUITE ADD release_gate Revenue MIN 0; "
+            "ASSERT SUITE RUN release_gate [FAIL_ON error|warning|info|never]"
+        ),
+        "description": (
+            "Evaluate non-mutating data-quality expectations or define, run, "
+            "inspect, export, and load reusable test suites."
+        ),
     },
     {
         "command": "REVIEW / APPROVE / REJECT / CLEAN / VALIDATE",

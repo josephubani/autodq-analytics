@@ -25,6 +25,8 @@ workflow.
   row/column removal staged through the cleaning review
 - Exact-row duplicate tables and audited `DUPLICATES DROP` retention policies
   that finalize into the reusable `CLEANED` stage
+- Executable `ASSERT` quality checks and reusable named test suites with
+  severity thresholds, structured results, and portable JSON definitions
 - A theme-aware interactive `REVIEW` panel for selecting actions, approving,
   rejecting with reasons, previewing, editing rows, inspecting audit history,
   and applying reviewed changes to `CLEANED`
@@ -99,6 +101,21 @@ CLEANING APPLY;
 MISSING SUMMARY;
 LET cleaned_sales = CLEANED;
 ```
+
+Create a data-quality gate in its own cell:
+
+```adql
+ASSERT SUITE ADD sales_gate Transaction_ID UNIQUE
+    NAME "Transaction IDs are unique";
+ASSERT SUITE ADD sales_gate Revenue MIN 0;
+ASSERT SUITE ADD sales_gate MISSING_PERCENT Region <= 2
+    SEVERITY warning;
+ASSERT SUITE RUN sales_gate FAIL_ON warning;
+```
+
+The result appears as a notebook table. Blocking failures mark the cell as
+failed, while `FAIL_ON never` records results without stopping later cells.
+Use `ASSERT SUITE EXPORT ... TO "suite.json"` to keep the suite with a project.
 
 Open the file with **AutoDQ ADQL Notebook**, then run cells from top to bottom.
 The first code cell automatically initializes the dataset when required.
