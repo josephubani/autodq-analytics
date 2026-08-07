@@ -123,6 +123,10 @@ def write_adql(path: Path) -> None:
         "DATASET \"acceptance.csv\" TARGET Revenue;\n"
         "SET TYPE Recorded_At datetime FORMAT \"DD/MM/YYYY HH:mm:ss\";\n"
         "SET TYPE Revenue decimal DECIMALS 2;\n"
+        "# %% [Data-quality gate]\n"
+        "ASSERT SUITE ADD release_gate Transaction_ID NOT NULL;\n"
+        "ASSERT SUITE ADD release_gate Revenue MIN 0;\n"
+        "ASSERT SUITE RUN release_gate;\n"
         "# %% [Automatic review]\n"
         "AUTO MODE review VISUALIZE false CONTINUE_ON_ERROR false;\n"
         "# %% [Missing-value completion]\n"
@@ -240,16 +244,20 @@ def main() -> int:
         if not payload.get("success"):
             raise RuntimeError("The installed wheel failed the ADQL acceptance workflow.")
 
-        if payload.get("completed_cell_count") != 9:
+        if payload.get("completed_cell_count") != 10:
             raise RuntimeError("The ADQL acceptance workflow did not complete all cells.")
 
         api_check = (
-            "import sys; from autodq import AutoDQ; "
+            "import sys; from autodq import (ADQL_LANGUAGE_VERSION, AutoDQ, "
+            "QualityAssertion); assert ADQL_LANGUAGE_VERSION == '2.1'; "
             "project = AutoDQ(sys.argv[1], target='Revenue'); "
             "profile = project.profile(); diagnosis = project.diagnose(); "
             f"assert profile['rows'] == {row_count}; "
             "assert 0 <= diagnosis.quality_score <= 100; "
             "assert project.session_info()['active_dataset'] == 'main'; "
+            "quality = project.assert_quality(QualityAssertion("
+            "subject='row_count', predicate='compare', operator='>', expected=0)); "
+            "assert quality.success; "
             "result = project.auto(mode='review', visualize=False, "
             "auto_display=False); assert result.success; print('Python API OK')"
         )

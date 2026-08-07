@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.4 - 2026-08-07
+
 - Added complete ADQL 2.1 highlighting for `ASSERT`, quality metrics,
   predicates, suite operations, severities, and failure thresholds.
 - Documented executable notebook quality gates and portable JSON suites.

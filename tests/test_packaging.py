@@ -238,14 +238,15 @@ class PackagingTests(unittest.TestCase):
     def test_public_release_documentation_is_current(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         notes = (
-            ROOT / "docs" / "RELEASE_NOTES_0.1.10.md"
+            ROOT / "docs" / "RELEASE_NOTES_0.1.11.md"
         ).read_text(encoding="utf-8")
         roadmap = (ROOT / "docs" / "ROADMAP.md").read_text(encoding="utf-8")
 
         self.assertIn("https://pypi.org/project/autodq/", readme)
         self.assertNotIn("Until the first PyPI release", readme)
-        self.assertIn("## Interactive ADQL cleaning review", notes)
-        self.assertIn("Apply to CLEANED", notes)
+        self.assertIn("## Executable data-quality assertions", notes)
+        self.assertIn("ASSERT SUITE RUN", notes)
+        self.assertIn("AutoDQ ADQL VS Code extension: `0.3.4`", notes)
         self.assertIn(
             "All items in the original AutoDQ development roadmap are complete.",
             roadmap,

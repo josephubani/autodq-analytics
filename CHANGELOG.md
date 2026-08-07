@@ -5,6 +5,8 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.11 - 2026-08-07
+
 ### Added
 
 - Added non-mutating ADQL `ASSERT` checks for column existence, completeness,
@@ -27,6 +29,9 @@ versioning and Python package releases follow PEP 440.
 - Advanced the formal language version to ADQL 2.1 and synchronized the EBNF,
   compatibility policy, error model, execution model, help, and VS Code syntax
   vocabulary.
+- Updated the bundled AutoDQ ADQL VS Code extension to 0.3.4 with complete
+  assertion, quality-metric, suite-operation, severity, and threshold
+  highlighting.
 - Made knowledge matching aware of snake case, kebab case, punctuation,
   whitespace, and CamelCase while preserving the existing `KnowledgeRule` and
   `KnowledgeEngine` APIs.

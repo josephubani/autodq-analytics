@@ -57,6 +57,10 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
             "DATASET \"acceptance.csv\" TARGET Revenue;\n"
             "SET TYPE Created_At datetime FORMAT \"DD/MM/YYYY HH:mm:ss\";\n"
             "SET TYPE Revenue decimal DECIMALS 2;\n"
+            "# %% [Data-quality gate]\n"
+            "ASSERT SUITE ADD acceptance_gate Order_ID NOT NULL;\n"
+            "ASSERT SUITE ADD acceptance_gate Revenue MIN 0;\n"
+            "ASSERT SUITE RUN acceptance_gate;\n"
             "# %% [Automatic review]\n"
             "AUTO MODE review VISUALIZE false CONTINUE_ON_ERROR false;\n"
             "# %% [Missing-value completion]\n"
@@ -121,7 +125,7 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
         self.assertIn("valid", validation.stdout.lower())
         self.assertIn("ADQL completed", completed.stdout)
         self.assertTrue(payload["success"])
-        self.assertEqual(payload["completed_cell_count"], 5)
+        self.assertEqual(payload["completed_cell_count"], 6)
         self.assertEqual(payload["failed_cell_count"], 0)
         self.assertTrue(self.exported.is_file())
 
