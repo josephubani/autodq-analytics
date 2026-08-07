@@ -884,7 +884,7 @@ body { background: white; color: black; }
         self.assertNotIn("transientOutputs: true", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.3.5")
+        self.assertEqual(package["version"], "0.3.6")
         renderer = package["contributes"]["notebookRenderer"][0]
         self.assertEqual(renderer["id"], "autodq-adql-review-renderer")
         self.assertEqual(renderer["requiresMessaging"], "always")
@@ -1137,6 +1137,7 @@ body { background: white; color: black; }
         expected_scopes = {
             "commands": "keyword.control.adql",
             "aggregateFunctions": "support.function.aggregate.adql",
+            "qualityPredicates": "keyword.control.quality.adql",
             "options": "storage.modifier.option.adql",
             "dataSources": "constant.language.data-source.adql",
             "identifiers": "variable.other.readwrite.adql",

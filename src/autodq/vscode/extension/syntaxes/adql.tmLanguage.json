@@ -110,7 +110,7 @@
     },
     "qualityPredicates": {
       "match": "(?i)\\b(BETWEEN|EXISTS|MATCHES|NOT\\s+NULL)\\b",
-      "name": "keyword.operator.quality.adql"
+      "name": "keyword.control.quality.adql"
     },
     "operators": {
       "match": "(?i)(<=|>=|!=|=|<|>|\\bIS\\s+NOT\\s+NULL\\b|\\bIS\\s+NULL\\b|\\bNOT\\s+IN\\b|\\bSTARTS\\s+WITH\\b|\\bENDS\\s+WITH\\b|\\bAND\\b|\\bOR\\b|\\bIN\\b|\\bCONTAINS\\b)",

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.3.6 - 2026-08-07
+
+- Changed quality predicates to a visible control-keyword scope so `NOT NULL`,
+  `BETWEEN`, `EXISTS`, and `MATCHES` receive clear syntax coloring in common
+  VS Code themes.
+- Added regression coverage for the quality-predicate TextMate scope.
+
 ## 0.3.5 - 2026-08-07
 
 - Completed case-insensitive highlighting coverage for every ADQL command and

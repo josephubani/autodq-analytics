@@ -5,6 +5,16 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.13 - 2026-08-07
+
+### Fixed
+
+- Made ADQL quality predicates use a visible control-keyword syntax scope so
+  `NOT NULL`, `BETWEEN`, `EXISTS`, and `MATCHES` no longer inherit an
+  uncolored operator style in common VS Code themes.
+- Added a syntax-scope regression check for assertion predicates and bundled
+  the corrected AutoDQ ADQL 0.3.6 extension with the Python distribution.
+
 ## 0.1.12 - 2026-08-07
 
 ### Changed
