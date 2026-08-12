@@ -26,6 +26,7 @@ class AutoDQReport:
     adql_history: list | None = None
     validation: object | None = None
     quality_tests: object | None = None
+    ml_readiness: object | None = None
 
     visualizations: object | None = None
     rendered_visualizations: list | None = None

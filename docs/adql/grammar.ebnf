@@ -4,7 +4,7 @@
    Repeated options are syntactically expressible below but are rejected by
    semantic validation. *)
 
-language-version = "2.1" ;
+language-version = "2.2" ;
 
 script = statement, { ";", statement }, [ ";" ] ;
 
@@ -417,7 +417,9 @@ correlation-statement = "CORRELATION", [ dataset-selector ],
                         [ "MIN_ABS", number ] ;
 
 (* command: READINESS *)
-readiness-statement = "READINESS", [ short-dataset-target ] ;
+readiness-statement = "READINESS",
+    [ short-dataset-target
+    | [ dataset-selector ], "REFERENCE", identifier ] ;
 
 (* command: FEATURES *)
 features-statement = "FEATURES", [ short-dataset-target ] ;

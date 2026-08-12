@@ -5,6 +5,34 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.14 - 2026-08-12
+
+### Added
+
+- Replaced the opaque ML-readiness total with seven visible weighted
+  components, per-component points, observed metrics, deductions,
+  recommendations, assessment coverage, and the exact normalized formula.
+- Added optional baseline comparison through Python `ml_readiness()` and ADQL
+  `READINESS REFERENCE dataset` using feature-level Population Stability Index
+  thresholds.
+- Added rich readiness scorecards to Jupyter, ADQL notebook, console, JSON,
+  automatic-workflow, and project-report outputs.
+
+### Changed
+
+- Advanced the language to ADQL 2.2 and the bundled AutoDQ ADQL extension to
+  0.3.7 for the additive `READINESS ... REFERENCE ...` clause.
+- Excluded unassessed components from the score denominator instead of
+  silently awarding assumed credit; assessment coverage reports the measured
+  share of the 100-point model.
+
+### Fixed
+
+- Connected feature-readiness skew and heavy-tail scoring to the actual
+  `InterpretationReport.interpretations` collection.
+- Prevented target correlations flagged as leakage from also being counted as
+  predictor multicollinearity.
+
 ## 0.1.13 - 2026-08-07
 
 ### Fixed

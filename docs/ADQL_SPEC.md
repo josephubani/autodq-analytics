@@ -615,6 +615,29 @@ FEATURE CREATE RevenueBand METHOD bin COLUMN Revenue
     BINS "0,1000,5000,10000" LABELS "Low,Medium,High";
 ```
 
+`READINESS` returns a transparent weighted scorecard rather than only a final
+number. Its seven components are sample sufficiency (10 points), data quality
+(25), feature readiness (15), target readiness (15), leakage safety (15),
+multicollinearity (10), and feature stability (10). Every component shows its
+points, status, observed metrics, deductions, and recommendation.
+
+Without a baseline, feature stability is clearly marked **not assessed** and
+is excluded from the score denominator. Register a representative earlier or
+production dataset to add PSI-based distribution stability:
+
+```adql
+ADD DATASET baseline FROM "../datasets/baseline-sales.csv";
+READINESS REFERENCE baseline;
+
+-- Score a named cleaned snapshot without first making the baseline active.
+READINESS DATASET clean12 REFERENCE baseline;
+```
+
+The score formula is `earned points / assessed points * 100`, and assessment
+coverage shows how much of the 100-point model was actually measured. PSI is
+interpreted as stable at `<= 0.10`, moderate shift at `<= 0.25`, and unstable
+above `0.25`.
+
 ### BLUE diagnostics and visualization gallery
 
 ```adql

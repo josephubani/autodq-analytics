@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.3.7 - 2026-08-12
+
+- Added syntax highlighting for the ADQL 2.2 `REFERENCE` option.
+- Added notebook documentation for transparent weighted `READINESS`
+  scorecards and optional PSI feature-stability baselines.
+- Bundled AutoDQ 0.1.14 readiness rendering and runtime support.
+
 ## 0.3.6 - 2026-08-07
 
 - Changed quality predicates to a visible control-keyword scope so `NOT NULL`,

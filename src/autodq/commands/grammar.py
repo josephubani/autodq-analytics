@@ -2,7 +2,7 @@
 
 # Public language version. This is intentionally independent from the AutoDQ
 # package and VS Code extension versions.
-ADQL_LANGUAGE_VERSION = "2.1"
+ADQL_LANGUAGE_VERSION = "2.2"
 
 SUPPORTED_COMMANDS = {
     "SELECT",
@@ -439,10 +439,14 @@ COMMAND_HELP = [
     {
         "command": "CORRELATION / READINESS / FEATURES / FEATURE",
         "syntax": (
-            "CORRELATION MIN_ABS 0.3; READINESS; FEATURES; "
+            "CORRELATION MIN_ABS 0.3; READINESS [REFERENCE baseline]; "
+            "FEATURES; "
             "FEATURE CREATE Margin METHOD difference COLUMNS Revenue,Cost"
         ),
-        "description": "Run analytical intelligence and feature engineering.",
+        "description": (
+            "Run analytical intelligence, transparent weighted ML readiness "
+            "with optional PSI stability, and feature engineering."
+        ),
     },
     {
         "command": "BLUE / GALLERY",

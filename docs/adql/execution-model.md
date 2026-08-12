@@ -1,6 +1,6 @@
-# ADQL 2.1 Execution Model
+# ADQL 2.2 Execution Model
 
-This document is normative for AutoDQ ADQL 2.1 runtimes.
+This document is normative for AutoDQ ADQL 2.2 runtimes.
 
 ## 1. Runtime unit
 
@@ -90,6 +90,12 @@ Read-only commands such as `SELECT`, `HEAD`, `TAIL`, `SAMPLE`, `SESSION`,
 workflow artifacts. `ASSERT SUITE ADD|DROP|LOAD` changes suite definitions but
 does not change dataset values.
 
+`READINESS` stores a new readiness artifact but does not mutate dataset
+values. `READINESS REFERENCE name` reads the registered reference snapshot
+without activating it. If an explicit `DATASET name` selector is present, that
+analysis dataset is activated first under the normal invalidation rules; the
+reference still remains read-only.
+
 ## 5. Cleaning-review transaction
 
 The cleaning-review subsystem maintains:
@@ -169,7 +175,7 @@ validation failure MUST leave project state unchanged.
 Statement execution is sequential. Successful prior statements are not rolled
 back when a later statement fails. A runtime SHOULD validate inputs before a
 mutation and SHOULD stage complex changes on a copy so a failed statement does
-not leave a partially modified table. ADQL 2.1 does not define multi-statement
+not leave a partially modified table. ADQL 2.2 does not define multi-statement
 transactions or rollback syntax.
 
 Without host continue-on-error, the first execution failure stops the run.

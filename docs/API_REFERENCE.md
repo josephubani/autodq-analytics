@@ -163,12 +163,24 @@ suitable for CI gates. Suite JSON can be loaded under a new name with
 | Area | Methods |
 | --- | --- |
 | Correlation | `correlation()`, `show_correlation()` |
-| ML readiness | `ml_readiness()`, `show_ml_readiness()` |
+| ML readiness | `ml_readiness(reference=None, reference_name=None)`, `show_ml_readiness()` |
 | Features | `features()`, `create_feature()`, `apply_features()`, `export_engineered()` |
 | Modeling | `model()`, `save_model()`, `load_model()`, `show_model()` |
 | Prediction | `predict()`, `show_predictions()`, `export_predictions()` |
 | Explainability | `explain()`, `visualize_shap()`, `show_explanations()` |
 | BLUE diagnostics | `blue()`, `visualize_blue()`, `interpret_blue_visuals()`, `prescribe_blue()` |
+
+`ml_readiness()` returns a seven-component scorecard with explicit points,
+deductions, observed metrics, calculation coverage, and the normalized formula
+used for the final 0–100 score. Pass a representative baseline to assess PSI
+feature stability instead of leaving that component unassessed:
+
+```python
+readiness = project.ml_readiness(reference="baseline")
+print(readiness.score, readiness.assessment_coverage)
+for component in readiness.components:
+    print(component.name, component.score, component.max_score, component.status)
+```
 
 ## Visualization and reporting
 
@@ -185,7 +197,7 @@ HTML or JSON analytical reports.
 ```python
 from autodq import ADQL_LANGUAGE_VERSION
 
-print(ADQL_LANGUAGE_VERSION)  # 2.1
+print(ADQL_LANGUAGE_VERSION)  # 2.2
 result = project.query("PROFILE; DIAGNOSE;", auto_display=False)
 file_result = project.run_adql("analysis.adql", through_cell=3)
 ```
@@ -196,7 +208,7 @@ current project. Registered datasets can be targeted directly with
 `SELECT * FROM customers`. `run_adql()` executes a cell-based standalone file
 while retaining state between selected cells. See the
 [ADQL user guide](ADQL_SPEC.md) and
-[formal ADQL 2.1 specification](adql/SPECIFICATION.md).
+[formal ADQL 2.2 specification](adql/SPECIFICATION.md).
 
 ## Session inspection
 

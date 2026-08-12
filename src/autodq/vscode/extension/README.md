@@ -38,6 +38,8 @@ workflow.
   an `.adql` notebook
 - Collapsible and bounded previews for large outputs
 - Rich `AUTO MODE review|clean|full` workflow summaries
+- Transparent `READINESS` scorecards with component points, deductions,
+  assessment coverage, and optional `REFERENCE`-dataset PSI stability
 
 ## Requirements
 
@@ -119,6 +121,20 @@ Use `ASSERT SUITE EXPORT ... TO "suite.json"` to keep the suite with a project.
 
 Open the file with **AutoDQ ADQL Notebook**, then run cells from top to bottom.
 The first code cell automatically initializes the dataset when required.
+
+Inspect exactly how ML readiness is calculated and optionally compare the
+active data with a registered baseline:
+
+```adql
+READINESS;
+READINESS REFERENCE baseline;
+READINESS DATASET cleaned_sales REFERENCE baseline;
+```
+
+The output separates sample sufficiency, data quality, feature readiness,
+target readiness, leakage safety, multicollinearity, and feature stability.
+Unassessed components receive no assumed credit and reduce the visible
+assessment coverage.
 
 ## Interactive cleaning review
 

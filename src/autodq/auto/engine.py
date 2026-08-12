@@ -599,6 +599,16 @@ class AutoEngine:
     def _ml_readiness_summary(output) -> dict[str, Any]:
         return {
             "score": output.score,
+            "level": output.readiness_level,
+            "earned_points": output.earned_points,
+            "assessed_points": output.assessed_points,
+            "assessment_coverage": output.assessment_coverage,
+            "components": {
+                component.key: (
+                    component.score if component.assessed else None
+                )
+                for component in output.components
+            },
             "issues": output.issue_count,
             "task": output.recommended_task,
         }

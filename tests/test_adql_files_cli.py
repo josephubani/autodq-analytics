@@ -884,7 +884,7 @@ body { background: white; color: black; }
         self.assertNotIn("transientOutputs: true", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.3.6")
+        self.assertEqual(package["version"], "0.3.7")
         renderer = package["contributes"]["notebookRenderer"][0]
         self.assertEqual(renderer["id"], "autodq-adql-review-renderer")
         self.assertEqual(renderer["requiresMessaging"], "always")
@@ -1003,6 +1003,7 @@ body { background: white; color: black; }
             "PATTERN",
             "REASON",
             "RECOMMENDED",
+            "REFERENCE",
             "RIGHT_ON",
             "ROOT",
             "SEVERITY",

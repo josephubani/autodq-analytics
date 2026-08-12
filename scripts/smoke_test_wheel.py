@@ -249,7 +249,7 @@ def main() -> int:
 
         api_check = (
             "import sys; from autodq import (ADQL_LANGUAGE_VERSION, AutoDQ, "
-            "QualityAssertion); assert ADQL_LANGUAGE_VERSION == '2.1'; "
+            "QualityAssertion); assert ADQL_LANGUAGE_VERSION == '2.2'; "
             "project = AutoDQ(sys.argv[1], target='Revenue'); "
             "profile = project.profile(); diagnosis = project.diagnose(); "
             f"assert profile['rows'] == {row_count}; "

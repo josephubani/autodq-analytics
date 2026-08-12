@@ -72,6 +72,10 @@ class JSONExporter:
             "quality_tests":
                 report.quality_tests.to_dict()
                 if report.quality_tests else None,
+
+            "ml_readiness":
+                report.ml_readiness.to_dict()
+                if report.ml_readiness else None,
                 
             "visualizations":
                 report.visualizations.to_dict()

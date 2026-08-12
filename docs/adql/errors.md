@@ -1,4 +1,4 @@
-# ADQL 2.1 Error Model
+# ADQL 2.2 Error Model
 
 This document defines the stable ADQL error categories and failure reporting
 requirements.

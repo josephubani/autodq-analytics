@@ -2048,7 +2048,25 @@ class AutoDQ:
         ConsoleCorrelationRenderer.render(self.state.correlation_report)
         
         
-    def ml_readiness(self):
+    def ml_readiness(
+        self,
+        reference: pd.DataFrame | str | None = None,
+        reference_name: str | None = None,
+    ):
+        """Evaluate transparent ML readiness, optionally against a baseline."""
+        if isinstance(reference, str):
+            reference_name = reference_name or reference
+            reference_data = self.dataset_manager.get_data(reference).copy()
+        elif isinstance(reference, pd.DataFrame):
+            reference_data = reference.copy()
+        elif reference is None:
+            reference_data = None
+        else:
+            raise TypeError(
+                "Readiness reference must be a registered dataset name or "
+                "pandas DataFrame."
+            )
+
         if self.state.data is None:
             self.load()
 
@@ -2071,6 +2089,8 @@ class AutoDQ:
             statistics_report=self.state.statistics_report,
             interpretation_report=self.state.interpretation_report,
             correlation_report=self.state.correlation_report,
+            reference_df=reference_data,
+            reference_name=reference_name,
         )
 
         self.session.log(
@@ -2081,6 +2101,12 @@ class AutoDQ:
                 "target": self.state.ml_readiness_report.target,
                 "recommended_task": self.state.ml_readiness_report.recommended_task,
                 "issues": self.state.ml_readiness_report.issue_count,
+                "earned_points": self.state.ml_readiness_report.earned_points,
+                "assessed_points": self.state.ml_readiness_report.assessed_points,
+                "assessment_coverage": (
+                    self.state.ml_readiness_report.assessment_coverage
+                ),
+                "reference": self.state.ml_readiness_report.reference_name,
             },
         )
 

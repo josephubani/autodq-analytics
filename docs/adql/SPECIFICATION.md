@@ -3,12 +3,12 @@
 | Field | Value |
 | --- | --- |
 | Language | AutoDQ Analytics Domain Query Language (ADQL) |
-| Language version | 2.1 |
+| Language version | 2.2 |
 | Specification status | Stable |
 | Text encoding | UTF-8 |
 | Canonical file extension | `.adql` |
 
-This document is the normative definition of ADQL 2.1. It defines the
+This document is the normative definition of ADQL 2.2. It defines the
 language independently of a particular user interface or AutoDQ package
 release. The public Python constant `autodq.ADQL_LANGUAGE_VERSION` identifies
 the language version implemented by an installed AutoDQ package.
@@ -198,6 +198,33 @@ PROFILE customers;
 READINESS customers;
 ```
 
+`READINESS` MAY compare the active analysis dataset with a registered baseline:
+
+```adql
+READINESS REFERENCE production_baseline;
+READINESS DATASET cleaned_sales REFERENCE production_baseline;
+```
+
+The optional `REFERENCE` dataset is read without being activated or mutated.
+The explicit `DATASET` selector, when present, activates the analysis dataset
+before scoring and leaves it active afterward.
+
+The readiness result MUST expose seven weighted components totaling 100
+possible points: sample sufficiency (10), data quality (25), feature readiness
+(15), target readiness (15), leakage safety (15), multicollinearity (10), and
+feature stability (10). The overall score is:
+
+```text
+earned component points / assessed component points * 100
+```
+
+An unassessed component MUST be excluded from both values and MUST reduce the
+reported assessment coverage; it MUST NOT receive assumed credit. Feature
+stability is unassessed without `REFERENCE`. With a suitable reference,
+numeric and categorical feature distributions are compared using Population
+Stability Index (PSI): values at or below 0.10 are stable, values through 0.25
+are moderate shift, and values above 0.25 are unstable.
+
 A dataset selector activates that registered dataset before the command and
 leaves it active afterward. `SELECT ... FROM dataset`, `EXPORT dataset ...`,
 and `LET name = DATASET dataset` read a named dataset without activating it.
@@ -243,6 +270,7 @@ appear at most once. The following semantic constraints supplement the EBNF:
 | `MODEL` | Training uses the existing target unless `TARGET` is supplied; `TEST_SIZE` is strictly between 0 and 1; save/load forms require their path clause. |
 | `PREDICT` | Confidence is strictly between 0 and 1; low-confidence threshold is between 0 and 1 inclusive. |
 | `EXPLAIN` | `MAX_ROWS` MUST be positive. |
+| `READINESS` | `REFERENCE` MUST name a registered dataset. PSI stability requires at least 50 rows in both the current and reference datasets. |
 | `SHAP` | `ROW` cannot be negative; chart is `summary`, `bar`, `beeswarm`, `waterfall`, or `dependence`. |
 | `MERGE` | `WITH` is REQUIRED; `SUFFIXES` contains exactly two values. |
 | `CONCAT` | The initial dataset list contains at least two names. |
@@ -319,7 +347,7 @@ MUST appear in `GROUP BY`. Output aliases are case-insensitively unique.
 
 `WHERE` conditions are combined only with `AND`. Supported operators are `=`,
 `!=`, `<`, `<=`, `>`, `>=`, `IN`, `NOT IN`, `IS NULL`, `IS NOT NULL`,
-`CONTAINS`, `STARTS WITH`, and `ENDS WITH`. ADQL 2.1 does not support `OR`,
+`CONTAINS`, `STARTS WITH`, and `ENDS WITH`. ADQL 2.2 does not support `OR`,
 joins inside `SELECT`, subqueries, window functions, or arbitrary functions.
 
 `DISTINCT` is applied after projection and aggregation. Ordering is stable,
@@ -355,7 +383,7 @@ overwritten by `LET`.
 
 ## 10. Safety limits
 
-A conforming AutoDQ ADQL 2.1 validator enforces:
+A conforming AutoDQ ADQL 2.2 validator enforces:
 
 | Limit | Value |
 | --- | ---: |
@@ -396,13 +424,13 @@ language behavior.
 
 ## 12. Conformance and extensions
 
-An implementation claiming **ADQL 2.1 parser conformance** MUST implement all
-productions in `grammar.ebnf`. An implementation claiming **AutoDQ ADQL 2.1
+An implementation claiming **ADQL 2.2 parser conformance** MUST implement all
+productions in `grammar.ebnf`. An implementation claiming **AutoDQ ADQL 2.2
 runtime conformance** MUST additionally implement every command listed by the
 runtime command set and the state transitions in this specification.
 
 Implementations MAY provide extra renderers, editors, transport protocols, and
-CLI options. They MUST NOT silently reinterpret valid ADQL 2.1 syntax.
+CLI options. They MUST NOT silently reinterpret valid ADQL 2.2 syntax.
 Language extensions require a later ADQL language version and MUST be rejected
 as unknown syntax by implementations that do not support that version.
 

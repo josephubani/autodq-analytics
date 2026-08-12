@@ -25,6 +25,7 @@ class HTMLExporter:
         dashboard = getattr(report, "dashboard", None)
         adql_history = getattr(report, "adql_history", None)
         quality_tests = getattr(report, "quality_tests", None)
+        ml_readiness = getattr(report, "ml_readiness", None)
         diagnosis = report.diagnosis
         recommendations = report.recommendations or []
 
@@ -64,6 +65,7 @@ class HTMLExporter:
         dashboard_section = self._build_dashboard_section(dashboard)
         adql_section = self._build_adql_section(adql_history)
         quality_test_section = self._build_quality_test_section(quality_tests)
+        ml_readiness_section = self._build_ml_readiness_section(ml_readiness)
 
         visualization_cards = self._build_visualization_cards(
             getattr(report, "visualizations", None)
@@ -722,6 +724,8 @@ th {{
 
     {dataset_operations_section}
 
+    {ml_readiness_section}
+
     <div class="section card">
         <h2 class="section-title">Rendered Visualization Assets</h2>
         <div class="rendered-viz-grid">
@@ -1102,6 +1106,76 @@ th {{
             </tr>
             {"".join(rows)}
         </table>
+        """
+
+    def _build_ml_readiness_section(self, readiness):
+        if readiness is None:
+            return ""
+
+        component_rows = []
+        for component in readiness.components:
+            points = (
+                f"{component.score:.2f} / {component.max_score:.0f}"
+                if component.assessed
+                else f"Not assessed / {component.max_score:.0f}"
+            )
+            deductions = (
+                "<br>".join(escape(item) for item in component.deductions)
+                or "No deduction"
+            )
+            component_rows.append(
+                "<tr>"
+                f"<td><strong>{escape(component.name)}</strong></td>"
+                f"<td>{escape(points)}</td>"
+                f"<td>{escape(component.status.replace('_', ' ').title())}</td>"
+                f"<td>{escape(component.summary)}</td>"
+                f"<td>{deductions}</td>"
+                "</tr>"
+            )
+
+        reference = readiness.reference_name or "Not supplied"
+        return f"""
+        <div class="section card">
+            <h2 class="section-title">Machine Learning Readiness</h2>
+            <div class="grid">
+                <div class="card">
+                    <h3>Overall score</h3>
+                    <div class="metric">{readiness.score:.2f}/100</div>
+                    <div class="metric-small">
+                        {escape(readiness.readiness_level.replace('_', ' ').title())}
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Earned points</h3>
+                    <div class="metric">{readiness.earned_points:.2f}</div>
+                    <div class="metric-small">
+                        of {readiness.assessed_points:.2f} assessed points
+                    </div>
+                </div>
+                <div class="card">
+                    <h3>Assessment coverage</h3>
+                    <div class="metric">{readiness.assessment_coverage:.1f}%</div>
+                    <div class="metric-small">Unassessed components receive no assumed credit</div>
+                </div>
+                <div class="card">
+                    <h3>Stability reference</h3>
+                    <div class="metric">{escape(reference)}</div>
+                    <div class="metric-small">PSI baseline dataset</div>
+                </div>
+            </div>
+            <p class="metric-small">
+                Calculation: {readiness.earned_points:.2f} earned points ÷
+                {readiness.assessed_points:.2f} assessed points × 100 =
+                {readiness.score:.2f}.
+            </p>
+            <table>
+                <tr>
+                    <th>Component</th><th>Points</th><th>Status</th>
+                    <th>Calculation</th><th>Deductions</th>
+                </tr>
+                {''.join(component_rows)}
+            </table>
+        </div>
         """
 
     def _build_model_section(self, model):

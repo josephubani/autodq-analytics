@@ -348,7 +348,13 @@ class ADQLParser:
                 self._parse_options(arguments, {"MIN_ABS": "min_abs_correlation"})
             )
 
-        if kind in {"READINESS", "FEATURES"}:
+        if kind == "READINESS":
+            return self._parse_options(
+                arguments,
+                {"REFERENCE": "reference_dataset"},
+            )
+
+        if kind == "FEATURES":
             if arguments:
                 raise ADQLSyntaxError(f"{kind} does not accept arguments.")
             return {}

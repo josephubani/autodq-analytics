@@ -30,7 +30,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
         )
         grammar = (SPEC_ROOT / "grammar.ebnf").read_text(encoding="utf-8")
 
-        self.assertEqual(ADQL_LANGUAGE_VERSION, "2.1")
+        self.assertEqual(ADQL_LANGUAGE_VERSION, "2.2")
         self.assertIn(
             f"| Language version | {ADQL_LANGUAGE_VERSION} |",
             specification,
@@ -273,7 +273,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
             validator.validate(script)
 
     def test_adql_2_rejects_or_with_versioned_diagnostic(self):
-        with self.assertRaisesRegex(ADQLSyntaxError, r"ADQL 2\.1"):
+        with self.assertRaisesRegex(ADQLSyntaxError, r"ADQL 2\.2"):
             ADQLParser().parse(
                 "SELECT * FROM CURRENT WHERE Region = North OR Region = South;"
             )

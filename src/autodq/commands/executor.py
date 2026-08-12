@@ -481,10 +481,17 @@ class ADQLExecutor:
             }
 
         if kind == "READINESS":
-            value = project.ml_readiness()
+            reference_name = parameters.pop("reference_dataset", None)
+            value = project.ml_readiness(
+                reference=reference_name,
+                reference_name=reference_name,
+            )
             return {
                 "value": value,
-                "message": f"ML readiness score: {value.score}.",
+                "message": (
+                    f"ML readiness score: {value.score}; assessed "
+                    f"{value.assessment_coverage:.1f}% of weighted components."
+                ),
             }
 
         if kind == "FEATURES":
