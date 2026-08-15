@@ -1871,6 +1871,17 @@ th {{
                 """
             )
 
+        visual_insights_html = "".join(visual_insight_cards)
+
+        if not visual_insights_html:
+            visual_insights_html = """
+            <p class="metric-small">
+                No BLUE visual interpretations are available.
+                Run project.interpret_blue_visuals() before generating the
+                report.
+            </p>
+            """
+
         prescription_rows = []
 
         for index, prescription in enumerate(
@@ -1995,16 +2006,7 @@ th {{
             <h2 class="section-title">BLUE Diagnostic Visual Insights</h2>
 
             <div class="blue-assumption-grid">
-                {
-                    "".join(visual_insight_cards)
-                    or """
-                    <p class="metric-small">
-                        No BLUE visual interpretations are available.
-                        Run project.interpret_blue_visuals() before
-                        generating the report.
-                    </p>
-                    """
-                }
+                {visual_insights_html}
             </div>
         </div>
 

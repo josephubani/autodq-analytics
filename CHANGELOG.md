@@ -5,6 +5,21 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.16 - 2026-08-15
+
+### Fixed
+
+- Restored Python 3.10 and 3.11 import compatibility in the HTML report
+  exporter by removing a Python 3.12-only nested f-string expression from the
+  BLUE visual-insights fallback.
+- Added a focused regression test that renders the BLUE section when no
+  interpreted visual diagnostics are available.
+
+### Changed
+
+- Advanced the bundled AutoDQ ADQL VS Code extension to 0.3.9 so manual VSIX
+  installations include the corrected AutoDQ 0.1.16 runtime.
+
 ## 0.1.15 - 2026-08-15
 
 ### Added

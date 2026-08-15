@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.3.9 - 2026-08-15
+
+- Bundled AutoDQ 0.1.16 with Python 3.10 and 3.11 compatibility restored in
+  HTML report generation.
+- Added regression coverage for BLUE report rendering when visual insights
+  have not been generated.
+
 ## 0.3.8 - 2026-08-15
 
 - Added case-insensitive syntax highlighting for ADQL 2.3 `SCHEMA CONTRACT`
