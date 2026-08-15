@@ -158,6 +158,71 @@ project.export_quality_suite("sales_gate", "tests/sales-gate.json", overwrite=Tr
 suitable for CI gates. Suite JSON can be loaded under a new name with
 `load_quality_suite()`.
 
+## Schema contracts and drift detection
+
+Schema contracts are versioned expectations for column presence, canonical
+type, nullability, uniqueness, numeric or datetime bounds, allowed values, and
+regular-expression matching. Inference is conservative: ranges are opt-in and
+categorical values are inferred only for low-cardinality columns.
+
+```python
+project.create_schema_contract(
+    "sales_v1",
+    dataset="cleaned_sales",
+    contract_version="1.0.0",
+    extra_columns="warning",
+    infer_ranges=False,
+    infer_categories=True,
+)
+project.add_schema_rule(
+    "sales_v1",
+    "Revenue",
+    dtype="numeric",
+    required=True,
+    nullable=False,
+    minimum=0,
+    severity="error",
+)
+schema_report = project.validate_schema(
+    "sales_v1", dataset="august_sales", fail_on="error"
+)
+project.export_schema_contract(
+    "sales_v1", "contracts/sales-v1.json", overwrite=True
+)
+```
+
+Use `schema_contract_frame()`, `list_schema_contracts()`,
+`load_schema_contract()`, and `drop_schema_contract()` to inspect and manage
+definitions. `SchemaValidationReport.to_frame()` contains one row per check,
+including severity, observed and expected values, failed counts, and blocking
+status. Validation never mutates the evaluated data.
+
+Drift baselines store compact schema and distribution summaries, not raw rows.
+They measure schema changes, missingness, distinct-ratio changes, PSI,
+out-of-range values, unseen categories, duplicate rate, and row-count change.
+
+```python
+project.create_drift_baseline("sales_baseline", dataset="july_sales")
+drift = project.detect_drift(
+    "sales_baseline",
+    dataset="august_sales",
+    contract="sales_v1",
+    fail_on="warning",
+    psi_warning=0.10,
+    psi_error=0.25,
+    missing_warning=2.0,
+    missing_error=5.0,
+)
+print(drift.stability_score, drift.moderate_count, drift.major_count)
+project.export_drift_baseline(
+    "sales_baseline", "baselines/sales.json", overwrite=True
+)
+```
+
+The stability score is transparent: `(stable checks + 0.5 × moderate checks)
+/ all checks × 100`. `fail_on="error"` blocks major drift, `warning` blocks
+moderate or major drift, and `never` records the result without gating.
+
 ## Analysis, features, and modeling
 
 | Area | Methods |
@@ -197,7 +262,7 @@ HTML or JSON analytical reports.
 ```python
 from autodq import ADQL_LANGUAGE_VERSION
 
-print(ADQL_LANGUAGE_VERSION)  # 2.2
+print(ADQL_LANGUAGE_VERSION)  # 2.3
 result = project.query("PROFILE; DIAGNOSE;", auto_display=False)
 file_result = project.run_adql("analysis.adql", through_cell=3)
 ```
@@ -208,7 +273,7 @@ current project. Registered datasets can be targeted directly with
 `SELECT * FROM customers`. `run_adql()` executes a cell-based standalone file
 while retaining state between selected cells. See the
 [ADQL user guide](ADQL_SPEC.md) and
-[formal ADQL 2.2 specification](adql/SPECIFICATION.md).
+[formal ADQL 2.3 specification](adql/SPECIFICATION.md).
 
 ## Session inspection
 

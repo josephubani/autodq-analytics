@@ -5,6 +5,35 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.15 - 2026-08-15
+
+### Added
+
+- Added versioned schema contracts with conservative inference, explicit
+  column constraints, severity-aware validation, rich reports, JSON
+  portability, and workspace persistence.
+- Added compact statistical drift baselines and transparent detection for
+  schema changes, missingness, distinct ratios, PSI, unseen categories,
+  out-of-range values, duplicate rate, and row-count movement.
+- Added Python APIs and ADQL 2.3 `SCHEMA CONTRACT` and `DRIFT` commands with
+  current-data, named-dataset, and reusable JSON workflows.
+- Added schema and drift sections to HTML and JSON project reports and
+  theme-aware notebook output.
+
+### Changed
+
+- Advanced the bundled AutoDQ ADQL VS Code extension to 0.3.8 with complete,
+  case-insensitive highlighting for schema-contract and drift syntax.
+- Persisted contract and baseline definitions with workspaces while correctly
+  invalidating only dataset-derived validation and drift reports on dataset
+  changes.
+
+### Safety
+
+- Contract validation and drift detection are non-mutating operations.
+- Drift baseline artifacts contain bounded statistical summaries and never
+  contain source rows.
+
 ## 0.1.14 - 2026-08-12
 
 ### Added

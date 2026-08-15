@@ -216,6 +216,40 @@ autodq vscode install
 
 Restart VS Code and open the `.adql` file with the ADQL notebook editor.
 
+## Protect later data with a contract and baseline
+
+After cleaning and approving a representative dataset, preserve it and create
+two reusable safeguards:
+
+```adql
+LET approved_sales = CLEANED;
+
+SCHEMA CONTRACT CREATE sales_v1 FROM approved_sales;
+SCHEMA CONTRACT ADD sales_v1 COLUMN Transaction_ID
+    TYPE integer REQUIRED true NULLABLE false;
+SCHEMA CONTRACT ADD sales_v1 COLUMN Revenue
+    TYPE numeric REQUIRED true NULLABLE false MIN 0;
+
+DRIFT BASELINE CREATE sales_baseline FROM approved_sales;
+```
+
+When a later batch is registered, validate its structure and compare its
+distributions without changing it:
+
+```adql
+SCHEMA CONTRACT VALIDATE sales_v1 DATASET august_sales FAIL_ON error;
+DRIFT DETECT REFERENCE sales_baseline DATASET august_sales
+    CONTRACT sales_v1 FAIL_ON warning;
+```
+
+Export the JSON definitions when they should travel independently of a saved
+workspace:
+
+```adql
+SCHEMA CONTRACT EXPORT sales_v1 TO "contracts/sales-v1.json" OVERWRITE;
+DRIFT BASELINE EXPORT sales_baseline TO "baselines/sales.json" OVERWRITE;
+```
+
 ## Continue from here
 
 - [Python API reference](API_REFERENCE.md)

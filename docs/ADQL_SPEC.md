@@ -6,7 +6,7 @@ repeatable analytics while retaining named, executable cells. ADQL does not
 evaluate Python expressions or expose arbitrary object methods.
 
 This file is the practical command guide. The normative definition of ADQL
-2.1 is the [formal language specification](adql/SPECIFICATION.md), accompanied
+2.3 is the [formal language specification](adql/SPECIFICATION.md), accompanied
 by its [EBNF grammar](adql/grammar.ebnf),
 [execution model](adql/execution-model.md),
 [data-type rules](adql/data-types.md), [error model](adql/errors.md), and
@@ -575,6 +575,74 @@ Suites are available throughout the current project session and remain intact
 when the active dataset changes. Export suite JSON to keep a contract with the
 project or share it with another machine. Every form supports explicit named
 dataset targeting, for example `ASSERT DATASET customers SUITE RUN customer_gate;`.
+
+### Schema contracts and drift detection
+
+`ASSERT` is ideal for individual data-quality tests. A schema contract is the
+reusable structural agreement for an entire dataset: required columns, types,
+nullability, uniqueness, bounds, allowed values, and patterns. `DRIFT` then
+compares a new batch with a compact approved baseline to detect changes that
+may still satisfy the schema.
+
+```adql
+SCHEMA CONTRACT CREATE sales_v1 FROM cleaned_sales
+    VERSION 1.0.0
+    EXTRA_COLUMNS warning
+    INFER_RANGES false
+    INFER_CATEGORIES true
+    OVERWRITE;
+
+SCHEMA CONTRACT ADD sales_v1 COLUMN Transaction_ID
+    TYPE integer REQUIRED true NULLABLE false UNIQUE true
+    SEVERITY error;
+SCHEMA CONTRACT ADD sales_v1 COLUMN Revenue
+    TYPE numeric REQUIRED true NULLABLE false MIN 0
+    SEVERITY error;
+SCHEMA CONTRACT ADD sales_v1 COLUMN Region
+    TYPE string ALLOWED "North,South,East,West,Central"
+    SEVERITY warning;
+
+SCHEMA CONTRACT VALIDATE sales_v1 DATASET august_sales FAIL_ON error;
+SCHEMA CONTRACT SHOW sales_v1;
+SCHEMA CONTRACT LIST;
+SCHEMA CONTRACT EXPORT sales_v1 TO "contracts/sales-v1.json" OVERWRITE;
+SCHEMA CONTRACT LOAD restored_sales FROM "contracts/sales-v1.json" OVERWRITE;
+SCHEMA CONTRACT DROP restored_sales;
+```
+
+`EXTRA_COLUMNS` accepts `ignore`, `info`, `warning`, or `error`. Contract
+validation is read-only. `FAIL_ON error` blocks failed error rules;
+`FAIL_ON warning` also blocks warning rules; `FAIL_ON never` only records the
+report.
+
+Create the drift baseline from a representative, approved dataset—not from a
+known-bad batch:
+
+```adql
+DRIFT BASELINE CREATE sales_baseline FROM july_sales OVERWRITE;
+DRIFT BASELINE SHOW sales_baseline;
+DRIFT BASELINE LIST;
+DRIFT BASELINE EXPORT sales_baseline TO "baselines/sales.json" OVERWRITE;
+DRIFT BASELINE LOAD restored_base FROM "baselines/sales.json" OVERWRITE;
+
+DRIFT DETECT REFERENCE sales_baseline DATASET august_sales
+    CONTRACT sales_v1
+    FAIL_ON warning
+    PSI_WARNING 0.10 PSI_ERROR 0.25
+    MISSING_WARNING 2 MISSING_ERROR 5;
+
+DRIFT BASELINE DROP restored_base;
+```
+
+The baseline contains schema metadata, quantile buckets, bounded category
+frequencies, missingness, distinct ratios, duplicate rate, and row count; it
+does not contain the original rows. The report classifies checks as `stable`,
+`moderate`, or `major`. Its visible score is `(stable + 0.5 × moderate) / all
+checks × 100`. A `CONTRACT` clause includes contract failures in the same gate.
+
+Contracts and baselines remain available when the active dataset changes and
+are persisted by `WORKSPACE SAVE`. The latest validation and drift reports are
+dataset-derived artifacts and reset when another dataset is activated.
 
 ### Interactive cleaning and domain review
 

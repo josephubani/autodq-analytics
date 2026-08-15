@@ -3,6 +3,8 @@
 from autodq.commands.errors import (
     ADQLError,
     ADQLAssertionError,
+    ADQLContractError,
+    ADQLDriftError,
     ADQLExecutionError,
     ADQLSyntaxError,
     ADQLValidationError,
@@ -28,6 +30,8 @@ __all__ = [
     "ADQL_LANGUAGE_VERSION",
     "ADQLError",
     "ADQLAssertionError",
+    "ADQLContractError",
+    "ADQLDriftError",
     "ADQLExecutionError",
     "ADQLExecutor",
     "ADQLCell",

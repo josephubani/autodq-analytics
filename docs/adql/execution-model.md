@@ -1,6 +1,6 @@
-# ADQL 2.2 Execution Model
+# ADQL 2.3 Execution Model
 
-This document is normative for AutoDQ ADQL 2.2 runtimes.
+This document is normative for AutoDQ ADQL 2.3 runtimes.
 
 ## 1. Runtime unit
 
@@ -13,7 +13,8 @@ project owns:
 - workflow artifacts derived from the active dataset;
 - an optional cleaning-review working copy and audit trail;
 - model, prediction, visualization, report, dashboard, and workspace state;
-- reusable in-memory data-quality suite definitions and the latest test report;
+- reusable in-memory data-quality suite and schema-contract definitions;
+- reusable compact drift baselines and the latest validation and drift reports;
 - session events and bounded ADQL run history.
 
 Statements execute in source order. A later statement observes every
@@ -81,6 +82,11 @@ latest data-quality test artifacts. Reusable quality suite definitions remain
 available because they contain expectations rather than dataset-derived
 values.
 
+The latest schema-validation and drift reports are also invalidated. Schema
+contract definitions and drift baselines remain available because they are
+explicit reusable reference artifacts, not observations of the newly active
+dataset.
+
 Direct changes to `CURRENT`, including `SET TYPE`, MUST invalidate downstream
 artifacts. Review-working-copy mutations invalidate an existing finalized
 `CLEANED` stage until cleaning is finalized again.
@@ -95,6 +101,12 @@ values. `READINESS REFERENCE name` reads the registered reference snapshot
 without activating it. If an explicit `DATASET name` selector is present, that
 analysis dataset is activated first under the normal invalidation rules; the
 reference still remains read-only.
+
+`SCHEMA CONTRACT VALIDATE` and `DRIFT DETECT` are read-only. A named `DATASET`
+selector reads that registered dataset without activating it. Creating a
+contract or baseline reads a snapshot and registers only the derived compact
+artifact. Adding, loading, dropping, or exporting definitions does not change
+dataset values.
 
 ## 5. Cleaning-review transaction
 
@@ -175,7 +187,7 @@ validation failure MUST leave project state unchanged.
 Statement execution is sequential. Successful prior statements are not rolled
 back when a later statement fails. A runtime SHOULD validate inputs before a
 mutation and SHOULD stage complex changes on a copy so a failed statement does
-not leave a partially modified table. ADQL 2.2 does not define multi-statement
+not leave a partially modified table. ADQL 2.3 does not define multi-statement
 transactions or rollback syntax.
 
 Without host continue-on-error, the first execution failure stops the run.
@@ -203,7 +215,14 @@ when its cell is included in the selected execution.
 
 During `.adql` file execution, relative paths in statements resolve against the
 document directory. This includes dataset, export, report, dashboard, model,
-SHAP, gallery, workspace, audit, and quality-suite paths where applicable.
+SHAP, gallery, workspace, audit, quality-suite, schema-contract, and drift
+baseline paths where applicable.
+
+`WORKSPACE SAVE` persists schema contracts under the workspace `contracts`
+directory and drift baselines under `drift_baselines`. Opening the workspace
+loads both sets after validating that manifest paths remain inside those
+directories. Latest validation and drift reports are not persisted as active
+workflow state.
 
 External writes require an explicit writing command. Unless `OVERWRITE` is
 accepted by that command, an existing output path MUST cause an error rather

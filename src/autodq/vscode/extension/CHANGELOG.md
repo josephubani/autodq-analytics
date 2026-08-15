@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.3.8 - 2026-08-15
+
+- Added case-insensitive syntax highlighting for ADQL 2.3 `SCHEMA CONTRACT`
+  and `DRIFT` commands, operations, thresholds, rule options, and severities.
+- Added notebook guidance for creating, validating, exporting, loading, and
+  persisting schema contracts and compact statistical baselines.
+- Bundled AutoDQ 0.1.15 schema-validation and drift-detection runtime support.
+
 ## 0.3.7 - 2026-08-12
 
 - Added syntax highlighting for the ADQL 2.2 `REFERENCE` option.

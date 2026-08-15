@@ -30,7 +30,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
         )
         grammar = (SPEC_ROOT / "grammar.ebnf").read_text(encoding="utf-8")
 
-        self.assertEqual(ADQL_LANGUAGE_VERSION, "2.2")
+        self.assertEqual(ADQL_LANGUAGE_VERSION, "2.3")
         self.assertIn(
             f"| Language version | {ADQL_LANGUAGE_VERSION} |",
             specification,
@@ -65,6 +65,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
             "DECIDE": "DECIDE",
             "DIAGNOSE": "DIAGNOSE",
             "DOMAIN": "DOMAIN ADD Revenue MIN 0 NULLABLE false",
+            "DRIFT": "DRIFT DETECT REFERENCE sales_baseline FAIL_ON never",
             "DUPLICATES": "DUPLICATES SUMMARY",
             "EDIT": "EDIT ROW 1 CHANGES '{\"Revenue\": 10}'",
             "EXPLAIN": "EXPLAIN MAX_ROWS 5",
@@ -99,6 +100,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
             "REPORT": 'REPORT TO "report.html" STYLE executive OVERWRITE',
             "REVIEW": "REVIEW",
             "SAMPLE": "SAMPLE 5 RANDOM_STATE 7",
+            "SCHEMA": "SCHEMA CONTRACT LIST",
             "SELECT": "SELECT Revenue FROM CURRENT LIMIT 1",
             "SESSION": "SESSION EVENTS LIMIT 5",
             "SET": "SET TYPE Revenue float DECIMALS 2",
@@ -273,7 +275,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
             validator.validate(script)
 
     def test_adql_2_rejects_or_with_versioned_diagnostic(self):
-        with self.assertRaisesRegex(ADQLSyntaxError, r"ADQL 2\.2"):
+        with self.assertRaisesRegex(ADQLSyntaxError, r"ADQL 2\.3"):
             ADQLParser().parse(
                 "SELECT * FROM CURRENT WHERE Region = North OR Region = South;"
             )

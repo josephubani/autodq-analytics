@@ -72,6 +72,15 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
             "MISSING SUMMARY;\n"
             "DUPLICATES SUMMARY;\n"
             "LET acceptance_cleaned = CLEANED;\n"
+            "# %% [Schema and drift gates]\n"
+            "SCHEMA CONTRACT CREATE acceptance_v1 FROM acceptance_cleaned "
+            "INFER_CATEGORIES false;\n"
+            "SCHEMA CONTRACT ADD acceptance_v1 COLUMN Revenue TYPE numeric "
+            "REQUIRED true NULLABLE false MIN 0;\n"
+            "SCHEMA CONTRACT VALIDATE acceptance_v1 DATASET acceptance_cleaned;\n"
+            "DRIFT BASELINE CREATE acceptance_base FROM acceptance_cleaned;\n"
+            "DRIFT DETECT REFERENCE acceptance_base DATASET acceptance_cleaned "
+            "CONTRACT acceptance_v1 FAIL_ON warning;\n"
             "# %% [Summary]\n"
             "SELECT Region, SUM(Revenue) AS total_revenue, COUNT(*) AS rows\n"
             "FROM CURRENT WHERE Region IS NOT NULL GROUP BY Region\n"
@@ -125,7 +134,7 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
         self.assertIn("valid", validation.stdout.lower())
         self.assertIn("ADQL completed", completed.stdout)
         self.assertTrue(payload["success"])
-        self.assertEqual(payload["completed_cell_count"], 6)
+        self.assertEqual(payload["completed_cell_count"], 7)
         self.assertEqual(payload["failed_cell_count"], 0)
         self.assertTrue(self.exported.is_file())
 

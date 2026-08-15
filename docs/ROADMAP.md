@@ -39,6 +39,12 @@
     - Automated wheel and source-distribution release checks
     - Isolated wheel-install smoke testing against public user interfaces
     - Quickstart, troubleshooting, release notes, and repeatable release guide
+12. Schema contracts and drift detection
+    - Versioned, portable schema contracts with inferred and explicit rules
+    - Severity-aware validation gates for current or named datasets
+    - Compact statistical baselines with no source-row storage
+    - Schema, missingness, PSI, category, range, duplicate, and row-count drift
+    - Python, ADQL, notebook, report, workspace, and release integration
 
 ## 0.1.0 release status
 

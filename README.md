@@ -28,7 +28,8 @@ Jupyter, the command line, or standalone `.adql` notebooks.
 - `project.auto()` for an automated workflow
 - ADQL files with executable notebook cells, direct named-dataset workflows,
   `ASSERT` quality gates and reusable test suites, session inspection,
-  explicit datatype formatting, and rich VS Code output
+  versioned schema contracts, statistical drift detection, explicit datatype
+  formatting, and rich VS Code output
 
 ## Requirements
 
@@ -50,7 +51,7 @@ autodq --version
 python -c "import autodq; print(autodq.__version__)"
 ```
 
-Version 0.1.14 is available on
+Version 0.1.15 is available on
 [PyPI](https://pypi.org/project/autodq/). To work on AutoDQ itself, install
 directly from the project source:
 
@@ -109,7 +110,7 @@ chart.show()
 
 ADQL is AutoDQ's standalone analytics language. A `.adql` file can contain
 named executable cells and markdown cells, while retaining project state
-between executions. In the AutoDQ ADQL 0.3.7 VS Code extension, `REVIEW`
+between executions. In the AutoDQ ADQL 0.3.8 VS Code extension, `REVIEW`
 opens a theme-aware interactive panel for approvals, rejections, previews,
 manual row edits, audit inspection, and applying reviewed work to `CLEANED`.
 
@@ -134,6 +135,17 @@ LET cleaned_sales = CLEANED;
 ASSERT SUITE ADD sales_gate Transaction_ID UNIQUE;
 ASSERT SUITE ADD sales_gate Revenue MIN 0;
 ASSERT SUITE RUN sales_gate FAIL_ON error;
+
+# %% [Schema and drift gates]
+SCHEMA CONTRACT CREATE sales_v1 FROM cleaned_sales
+    VERSION 1.0.0 EXTRA_COLUMNS warning;
+SCHEMA CONTRACT ADD sales_v1 COLUMN Revenue
+    TYPE numeric REQUIRED true NULLABLE false MIN 0;
+SCHEMA CONTRACT VALIDATE sales_v1 DATASET cleaned_sales FAIL_ON error;
+
+DRIFT BASELINE CREATE sales_baseline FROM cleaned_sales;
+DRIFT DETECT REFERENCE sales_baseline DATASET cleaned_sales
+    CONTRACT sales_v1 FAIL_ON warning;
 
 # %% [Regional analysis]
 SELECT Region,
@@ -269,7 +281,7 @@ python -m unittest discover -s tests
 
 References: [Python API](docs/API_REFERENCE.md),
 [ADQL user guide](docs/ADQL_SPEC.md),
-[ADQL 2.2 specification](docs/adql/SPECIFICATION.md),
+[ADQL 2.3 specification](docs/adql/SPECIFICATION.md),
 [troubleshooting](docs/TROUBLESHOOTING.md),
 [release guide](docs/RELEASING.md), and [changelog](CHANGELOG.md).
 
@@ -287,7 +299,7 @@ For the complete release process, see the
 ## Documentation
 
 - [ADQL language reference](https://github.com/josephubani/autodq-analytics/blob/main/docs/ADQL_SPEC.md)
-- [Formal ADQL 2.2 specification](https://github.com/josephubani/autodq-analytics/blob/main/docs/adql/SPECIFICATION.md)
+- [Formal ADQL 2.3 specification](https://github.com/josephubani/autodq-analytics/blob/main/docs/adql/SPECIFICATION.md)
 - [Machine-readable ADQL grammar](https://github.com/josephubani/autodq-analytics/blob/main/docs/adql/grammar.ebnf)
 - [Quickstart](https://github.com/josephubani/autodq-analytics/blob/main/docs/QUICKSTART.md)
 - [Troubleshooting](https://github.com/josephubani/autodq-analytics/blob/main/docs/TROUBLESHOOTING.md)
@@ -296,7 +308,7 @@ For the complete release process, see the
 - [Plugin development](https://github.com/josephubani/autodq-analytics/blob/main/docs/PLUGIN_GUIDE.md)
 - [Project roadmap](https://github.com/josephubani/autodq-analytics/blob/main/docs/ROADMAP.md)
 - [Package and release procedure](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASING.md)
-- [AutoDQ 0.1.14 release notes](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.14.md)
+- [AutoDQ 0.1.15 release notes](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.15.md)
 
 ## License
 

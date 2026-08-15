@@ -1,11 +1,11 @@
-# ADQL 2.2 Error Model
+# ADQL 2.3 Error Model
 
 This document defines the stable ADQL error categories and failure reporting
 requirements.
 
 ## 1. Error categories
 
-AutoDQ exposes five public exception classes:
+AutoDQ exposes seven public exception classes:
 
 | Class | Phase | Meaning |
 | --- | --- | --- |
@@ -13,9 +13,11 @@ AutoDQ exposes five public exception classes:
 | `ADQLSyntaxError` | Parse | Source cannot be represented by ADQL grammar |
 | `ADQLValidationError` | Validate | Parsed source violates a safety or semantic rule |
 | `ADQLAssertionError` | Execute | A valid quality assertion reached its configured failure level |
+| `ADQLContractError` | Execute | Schema validation reached its configured failure level |
+| `ADQLDriftError` | Execute | Drift detection reached its configured failure level |
 | `ADQLExecutionError` | Execute | A valid statement failed while operating on project state |
 
-All five are language-facing categories. The underlying cause of an
+All seven are language-facing categories. The underlying cause of an
 execution failure MAY be a project exception such as `KeyError`, `ValueError`,
 or `RuntimeError`; the ADQL executor wraps it in `ADQLExecutionError` when
 execution is configured to raise.
@@ -85,6 +87,11 @@ An `ADQLAssertionError` MUST retain the `QualityTestReport` and its tabular
 test results. The executor records that structured result before applying the
 normal stop or continue-on-error policy. Hosts that raise execution failures
 MAY wrap it in `ADQLExecutionError`, retaining it as the original cause.
+
+`ADQLContractError` and `ADQLDriftError` specialize `ADQLAssertionError` and
+follow the same structured-result rule. They retain the complete
+`SchemaValidationReport` or `DriftReport`, respectively, including the tabular
+check results that caused the gate to fail.
 
 ## 5. Continue-on-error
 

@@ -22,6 +22,14 @@ class ADQLAssertionError(ADQLError, AssertionError):
         self.data = data
 
 
+class ADQLContractError(ADQLAssertionError):
+    """Raised when schema contract validation reaches its failure level."""
+
+
+class ADQLDriftError(ADQLAssertionError):
+    """Raised when drift detection reaches its configured failure level."""
+
+
 class ADQLExecutionError(ADQLError, RuntimeError):
     """Raised when a valid ADQL statement fails during execution."""
 

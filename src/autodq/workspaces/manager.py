@@ -33,6 +33,8 @@ class WorkspaceManager:
         "visualizations",
         "exports",
         "logs",
+        "contracts",
+        "drift_baselines",
     )
 
     def __init__(

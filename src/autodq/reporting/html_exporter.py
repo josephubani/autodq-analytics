@@ -25,6 +25,8 @@ class HTMLExporter:
         dashboard = getattr(report, "dashboard", None)
         adql_history = getattr(report, "adql_history", None)
         quality_tests = getattr(report, "quality_tests", None)
+        schema_validation = getattr(report, "schema_validation", None)
+        drift = getattr(report, "drift", None)
         ml_readiness = getattr(report, "ml_readiness", None)
         diagnosis = report.diagnosis
         recommendations = report.recommendations or []
@@ -65,6 +67,8 @@ class HTMLExporter:
         dashboard_section = self._build_dashboard_section(dashboard)
         adql_section = self._build_adql_section(adql_history)
         quality_test_section = self._build_quality_test_section(quality_tests)
+        schema_section = self._build_schema_validation_section(schema_validation)
+        drift_section = self._build_drift_section(drift)
         ml_readiness_section = self._build_ml_readiness_section(ml_readiness)
 
         visualization_cards = self._build_visualization_cards(
@@ -795,6 +799,10 @@ th {{
     {dashboard_section}
 
     {quality_test_section}
+
+    {schema_section}
+
+    {drift_section}
 
     {adql_section}
 
@@ -2485,5 +2493,67 @@ th {{
                     <th>Message</th></tr>
                 {''.join(rows)}
             </table>
+        </div>
+        """
+
+    def _build_schema_validation_section(self, report):
+        if report is None:
+            return ""
+        rows = "".join(
+            "<tr>"
+            f"<td>{escape(item.rule)}</td>"
+            f"<td>{escape(item.column or 'Dataset')}</td>"
+            f"<td><span class='badge {'success' if item.passed else 'high'}'>{escape(item.status)}</span></td>"
+            f"<td>{escape(item.severity)}</td>"
+            f"<td>{escape(str(item.observed))}</td>"
+            f"<td>{escape(str(item.expected))}</td>"
+            f"<td>{escape(item.message)}</td>"
+            "</tr>"
+            for item in report.results
+        )
+        return f"""
+        <div class="section card">
+            <h2 class="section-title">Schema Contract Validation</h2>
+            <p>{escape(report.contract_name)} {escape(report.contract_version)} ·
+                {escape(report.dataset)} ·
+                {'Passed' if report.success else 'Failed'} ·
+                {report.passed_count}/{report.test_count} checks passed ·
+                {report.blocking_failure_count} blocking</p>
+            <table><tr><th>Rule</th><th>Column</th><th>Status</th>
+                <th>Severity</th><th>Observed</th><th>Expected</th><th>Message</th></tr>
+                {rows}</table>
+        </div>
+        """
+
+    def _build_drift_section(self, report):
+        if report is None:
+            return ""
+        rows = "".join(
+            "<tr>"
+            f"<td>{escape(item.column or 'Dataset')}</td>"
+            f"<td>{escape(item.metric.replace('_', ' ').title())}</td>"
+            f"<td><span class='badge {'success' if item.status == 'stable' else 'high'}'>{escape(item.status)}</span></td>"
+            f"<td>{escape(item.severity)}</td>"
+            f"<td>{escape(str(item.reference))}</td>"
+            f"<td>{escape(str(item.current))}</td>"
+            f"<td>{escape(item.message)}</td>"
+            "</tr>"
+            for item in report.results
+        )
+        return f"""
+        <div class="section card">
+            <h2 class="section-title">Schema and Data Drift</h2>
+            <div class="grid">
+                <div class="card"><h3>Stability score</h3><div class="metric">{report.stability_score:.2f}</div></div>
+                <div class="card"><h3>Stable checks</h3><div class="metric">{report.stable_count}</div></div>
+                <div class="card"><h3>Moderate drift</h3><div class="metric">{report.moderate_count}</div></div>
+                <div class="card"><h3>Major drift</h3><div class="metric">{report.major_count}</div></div>
+            </div>
+            <p>Current dataset {escape(report.dataset)} compared with baseline
+                {escape(report.baseline_name)} ({escape(report.baseline_dataset)}).
+                Score = (stable checks + 0.5 × moderate checks) ÷ all checks × 100.</p>
+            <table><tr><th>Column</th><th>Metric</th><th>Status</th>
+                <th>Severity</th><th>Baseline</th><th>Current</th><th>Message</th></tr>
+                {rows}</table>
         </div>
         """

@@ -62,6 +62,16 @@ from autodq.quality_tests import (
     QualityTestEngine,
     QualityTestSuite,
 )
+from autodq.schema_drift import (
+    DriftBaseline,
+    DriftEngine,
+    SchemaContract,
+    SchemaContractEngine,
+)
+from autodq.renderers.console.schema_drift import (
+    ConsoleDriftRenderer,
+    ConsoleSchemaRenderer,
+)
 from autodq.workspaces.manager import WorkspaceManager
 from autodq.workspaces.models import WorkspaceContext
 
@@ -101,6 +111,8 @@ class AutoDQ:
         self.model_persistence_engine = ModelPersistenceEngine()
         self.cleaning_review_engine = CleaningReviewEngine()
         self.quality_test_engine = QualityTestEngine()
+        self.schema_contract_engine = SchemaContractEngine()
+        self.drift_engine = DriftEngine()
         self.auto_engine = AutoEngine()
         self.dashboard_engine = DashboardEngine()
         self.adql_parser = ADQLParser()
@@ -260,6 +272,22 @@ class AutoDQ:
         if session_data is not None:
             project.session = AutoDQSession.from_dict(session_data)
 
+        for name, relative in context.manifest.metadata.get(
+            "schema_contracts", {}
+        ).items():
+            path = (context.path / relative).resolve()
+            if not path.is_relative_to(context.contracts_dir.resolve()):
+                raise ValueError("Workspace contains an unsafe schema contract path.")
+            project.load_schema_contract(name, path, overwrite=True)
+
+        for name, relative in context.manifest.metadata.get(
+            "drift_baselines", {}
+        ).items():
+            path = (context.path / relative).resolve()
+            if not path.is_relative_to(context.drift_baselines_dir.resolve()):
+                raise ValueError("Workspace contains an unsafe drift baseline path.")
+            project.load_drift_baseline(name, path, overwrite=True)
+
         model_path = manager.model_path(context)
 
         if load_model and model_path is not None:
@@ -347,6 +375,30 @@ class AutoDQ:
             self.workspace.manifest.metadata["cleaning_audit"] = (
                 "logs/cleaning_audit.json"
             )
+
+        schema_contract_files = {}
+        self.workspace.contracts_dir.mkdir(parents=True, exist_ok=True)
+        for name in self.state.schema_contracts:
+            relative = f"contracts/{name}.json"
+            self.export_schema_contract(
+                name,
+                self.workspace.path / relative,
+                overwrite=True,
+            )
+            schema_contract_files[name] = relative
+        self.workspace.manifest.metadata["schema_contracts"] = schema_contract_files
+
+        drift_baseline_files = {}
+        self.workspace.drift_baselines_dir.mkdir(parents=True, exist_ok=True)
+        for name in self.state.drift_baselines:
+            relative = f"drift_baselines/{name}.json"
+            self.export_drift_baseline(
+                name,
+                self.workspace.path / relative,
+                overwrite=True,
+            )
+            drift_baseline_files[name] = relative
+        self.workspace.manifest.metadata["drift_baselines"] = drift_baseline_files
 
         self.session.log(
             step="save_workspace",
@@ -978,6 +1030,378 @@ class AutoDQ:
                 "and contain only letters, digits, underscores, or hyphens."
             )
         return value
+
+    def create_schema_contract(
+        self,
+        name: str,
+        *,
+        dataset: str | pd.DataFrame | None = None,
+        contract_version: str = "1.0.0",
+        extra_columns: str = "warning",
+        infer_ranges: bool = False,
+        infer_categories: bool = True,
+        overwrite: bool = False,
+    ) -> SchemaContract:
+        """Infer and register a versioned contract from a dataset snapshot."""
+        normalized = self._artifact_name(name, "Schema contract")
+        if normalized in self.state.schema_contracts and not overwrite:
+            raise FileExistsError(
+                f"Schema contract already exists: {normalized}. Use overwrite=True."
+            )
+        data, dataset_name = self._resolve_dataset_input(dataset)
+        contract = self.schema_contract_engine.infer(
+            data,
+            name=normalized,
+            dataset=dataset_name,
+            contract_version=contract_version,
+            extra_columns=extra_columns,
+            infer_ranges=infer_ranges,
+            infer_categories=infer_categories,
+        )
+        self.state.schema_contracts[normalized] = contract
+        self.session.log(
+            step="schema_contract_create",
+            message="Schema contract inferred and registered.",
+            metadata={
+                "contract": normalized,
+                "dataset": dataset_name,
+                "columns": contract.column_count,
+                "rules": contract.rule_count,
+            },
+        )
+        return contract
+
+    def add_schema_rule(
+        self,
+        contract_name: str,
+        column: str,
+        **constraints,
+    ) -> SchemaContract:
+        """Add or update explicit constraints for one contract column."""
+        contract = self.schema_contract(contract_name)
+        contract = self.schema_contract_engine.add_column_rule(
+            contract,
+            column=column,
+            **constraints,
+        )
+        self.state.schema_contracts[contract.name] = contract
+        self.session.log(
+            step="schema_contract_add",
+            message="Schema contract rule updated.",
+            metadata={"contract": contract.name, "column": column},
+        )
+        return contract
+
+    def schema_contract(self, name: str) -> SchemaContract:
+        normalized = self._artifact_name(name, "Schema contract")
+        contract = self.state.schema_contracts.get(normalized)
+        if contract is None:
+            available = ", ".join(self.state.schema_contracts) or "none"
+            raise KeyError(
+                f"Unknown schema contract: {normalized}. Available: {available}."
+            )
+        return contract
+
+    def schema_contract_frame(self, name: str) -> pd.DataFrame:
+        return self.schema_contract(name).to_frame()
+
+    def list_schema_contracts(self) -> pd.DataFrame:
+        return pd.DataFrame(
+            [
+                {
+                    "name": item.name,
+                    "version": item.contract_version,
+                    "dataset": item.dataset,
+                    "columns": item.column_count,
+                    "rules": item.rule_count,
+                    "extra_columns": item.extra_columns,
+                    "updated_at": item.updated_at.isoformat(),
+                }
+                for item in self.state.schema_contracts.values()
+            ],
+            columns=[
+                "name", "version", "dataset", "columns", "rules",
+                "extra_columns", "updated_at",
+            ],
+        )
+
+    def drop_schema_contract(self, name: str) -> dict:
+        contract = self.schema_contract(name)
+        del self.state.schema_contracts[contract.name]
+        self.session.log(
+            step="schema_contract_drop",
+            message="Schema contract removed.",
+            metadata={"contract": contract.name},
+        )
+        return {"name": contract.name, "columns_removed": contract.column_count}
+
+    def export_schema_contract(
+        self,
+        name: str,
+        path: str | Path,
+        *,
+        overwrite: bool = False,
+    ) -> Path:
+        output = self.schema_contract_engine.export(
+            self.schema_contract(name), path, overwrite=overwrite
+        )
+        self.session.log(
+            step="schema_contract_export",
+            message="Schema contract exported.",
+            metadata={"contract": name, "path": str(output)},
+        )
+        return output
+
+    def load_schema_contract(
+        self,
+        name: str,
+        path: str | Path,
+        *,
+        overwrite: bool = False,
+    ) -> SchemaContract:
+        normalized = self._artifact_name(name, "Schema contract")
+        if normalized in self.state.schema_contracts and not overwrite:
+            raise FileExistsError(
+                f"Schema contract already exists: {normalized}. Use overwrite=True."
+            )
+        contract = self.schema_contract_engine.load(path, name=normalized)
+        self.state.schema_contracts[normalized] = contract
+        self.session.log(
+            step="schema_contract_load",
+            message="Schema contract loaded.",
+            metadata={"contract": normalized, "path": str(Path(path).resolve())},
+        )
+        return contract
+
+    def validate_schema(
+        self,
+        contract_name: str,
+        *,
+        dataset: str | pd.DataFrame | None = None,
+        fail_on: str = "error",
+    ):
+        """Validate a current, registered, or supplied dataframe without mutation."""
+        data, dataset_name = self._resolve_dataset_input(dataset)
+        contract = self.schema_contract(contract_name)
+        report = self.schema_contract_engine.validate(
+            data,
+            contract,
+            dataset=dataset_name,
+            fail_on=fail_on,
+        )
+        self.state.schema_validation_report = report
+        self.session.log(
+            step="schema_contract_validate",
+            message="Dataset validated against schema contract.",
+            metadata={
+                "contract": contract.name,
+                "dataset": dataset_name,
+                "passed": report.passed_count,
+                "failed": report.failed_count,
+                "blocking_failures": report.blocking_failure_count,
+            },
+        )
+        return report
+
+    def show_schema_validation(self) -> None:
+        ConsoleSchemaRenderer.render_validation(self.state.schema_validation_report)
+
+    def create_drift_baseline(
+        self,
+        name: str,
+        *,
+        dataset: str | pd.DataFrame | None = None,
+        overwrite: bool = False,
+    ) -> DriftBaseline:
+        """Create a compact, reusable distribution baseline."""
+        normalized = self._artifact_name(name, "Drift baseline")
+        if normalized in self.state.drift_baselines and not overwrite:
+            raise FileExistsError(
+                f"Drift baseline already exists: {normalized}. Use overwrite=True."
+            )
+        data, dataset_name = self._resolve_dataset_input(dataset)
+        baseline = self.drift_engine.create_baseline(
+            data, name=normalized, dataset=dataset_name
+        )
+        self.state.drift_baselines[normalized] = baseline
+        self.session.log(
+            step="drift_baseline_create",
+            message="Statistical drift baseline created.",
+            metadata={
+                "baseline": normalized,
+                "dataset": dataset_name,
+                "rows": baseline.row_count,
+                "columns": baseline.column_count,
+            },
+        )
+        return baseline
+
+    def drift_baseline(self, name: str) -> DriftBaseline:
+        normalized = self._artifact_name(name, "Drift baseline")
+        baseline = self.state.drift_baselines.get(normalized)
+        if baseline is None:
+            available = ", ".join(self.state.drift_baselines) or "none"
+            raise KeyError(
+                f"Unknown drift baseline: {normalized}. Available: {available}."
+            )
+        return baseline
+
+    def drift_baseline_frame(self, name: str) -> pd.DataFrame:
+        return self.drift_baseline(name).to_frame()
+
+    def list_drift_baselines(self) -> pd.DataFrame:
+        return pd.DataFrame(
+            [
+                {
+                    "name": item.name,
+                    "dataset": item.dataset,
+                    "rows": item.row_count,
+                    "columns": item.column_count,
+                    "duplicate_percent": item.duplicate_percent,
+                    "created_at": item.created_at.isoformat(),
+                }
+                for item in self.state.drift_baselines.values()
+            ],
+            columns=[
+                "name", "dataset", "rows", "columns", "duplicate_percent",
+                "created_at",
+            ],
+        )
+
+    def drop_drift_baseline(self, name: str) -> dict:
+        baseline = self.drift_baseline(name)
+        del self.state.drift_baselines[baseline.name]
+        self.session.log(
+            step="drift_baseline_drop",
+            message="Drift baseline removed.",
+            metadata={"baseline": baseline.name},
+        )
+        return {"name": baseline.name, "columns_removed": baseline.column_count}
+
+    def export_drift_baseline(
+        self,
+        name: str,
+        path: str | Path,
+        *,
+        overwrite: bool = False,
+    ) -> Path:
+        output = self.drift_engine.export(
+            self.drift_baseline(name), path, overwrite=overwrite
+        )
+        self.session.log(
+            step="drift_baseline_export",
+            message="Drift baseline exported.",
+            metadata={"baseline": name, "path": str(output)},
+        )
+        return output
+
+    def load_drift_baseline(
+        self,
+        name: str,
+        path: str | Path,
+        *,
+        overwrite: bool = False,
+    ) -> DriftBaseline:
+        normalized = self._artifact_name(name, "Drift baseline")
+        if normalized in self.state.drift_baselines and not overwrite:
+            raise FileExistsError(
+                f"Drift baseline already exists: {normalized}. Use overwrite=True."
+            )
+        baseline = self.drift_engine.load(path, name=normalized)
+        self.state.drift_baselines[normalized] = baseline
+        self.session.log(
+            step="drift_baseline_load",
+            message="Drift baseline loaded.",
+            metadata={"baseline": normalized, "path": str(Path(path).resolve())},
+        )
+        return baseline
+
+    def detect_drift(
+        self,
+        reference: str | DriftBaseline,
+        *,
+        dataset: str | pd.DataFrame | None = None,
+        contract: str | None = None,
+        fail_on: str = "error",
+        psi_warning: float = 0.1,
+        psi_error: float = 0.25,
+        missing_warning: float = 2.0,
+        missing_error: float = 5.0,
+    ):
+        """Compare current data with a compact baseline and optional contract."""
+        data, dataset_name = self._resolve_dataset_input(dataset)
+        baseline = (
+            self.drift_baseline(reference)
+            if isinstance(reference, str)
+            else reference
+        )
+        if not isinstance(baseline, DriftBaseline):
+            raise TypeError("Drift reference must be a baseline name or DriftBaseline.")
+        contract_report = None
+        if contract is not None:
+            contract_report = self.schema_contract_engine.validate(
+                data,
+                self.schema_contract(contract),
+                dataset=dataset_name,
+                fail_on="never",
+            )
+            self.state.schema_validation_report = contract_report
+        report = self.drift_engine.detect(
+            data,
+            baseline,
+            dataset=dataset_name,
+            fail_on=fail_on,
+            contract_report=contract_report,
+            psi_warning=psi_warning,
+            psi_error=psi_error,
+            missing_warning=missing_warning,
+            missing_error=missing_error,
+        )
+        self.state.drift_report = report
+        self.session.log(
+            step="drift_detect",
+            message="Schema and distribution drift evaluated.",
+            metadata={
+                "baseline": baseline.name,
+                "dataset": dataset_name,
+                "contract": contract,
+                "stability_score": report.stability_score,
+                "moderate": report.moderate_count,
+                "major": report.major_count,
+                "blocking_failures": report.blocking_failure_count,
+            },
+        )
+        return report
+
+    def show_drift(self) -> None:
+        ConsoleDriftRenderer.render(self.state.drift_report)
+
+    def _resolve_dataset_input(
+        self,
+        dataset: str | pd.DataFrame | None,
+    ) -> tuple[pd.DataFrame, str]:
+        if isinstance(dataset, pd.DataFrame):
+            return dataset.copy(), "dataframe"
+        if isinstance(dataset, str):
+            return self.dataset_manager.get_data(dataset).copy(), dataset
+        if dataset is not None:
+            raise TypeError("Dataset must be a registered name, DataFrame, or None.")
+        if self.state.data is None:
+            self.load()
+        active = self.dataset_manager.primary()
+        return self.state.data.copy(), (
+            active.name if active is not None else str(self.state.dataset_path)
+        )
+
+    @staticmethod
+    def _artifact_name(value: str, label: str) -> str:
+        normalized = str(value).strip()
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_-]{0,127}", normalized):
+            raise ValueError(
+                f"{label} name must begin with a letter or underscore and "
+                "contain only letters, digits, underscores, or hyphens."
+            )
+        return normalized
 
     def profile(self) -> dict:
         if self.state.data is None:
@@ -3509,6 +3933,8 @@ class AutoDQ:
             "blue": self.state.blue_report is not None,
             "dashboard": self.state.dashboard_report is not None,
             "quality_tests": self.state.quality_test_report is not None,
+            "schema_validation": self.state.schema_validation_report is not None,
+            "drift": self.state.drift_report is not None,
             "visualizations": bool(self.visualization_gallery.charts),
         }
         steps_completed = list(dict.fromkeys(self.session.steps_completed))
@@ -3525,6 +3951,8 @@ class AutoDQ:
             "adql_run_count": len(self.state.adql_history),
             "registered_datasets": self.dataset_manager.names(),
             "quality_suites": list(self.state.quality_test_suites),
+            "schema_contracts": list(self.state.schema_contracts),
+            "drift_baselines": list(self.state.drift_baselines),
             "steps_completed": steps_completed,
             "workflow_state": workflow_state,
         }

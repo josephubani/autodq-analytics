@@ -323,6 +323,12 @@ class ADQLParser:
         if kind == "ASSERT":
             return self._parse_assert(arguments)
 
+        if kind == "SCHEMA":
+            return self._parse_schema(arguments)
+
+        if kind == "DRIFT":
+            return self._parse_drift(arguments)
+
         if kind == "MISSING":
             return self._parse_missing(arguments)
 
@@ -552,6 +558,194 @@ class ADQLParser:
             }
 
         raise ADQLSyntaxError(f"Parser is not implemented for {kind}.")
+
+    def _parse_schema(self, arguments: list[str]) -> dict[str, Any]:
+        if len(arguments) < 2 or arguments[0].upper() != "CONTRACT":
+            raise ADQLSyntaxError(
+                "SCHEMA syntax begins with SCHEMA CONTRACT followed by "
+                "CREATE, ADD, VALIDATE, SHOW, LIST, DROP, EXPORT, or LOAD."
+            )
+        action = arguments[1].upper()
+        if action == "LIST":
+            if len(arguments) != 2:
+                raise ADQLSyntaxError("SCHEMA CONTRACT LIST accepts no arguments.")
+            return {"action": "list"}
+        if len(arguments) < 3:
+            raise ADQLSyntaxError(
+                f"SCHEMA CONTRACT {action} requires a contract name."
+            )
+        name = arguments[2]
+        if action == "CREATE":
+            options = self._parse_options(
+                arguments[3:],
+                {
+                    "FROM": "source_dataset",
+                    "VERSION": "contract_version",
+                    "EXTRA_COLUMNS": "extra_columns",
+                    "INFER_RANGES": "infer_ranges",
+                    "INFER_CATEGORIES": "infer_categories",
+                    "OVERWRITE": "overwrite",
+                },
+                flags={"OVERWRITE"},
+            )
+            return {
+                "action": "create",
+                "contract_name": name,
+                **self._coerce_options(options),
+            }
+        if action == "ADD":
+            if len(arguments) < 5 or arguments[3].upper() != "COLUMN":
+                raise ADQLSyntaxError(
+                    "SCHEMA CONTRACT ADD syntax requires COLUMN followed by a name."
+                )
+            options = self._parse_options(
+                arguments[5:],
+                {
+                    "TYPE": "dtype",
+                    "REQUIRED": "required",
+                    "NULLABLE": "nullable",
+                    "UNIQUE": "unique",
+                    "MIN": "minimum",
+                    "MINIMUM": "minimum",
+                    "MAX": "maximum",
+                    "MAXIMUM": "maximum",
+                    "ALLOWED": "allowed_values",
+                    "MATCHES": "pattern",
+                    "PATTERN": "pattern",
+                    "SEVERITY": "severity",
+                },
+            )
+            if not options:
+                raise ADQLSyntaxError(
+                    "SCHEMA CONTRACT ADD requires at least one column constraint."
+                )
+            options = self._coerce_options(options)
+            if "minimum" in options:
+                options["minimum"] = self._literal(str(options["minimum"]))
+            if "maximum" in options:
+                options["maximum"] = self._literal(str(options["maximum"]))
+            if "allowed_values" in options:
+                options["allowed_values"] = [
+                    self._literal(value)
+                    for value in self._string_list(
+                        options["allowed_values"], option="ALLOWED"
+                    )
+                ]
+            return {
+                "action": "add",
+                "contract_name": name,
+                "column": arguments[4],
+                **options,
+            }
+        if action == "VALIDATE":
+            options = self._parse_options(
+                arguments[3:],
+                {"DATASET": "source_dataset", "FAIL_ON": "fail_on"},
+            )
+            return {
+                "action": "validate",
+                "contract_name": name,
+                **self._coerce_options(options),
+            }
+        if action in {"SHOW", "DROP"}:
+            if len(arguments) != 3:
+                raise ADQLSyntaxError(
+                    f"SCHEMA CONTRACT {action} requires exactly one contract name."
+                )
+            return {"action": action.lower(), "contract_name": name}
+        if action in {"EXPORT", "LOAD"}:
+            keyword = "TO" if action == "EXPORT" else "FROM"
+            options = self._parse_options(
+                arguments[3:],
+                {keyword: "path", "OVERWRITE": "overwrite"},
+                flags={"OVERWRITE"},
+            )
+            if "path" not in options:
+                raise ADQLSyntaxError(
+                    f"SCHEMA CONTRACT {action} requires {keyword} followed by a path."
+                )
+            return {
+                "action": action.lower(),
+                "contract_name": name,
+                **self._coerce_options(options),
+            }
+        raise ADQLSyntaxError(
+            "SCHEMA CONTRACT action must be CREATE, ADD, VALIDATE, SHOW, "
+            "LIST, DROP, EXPORT, or LOAD."
+        )
+
+    def _parse_drift(self, arguments: list[str]) -> dict[str, Any]:
+        if not arguments:
+            raise ADQLSyntaxError("DRIFT requires BASELINE or DETECT.")
+        entity = arguments[0].upper()
+        if entity == "DETECT":
+            options = self._parse_options(
+                arguments[1:],
+                {
+                    "REFERENCE": "reference",
+                    "DATASET": "source_dataset",
+                    "CONTRACT": "contract",
+                    "FAIL_ON": "fail_on",
+                    "PSI_WARNING": "psi_warning",
+                    "PSI_ERROR": "psi_error",
+                    "MISSING_WARNING": "missing_warning",
+                    "MISSING_ERROR": "missing_error",
+                },
+            )
+            if "reference" not in options:
+                raise ADQLSyntaxError("DRIFT DETECT requires REFERENCE baseline_name.")
+            return {"action": "detect", **self._coerce_options(options)}
+        if entity != "BASELINE" or len(arguments) < 2:
+            raise ADQLSyntaxError(
+                "DRIFT syntax is DRIFT BASELINE operation or DRIFT DETECT."
+            )
+        action = arguments[1].upper()
+        if action == "LIST":
+            if len(arguments) != 2:
+                raise ADQLSyntaxError("DRIFT BASELINE LIST accepts no arguments.")
+            return {"action": "baseline_list"}
+        if len(arguments) < 3:
+            raise ADQLSyntaxError(f"DRIFT BASELINE {action} requires a name.")
+        name = arguments[2]
+        if action == "CREATE":
+            options = self._parse_options(
+                arguments[3:],
+                {"FROM": "source_dataset", "OVERWRITE": "overwrite"},
+                flags={"OVERWRITE"},
+            )
+            return {
+                "action": "baseline_create",
+                "baseline_name": name,
+                **self._coerce_options(options),
+            }
+        if action in {"SHOW", "DROP"}:
+            if len(arguments) != 3:
+                raise ADQLSyntaxError(
+                    f"DRIFT BASELINE {action} requires exactly one name."
+                )
+            return {
+                "action": f"baseline_{action.lower()}",
+                "baseline_name": name,
+            }
+        if action in {"EXPORT", "LOAD"}:
+            keyword = "TO" if action == "EXPORT" else "FROM"
+            options = self._parse_options(
+                arguments[3:],
+                {keyword: "path", "OVERWRITE": "overwrite"},
+                flags={"OVERWRITE"},
+            )
+            if "path" not in options:
+                raise ADQLSyntaxError(
+                    f"DRIFT BASELINE {action} requires {keyword} followed by a path."
+                )
+            return {
+                "action": f"baseline_{action.lower()}",
+                "baseline_name": name,
+                **self._coerce_options(options),
+            }
+        raise ADQLSyntaxError(
+            "DRIFT BASELINE action must be CREATE, SHOW, LIST, DROP, EXPORT, or LOAD."
+        )
 
     def _parse_assert(self, arguments: list[str]) -> dict[str, Any]:
         if not arguments:
@@ -1728,6 +1922,9 @@ class ADQLParser:
             "ignore_index",
             "nullable",
             "unique",
+            "required",
+            "infer_ranges",
+            "infer_categories",
             "allow_duplicates",
             "transparent",
             "dayfirst",
@@ -1756,6 +1953,10 @@ class ADQLParser:
             "significance_level",
             "leakage_threshold",
             "min_percent",
+            "psi_warning",
+            "psi_error",
+            "missing_warning",
+            "missing_error",
         }
         list_options = {"exclude_features", "chart_ids"}
         coerced = {}

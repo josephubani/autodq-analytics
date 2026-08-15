@@ -73,6 +73,14 @@ class JSONExporter:
                 report.quality_tests.to_dict()
                 if report.quality_tests else None,
 
+            "schema_validation":
+                report.schema_validation.to_dict()
+                if report.schema_validation else None,
+
+            "drift":
+                report.drift.to_dict()
+                if report.drift else None,
+
             "ml_readiness":
                 report.ml_readiness.to_dict()
                 if report.ml_readiness else None,

@@ -1,0 +1,45 @@
+#!/usr/bin/env autodq
+# %% [markdown] Schema contracts and drift monitoring
+# Establish a trusted sales baseline, then validate a later registered batch.
+
+# %% [Approved dataset]
+DATASET "../datasets/sample/sales.csv" TARGET Revenue;
+SET TYPE Date datetime FORMAT AUTO;
+LET approved_sales = CURRENT;
+
+# %% [Schema contract]
+SCHEMA CONTRACT CREATE sales_v1 FROM approved_sales
+    VERSION 1.0.0
+    EXTRA_COLUMNS warning
+    INFER_RANGES false
+    INFER_CATEGORIES true
+    OVERWRITE;
+SCHEMA CONTRACT ADD sales_v1 COLUMN Transaction_ID
+    TYPE integer REQUIRED true NULLABLE false
+    SEVERITY error;
+SCHEMA CONTRACT ADD sales_v1 COLUMN Revenue
+    TYPE numeric REQUIRED true MIN 0
+    SEVERITY error;
+SCHEMA CONTRACT ADD sales_v1 COLUMN Region
+    TYPE string ALLOWED "North,South,East,West,Central"
+    SEVERITY warning;
+SCHEMA CONTRACT VALIDATE sales_v1 DATASET approved_sales FAIL_ON error;
+
+# %% [Drift baseline]
+DRIFT BASELINE CREATE sales_baseline FROM approved_sales OVERWRITE;
+DRIFT DETECT REFERENCE sales_baseline DATASET approved_sales
+    CONTRACT sales_v1
+    FAIL_ON warning
+    PSI_WARNING 0.10 PSI_ERROR 0.25
+    MISSING_WARNING 2 MISSING_ERROR 5;
+
+# %% [Portable artifacts]
+SCHEMA CONTRACT EXPORT sales_v1
+    TO "../reports/sales-schema-contract.json" OVERWRITE;
+DRIFT BASELINE EXPORT sales_baseline
+    TO "../reports/sales-drift-baseline.json" OVERWRITE;
+
+# %% [Inventory]
+SCHEMA CONTRACT LIST;
+DRIFT BASELINE LIST;
+SESSION;

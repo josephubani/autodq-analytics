@@ -8,7 +8,12 @@ from typing import Any
 
 import pandas as pd
 
-from autodq.commands.errors import ADQLAssertionError, ADQLExecutionError
+from autodq.commands.errors import (
+    ADQLAssertionError,
+    ADQLContractError,
+    ADQLDriftError,
+    ADQLExecutionError,
+)
 from autodq.commands.grammar import COMMAND_HELP, DATA_SOURCES
 from autodq.commands.models import ADQLResult, ADQLRunResult
 
@@ -173,6 +178,12 @@ class ADQLExecutor:
 
         if kind == "ASSERT":
             return self._execute_assert(project, parameters)
+
+        if kind == "SCHEMA":
+            return self._execute_schema(project, parameters)
+
+        if kind == "DRIFT":
+            return self._execute_drift(project, parameters)
 
         simple = {
             "LOAD": project.load,
@@ -853,6 +864,184 @@ class ADQLExecutor:
             ),
         }
 
+    def _execute_schema(self, project, parameters) -> dict[str, Any]:
+        parameters = dict(parameters)
+        action = parameters.pop("action")
+        name = parameters.pop("contract_name", None)
+        source = parameters.pop("source_dataset", None)
+        if action == "create":
+            contract = project.create_schema_contract(
+                name, dataset=source, **parameters
+            )
+            data = contract.to_frame()
+            return {
+                "data": data,
+                "value": contract,
+                "total_rows": len(data),
+                "message": (
+                    f"Created schema contract {contract.name} version "
+                    f"{contract.contract_version} with {contract.column_count} column(s) "
+                    f"and {contract.rule_count} rule(s)."
+                ),
+            }
+        if action == "add":
+            column = parameters.pop("column")
+            contract = project.add_schema_rule(name, column, **parameters)
+            data = contract.to_frame()
+            return {
+                "data": data,
+                "value": contract,
+                "total_rows": len(data),
+                "message": f"Updated {column} in schema contract {name}.",
+            }
+        if action == "validate":
+            report = project.validate_schema(
+                name,
+                dataset=source,
+                fail_on=parameters.get("fail_on", "error"),
+            )
+            data = report.to_frame()
+            message = (
+                f"Schema contract {name} passed {report.passed_count}/"
+                f"{report.test_count} check(s); "
+                f"{report.blocking_failure_count} blocking failure(s)."
+            )
+            if not report.success:
+                raise ADQLContractError(message, report=report, data=data)
+            return {
+                "data": data,
+                "value": report,
+                "total_rows": len(data),
+                "message": message,
+            }
+        if action == "show":
+            contract = project.schema_contract(name)
+            data = contract.to_frame()
+            return {
+                "data": data,
+                "value": contract,
+                "total_rows": len(data),
+                "message": (
+                    f"Returned schema contract {name} with "
+                    f"{contract.column_count} column(s)."
+                ),
+            }
+        if action == "list":
+            data = project.list_schema_contracts()
+            return {
+                "data": data,
+                "total_rows": len(data),
+                "message": f"Returned {len(data)} schema contract(s).",
+            }
+        if action == "drop":
+            value = project.drop_schema_contract(name)
+            return {
+                "value": value,
+                "message": f"Dropped schema contract {name}.",
+            }
+        if action == "export":
+            value = project.export_schema_contract(
+                name,
+                parameters["path"],
+                overwrite=parameters.get("overwrite", False),
+            )
+            return {
+                "value": value,
+                "message": f"Exported schema contract to {value}.",
+            }
+        contract = project.load_schema_contract(
+            name,
+            parameters["path"],
+            overwrite=parameters.get("overwrite", False),
+        )
+        data = contract.to_frame()
+        return {
+            "data": data,
+            "value": contract,
+            "total_rows": len(data),
+            "message": (
+                f"Loaded schema contract {name} with {contract.column_count} column(s)."
+            ),
+        }
+
+    def _execute_drift(self, project, parameters) -> dict[str, Any]:
+        parameters = dict(parameters)
+        action = parameters.pop("action")
+        source = parameters.pop("source_dataset", None)
+        name = parameters.pop("baseline_name", None)
+        if action == "baseline_create":
+            baseline = project.create_drift_baseline(
+                name, dataset=source, **parameters
+            )
+            data = baseline.to_frame()
+            return {
+                "data": data,
+                "value": baseline,
+                "total_rows": len(data),
+                "message": (
+                    f"Created drift baseline {name} from {baseline.dataset} with "
+                    f"{baseline.row_count:,} row(s) and {baseline.column_count} column(s)."
+                ),
+            }
+        if action == "baseline_show":
+            baseline = project.drift_baseline(name)
+            data = baseline.to_frame()
+            return {
+                "data": data,
+                "value": baseline,
+                "total_rows": len(data),
+                "message": f"Returned drift baseline {name}.",
+            }
+        if action == "baseline_list":
+            data = project.list_drift_baselines()
+            return {
+                "data": data,
+                "total_rows": len(data),
+                "message": f"Returned {len(data)} drift baseline(s).",
+            }
+        if action == "baseline_drop":
+            value = project.drop_drift_baseline(name)
+            return {"value": value, "message": f"Dropped drift baseline {name}."}
+        if action == "baseline_export":
+            value = project.export_drift_baseline(
+                name,
+                parameters["path"],
+                overwrite=parameters.get("overwrite", False),
+            )
+            return {"value": value, "message": f"Exported drift baseline to {value}."}
+        if action == "baseline_load":
+            baseline = project.load_drift_baseline(
+                name,
+                parameters["path"],
+                overwrite=parameters.get("overwrite", False),
+            )
+            data = baseline.to_frame()
+            return {
+                "data": data,
+                "value": baseline,
+                "total_rows": len(data),
+                "message": f"Loaded drift baseline {name}.",
+            }
+        report = project.detect_drift(
+            parameters.pop("reference"),
+            dataset=source,
+            **parameters,
+        )
+        data = report.to_frame()
+        message = (
+            f"Drift stability score: {report.stability_score:.2f}; "
+            f"{report.moderate_count} moderate and {report.major_count} major "
+            f"check(s); {report.blocking_failure_count} blocking failure(s)."
+        )
+        if not report.success:
+            raise ADQLDriftError(message, report=report, data=data)
+        return {
+            "data": data,
+            "value": report,
+            "total_rows": len(data),
+            "message": message,
+        }
+
     @staticmethod
     def _quality_report_output(report) -> dict[str, Any]:
         data = report.to_frame()
@@ -1416,6 +1605,8 @@ class ADQLExecutor:
             "ADD": ("dataset_path",),
             "AUDIT": ("output",),
             "ASSERT": ("path",),
+            "SCHEMA": ("path",),
+            "DRIFT": ("path",),
             "WORKSPACE": ("workspace_root",),
             "GALLERY": ("output_dir",),
         }

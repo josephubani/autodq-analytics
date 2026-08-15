@@ -464,6 +464,12 @@ class ADQLValidator:
         elif statement.kind == "ASSERT":
             self._validate_assert(parameters)
 
+        elif statement.kind == "SCHEMA":
+            self._validate_schema(parameters)
+
+        elif statement.kind == "DRIFT":
+            self._validate_drift(parameters)
+
         elif statement.kind == "HELP":
             command = parameters.get("command")
 
@@ -633,6 +639,165 @@ class ADQLValidator:
                 raise ADQLValidationError(
                     f"ASSERT MATCHES pattern is invalid: {error}"
                 ) from error
+
+    def _validate_schema(self, parameters) -> None:
+        action = parameters.get("action")
+        if action not in {
+            "create", "add", "validate", "show", "list", "drop", "export", "load"
+        }:
+            raise ADQLValidationError("SCHEMA CONTRACT action is not recognized.")
+        name = parameters.get("contract_name")
+        if action != "list":
+            self._validate_artifact_name(name, label="SCHEMA CONTRACT")
+        source = parameters.get("source_dataset")
+        if source is not None and (
+            not str(source).strip()
+            or len(str(source)) > 255
+            or any(character in str(source) for character in ";\r\n")
+        ):
+            raise ADQLValidationError(
+                "SCHEMA dataset must be a valid registered dataset name."
+            )
+        if action == "create":
+            version = str(parameters.get("contract_version", "1.0.0")).strip()
+            if not version or len(version) > 64 or any(
+                character in version for character in ";\r\n"
+            ):
+                raise ADQLValidationError(
+                    "SCHEMA CONTRACT VERSION must be a non-empty value of at most 64 characters."
+                )
+            if str(parameters.get("extra_columns", "warning")).lower() not in {
+                "ignore", "info", "warning", "error"
+            }:
+                raise ADQLValidationError(
+                    "SCHEMA EXTRA_COLUMNS must be ignore, info, warning, or error."
+                )
+        if action == "add":
+            column = str(parameters.get("column", "")).strip()
+            if not column or len(column) > 255 or any(
+                character in column for character in ";\r\n"
+            ):
+                raise ADQLValidationError(
+                    "SCHEMA CONTRACT ADD requires a valid column name."
+                )
+            dtype = parameters.get("dtype")
+            if dtype is not None and str(dtype).lower() not in {
+                "numeric", "number", "integer", "int", "float", "decimal",
+                "string", "text", "datetime", "date", "timestamp",
+                "boolean", "bool", "category", "categorical",
+            }:
+                raise ADQLValidationError("SCHEMA TYPE is not supported.")
+            if str(parameters.get("severity", "error")).lower() not in {
+                "error", "warning", "info"
+            }:
+                raise ADQLValidationError(
+                    "SCHEMA SEVERITY must be error, warning, or info."
+                )
+            minimum = parameters.get("minimum")
+            maximum = parameters.get("maximum")
+            if minimum is not None and maximum is not None:
+                try:
+                    if minimum > maximum:
+                        raise ADQLValidationError(
+                            "SCHEMA MINIMUM cannot exceed MAXIMUM."
+                        )
+                except TypeError as error:
+                    raise ADQLValidationError(
+                        "SCHEMA MINIMUM and MAXIMUM must be comparable."
+                    ) from error
+            values = parameters.get("allowed_values")
+            if values is not None and (
+                not isinstance(values, list) or not values or len(values) > 1_000
+            ):
+                raise ADQLValidationError(
+                    "SCHEMA ALLOWED requires between 1 and 1,000 values."
+                )
+            pattern = parameters.get("pattern")
+            if pattern is not None:
+                if not str(pattern) or len(str(pattern)) > 1_000:
+                    raise ADQLValidationError(
+                        "SCHEMA PATTERN must contain at most 1,000 characters."
+                    )
+                try:
+                    re.compile(str(pattern))
+                except re.error as error:
+                    raise ADQLValidationError(
+                        f"SCHEMA PATTERN is invalid: {error}"
+                    ) from error
+        if action == "validate" and str(
+            parameters.get("fail_on", "error")
+        ).lower() not in {"error", "warning", "info", "never"}:
+            raise ADQLValidationError(
+                "SCHEMA FAIL_ON must be error, warning, info, or never."
+            )
+        if action in {"export", "load"} and Path(
+            parameters.get("path", "")
+        ).suffix.lower() != ".json":
+            raise ADQLValidationError(
+                "SCHEMA CONTRACT EXPORT and LOAD paths must end with .json."
+            )
+
+    def _validate_drift(self, parameters) -> None:
+        action = parameters.get("action")
+        allowed = {
+            "detect", "baseline_create", "baseline_show", "baseline_list",
+            "baseline_drop", "baseline_export", "baseline_load",
+        }
+        if action not in allowed:
+            raise ADQLValidationError("DRIFT action is not recognized.")
+        baseline_name = parameters.get("baseline_name")
+        if action not in {"detect", "baseline_list"}:
+            self._validate_artifact_name(baseline_name, label="DRIFT BASELINE")
+        if action == "detect":
+            self._validate_artifact_name(
+                parameters.get("reference"), label="DRIFT REFERENCE"
+            )
+            contract = parameters.get("contract")
+            if contract is not None:
+                self._validate_artifact_name(contract, label="DRIFT CONTRACT")
+            if str(parameters.get("fail_on", "error")).lower() not in {
+                "error", "warning", "info", "never"
+            }:
+                raise ADQLValidationError(
+                    "DRIFT FAIL_ON must be error, warning, info, or never."
+                )
+            psi_warning = parameters.get("psi_warning", 0.1)
+            psi_error = parameters.get("psi_error", 0.25)
+            missing_warning = parameters.get("missing_warning", 2.0)
+            missing_error = parameters.get("missing_error", 5.0)
+            if not 0 <= psi_warning <= psi_error:
+                raise ADQLValidationError(
+                    "DRIFT PSI thresholds must satisfy 0 <= warning <= error."
+                )
+            if not 0 <= missing_warning <= missing_error <= 100:
+                raise ADQLValidationError(
+                    "DRIFT missing thresholds must satisfy 0 <= warning <= error <= 100."
+                )
+        source = parameters.get("source_dataset")
+        if source is not None and (
+            not str(source).strip()
+            or len(str(source)) > 255
+            or any(character in str(source) for character in ";\r\n")
+        ):
+            raise ADQLValidationError(
+                "DRIFT dataset must be a valid registered dataset name."
+            )
+        if action in {"baseline_export", "baseline_load"} and Path(
+            parameters.get("path", "")
+        ).suffix.lower() != ".json":
+            raise ADQLValidationError(
+                "DRIFT BASELINE EXPORT and LOAD paths must end with .json."
+            )
+
+    @staticmethod
+    def _validate_artifact_name(value, *, label: str) -> None:
+        if not re.fullmatch(
+            r"[A-Za-z_][A-Za-z0-9_-]{0,127}", str(value or "")
+        ):
+            raise ADQLValidationError(
+                f"{label} name must begin with a letter or underscore and "
+                "contain only letters, digits, underscores, or hyphens."
+            )
 
     def _validate_select(self, parameters) -> None:
         items = parameters["select"]

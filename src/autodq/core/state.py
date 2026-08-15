@@ -42,6 +42,10 @@ class AutoDQState:
     dashboard_report = None
     quality_test_report = None
     quality_test_suites: dict = field(default_factory=dict)
+    schema_validation_report = None
+    schema_contracts: dict = field(default_factory=dict)
+    drift_report = None
+    drift_baselines: dict = field(default_factory=dict)
 
     def reset_outputs(self) -> None:
         self.profile_report = None
@@ -73,6 +77,8 @@ class AutoDQState:
         self.auto_run_report = None
         self.dashboard_report = None
         self.quality_test_report = None
+        self.schema_validation_report = None
+        self.drift_report = None
 
     def reset_all(self, dataset_path: str | Path) -> None:
         self.dataset_path = Path(dataset_path)

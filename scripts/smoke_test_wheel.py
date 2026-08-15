@@ -153,7 +153,16 @@ def write_adql(path: Path) -> None:
         "WHERE Spend >= 200 ORDER BY Spend DESC;\n"
         "SELECT * FROM priority_customers;\n"
         "# %% [Session inspection]\n"
-        "SESSION; SESSION EVENTS LIMIT 5; SESSION DATASETS;\n",
+        "SESSION; SESSION EVENTS LIMIT 5; SESSION DATASETS;\n"
+        "# %% [Schema and drift gates]\n"
+        "SCHEMA CONTRACT CREATE acceptance_v1 FROM acceptance_cleaned "
+        "INFER_CATEGORIES false;\n"
+        "SCHEMA CONTRACT ADD acceptance_v1 COLUMN Revenue TYPE numeric "
+        "REQUIRED true NULLABLE false MIN 0;\n"
+        "SCHEMA CONTRACT VALIDATE acceptance_v1 DATASET acceptance_cleaned;\n"
+        "DRIFT BASELINE CREATE acceptance_base FROM acceptance_cleaned;\n"
+        "DRIFT DETECT REFERENCE acceptance_base DATASET acceptance_cleaned "
+        "CONTRACT acceptance_v1 FAIL_ON warning;\n",
         encoding="utf-8",
     )
 
@@ -244,12 +253,12 @@ def main() -> int:
         if not payload.get("success"):
             raise RuntimeError("The installed wheel failed the ADQL acceptance workflow.")
 
-        if payload.get("completed_cell_count") != 10:
+        if payload.get("completed_cell_count") != 11:
             raise RuntimeError("The ADQL acceptance workflow did not complete all cells.")
 
         api_check = (
             "import sys; from autodq import (ADQL_LANGUAGE_VERSION, AutoDQ, "
-            "QualityAssertion); assert ADQL_LANGUAGE_VERSION == '2.2'; "
+            "QualityAssertion); assert ADQL_LANGUAGE_VERSION == '2.3'; "
             "project = AutoDQ(sys.argv[1], target='Revenue'); "
             "profile = project.profile(); diagnosis = project.diagnose(); "
             f"assert profile['rows'] == {row_count}; "
@@ -258,6 +267,13 @@ def main() -> int:
             "quality = project.assert_quality(QualityAssertion("
             "subject='row_count', predicate='compare', operator='>', expected=0)); "
             "assert quality.success; "
+            "project.create_schema_contract('acceptance_v1', "
+            "infer_categories=False); "
+            "schema = project.validate_schema('acceptance_v1'); "
+            "assert schema.success; "
+            "project.create_drift_baseline('acceptance_base'); "
+            "drift = project.detect_drift('acceptance_base'); "
+            "assert drift.success and drift.stability_score == 100.0; "
             "result = project.auto(mode='review', visualize=False, "
             "auto_display=False); assert result.success; print('Python API OK')"
         )

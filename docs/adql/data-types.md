@@ -1,4 +1,4 @@
-# ADQL 2.2 Data Types and Conversion Rules
+# ADQL 2.3 Data Types and Conversion Rules
 
 This document is normative for ADQL literals, option coercion, query values,
 and `SET TYPE` conversions.
@@ -140,7 +140,7 @@ SET TYPE Revenue float DECIMALS 2;
 SET TYPE Margin decimal DECIMALS 4;
 ```
 
-ADQL 2.2 `decimal` is an alias for floating-point conversion; it is not an
+ADQL 2.3 `decimal` is an alias for floating-point conversion; it is not an
 arbitrary-precision decimal type. Rounding changes numeric values, not merely
 their display formatting.
 
@@ -184,3 +184,10 @@ scalars. Datetimes, dates, paths, and pandas timestamps serialize as strings.
 Missing scalars serialize as null. DataFrame results serialize as column names,
 row counts, and bounded record previews; the full in-memory result remains
 available to the current runtime until replaced or the session ends.
+
+Schema contracts and drift baselines serialize as versioned UTF-8 JSON.
+Contract values use JSON strings, numbers, booleans, arrays, objects, and null.
+Datetime bounds serialize as ISO-compatible strings. Drift baselines contain
+column metadata, numeric or datetime quantile buckets, bounded categorical
+frequencies, missingness, distinct ratios, duplicate rate, and row count. They
+MUST NOT contain source data rows.

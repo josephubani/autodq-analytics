@@ -2,7 +2,7 @@
 
 # Public language version. This is intentionally independent from the AutoDQ
 # package and VS Code extension versions.
-ADQL_LANGUAGE_VERSION = "2.2"
+ADQL_LANGUAGE_VERSION = "2.3"
 
 SUPPORTED_COMMANDS = {
     "SELECT",
@@ -58,6 +58,8 @@ SUPPORTED_COMMANDS = {
     "HISTORY",
     "SESSION",
     "ASSERT",
+    "SCHEMA",
+    "DRIFT",
 }
 
 SIMPLE_COMMANDS = {
@@ -333,6 +335,28 @@ COMMAND_HELP = [
         "description": (
             "Evaluate non-mutating data-quality expectations or define, run, "
             "inspect, export, and load reusable test suites."
+        ),
+    },
+    {
+        "command": "SCHEMA",
+        "syntax": (
+            "SCHEMA CONTRACT CREATE name FROM dataset; "
+            "SCHEMA CONTRACT VALIDATE name DATASET dataset [FAIL_ON level]"
+        ),
+        "description": (
+            "Infer, refine, validate, inspect, export, and load versioned "
+            "dataset schema contracts."
+        ),
+    },
+    {
+        "command": "DRIFT",
+        "syntax": (
+            "DRIFT BASELINE CREATE name FROM dataset; "
+            "DRIFT DETECT REFERENCE name DATASET dataset [CONTRACT name]"
+        ),
+        "description": (
+            "Create reusable statistical baselines and detect schema, "
+            "missingness, cardinality, range, category, and PSI drift."
         ),
     },
     {

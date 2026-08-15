@@ -221,6 +221,14 @@ class WorkspaceContext:
         return self.path / "reports"
 
     @property
+    def contracts_dir(self) -> Path:
+        return self.path / "contracts"
+
+    @property
+    def drift_baselines_dir(self) -> Path:
+        return self.path / "drift_baselines"
+
+    @property
     def visualizations_dir(self) -> Path:
         return self.path / "visualizations"
 

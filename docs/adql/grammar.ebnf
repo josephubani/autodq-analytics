@@ -1,10 +1,10 @@
-(* AutoDQ Analytics Domain Query Language 2.1 concrete grammar.
+(* AutoDQ Analytics Domain Query Language 2.3 concrete grammar.
    Keywords and enum terminals are case-insensitive.
    Command options may appear in any order unless a production fixes an order.
    Repeated options are syntactically expressible below but are rejected by
    semantic validation. *)
 
-language-version = "2.2" ;
+language-version = "2.3" ;
 
 script = statement, { ";", statement }, [ ";" ] ;
 
@@ -14,6 +14,8 @@ statement =
   | load-statement
   | knowledge-statement
   | assert-statement
+  | schema-statement
+  | drift-statement
   | let-statement
   | profile-statement
   | statistics-statement
@@ -147,6 +149,58 @@ quality-suite-operation =
     | "EXPORT", suite-name, "TO", path, [ overwrite-flag ]
     | "LOAD", suite-name, "FROM", path, [ overwrite-flag ] ) ;
 suite-name = bare-token ;
+
+(* command: SCHEMA *)
+schema-statement = "SCHEMA", "CONTRACT", schema-contract-operation ;
+schema-contract-operation =
+    "LIST"
+  | "CREATE", contract-name, { schema-create-option }
+  | "ADD", contract-name, "COLUMN", identifier, schema-add-option,
+    { schema-add-option }
+  | "VALIDATE", contract-name, { schema-validate-option }
+  | ( "SHOW" | "DROP" ), contract-name
+  | "EXPORT", contract-name, "TO", path, [ overwrite-flag ]
+  | "LOAD", contract-name, "FROM", path, [ overwrite-flag ] ;
+schema-create-option = "FROM", dataset-name
+                     | "VERSION", value-token
+                     | "EXTRA_COLUMNS", schema-extra-policy
+                     | "INFER_RANGES", boolean
+                     | "INFER_CATEGORIES", boolean
+                     | overwrite-flag ;
+schema-add-option = "TYPE", schema-dtype
+                  | "REQUIRED", boolean
+                  | "NULLABLE", boolean
+                  | "UNIQUE", boolean
+                  | ( "MIN" | "MINIMUM" ), literal
+                  | ( "MAX" | "MAXIMUM" ), literal
+                  | "ALLOWED", value-list
+                  | ( "MATCHES" | "PATTERN" ), value-token
+                  | "SEVERITY", quality-severity ;
+schema-validate-option = "DATASET", dataset-name
+                       | "FAIL_ON", quality-failure-level ;
+schema-dtype = quality-dtype | "decimal" | "timestamp" ;
+schema-extra-policy = "ignore" | quality-severity ;
+contract-name = bare-token ;
+
+(* command: DRIFT *)
+drift-statement = "DRIFT", ( drift-baseline-operation | drift-detect-operation ) ;
+drift-baseline-operation = "BASELINE",
+    ( "LIST"
+    | "CREATE", baseline-name,
+      { "FROM", dataset-name | overwrite-flag }
+    | ( "SHOW" | "DROP" ), baseline-name
+    | "EXPORT", baseline-name, "TO", path, [ overwrite-flag ]
+    | "LOAD", baseline-name, "FROM", path, [ overwrite-flag ] ) ;
+drift-detect-operation = "DETECT", "REFERENCE", baseline-name,
+    { drift-detect-option } ;
+drift-detect-option = "DATASET", dataset-name
+                    | "CONTRACT", contract-name
+                    | "FAIL_ON", quality-failure-level
+                    | "PSI_WARNING", number
+                    | "PSI_ERROR", number
+                    | "MISSING_WARNING", number
+                    | "MISSING_ERROR", number ;
+baseline-name = bare-token ;
 
 (* command: LET *)
 let-statement = "LET", assignment-identifier, "=", let-source,
@@ -540,7 +594,7 @@ stage-source = "CURRENT" | "RAW" | "DATA" | "CLEANED"
              | "ENGINEERED" | "FEATURES" | "PREDICTIONS" ;
 
 command-name = "SELECT" | "DATASET" | "LOAD" | "KNOWLEDGE" | "LET"
-             | "ASSERT"
+             | "ASSERT" | "SCHEMA" | "DRIFT"
              | "PROFILE" | "STATISTICS" | "INTERPRET" | "DIAGNOSE"
              | "RECOMMEND" | "DECIDE" | "PREVIEW" | "REVIEW"
              | "APPROVE" | "REJECT" | "CLEAN" | "VALIDATE" | "CLEANING"
