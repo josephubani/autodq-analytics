@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.3.10 - 2026-08-15
+
+- Bundled AutoDQ 0.1.17 with complete Python 3.10 and 3.11 compatibility in
+  HTML report generation.
+- Added compatibility coverage for empty BLUE visual-insight and prescription
+  report sections.
+
 ## 0.3.9 - 2026-08-15
 
 - Bundled AutoDQ 0.1.16 with Python 3.10 and 3.11 compatibility restored in

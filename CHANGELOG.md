@@ -5,6 +5,22 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.17 - 2026-08-15
+
+### Fixed
+
+- Removed the remaining Python 3.12-only nested multiline fallback from the
+  BLUE prescriptions table in the HTML exporter, completing Python 3.10 and
+  3.11 import compatibility.
+- Extended compatibility coverage to render both empty BLUE visual insights
+  and empty BLUE prescriptions and to reject multiline `or` fallbacks in the
+  exporter source.
+
+### Changed
+
+- Advanced the bundled AutoDQ ADQL VS Code extension to 0.3.10 so manual VSIX
+  installations include the corrected AutoDQ 0.1.17 runtime.
+
 ## 0.1.16 - 2026-08-15
 
 ### Fixed

@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 
 from autodq.reporting.html_exporter import HTMLExporter
@@ -25,6 +26,18 @@ class HTMLExporterCompatibilityTests(unittest.TestCase):
 
         self.assertIn("BLUE Regression Diagnostics", markup)
         self.assertIn("No BLUE visual interpretations are available.", markup)
+        self.assertIn("No BLUE prescriptions are available.", markup)
+
+    def test_exporter_avoids_multiline_fallbacks_inside_fstrings(self):
+        source = (
+            Path(__file__).resolve().parents[1]
+            / "src"
+            / "autodq"
+            / "reporting"
+            / "html_exporter.py"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn('or """', source)
 
 
 if __name__ == "__main__":

@@ -1948,6 +1948,18 @@ th {{
                 """
             )
 
+        prescription_rows_html = "".join(prescription_rows)
+
+        if not prescription_rows_html:
+            prescription_rows_html = """
+            <tr>
+                <td colspan="8">
+                    No BLUE prescriptions are available.
+                    Run project.prescribe_blue() before generating the report.
+                </td>
+            </tr>
+            """
+
         return f"""
         <div class="section card">
             <h2 class="section-title">BLUE Regression Diagnostics</h2>
@@ -2042,18 +2054,7 @@ th {{
                     <th>Confidence</th>
                     <th>Related Assumptions</th>
                 </tr>
-                {
-                    "".join(prescription_rows)
-                    or """
-                    <tr>
-                        <td colspan="8">
-                            No BLUE prescriptions are available.
-                            Run project.prescribe_blue() before
-                            generating the report.
-                        </td>
-                    </tr>
-                    """
-                }
+                {prescription_rows_html}
             </table>
         </div>
 
