@@ -18,7 +18,7 @@ workflow.
 - Direct named-dataset workflows such as `PROFILE customers`,
   `AUTO DATASET customers MODE review`, and `SELECT * FROM customers`
 - Reusable dataset assignments with `LET`, including cleaned stages and
-  safe `SELECT` results
+  safe `SELECT` results, with compact confirmations instead of repeated tables
 - Explicit datetime parsing and numeric precision through `SET TYPE`, with
   human or `strftime` patterns, mixed/ISO modes, UTC, and decimal rounding
 - Audited `MISSING` summaries, datatype-aware fills, interpolation, and

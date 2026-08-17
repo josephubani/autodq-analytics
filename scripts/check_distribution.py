@@ -55,7 +55,7 @@ REQUIRED_SDIST_SUFFIXES = {
     "/MANIFEST.in",
     "/README.md",
     "/docs/RELEASING.md",
-    "/docs/RELEASE_NOTES_0.1.17.md",
+    "/docs/RELEASE_NOTES_0.1.18.md",
     "/docs/VSCODE_MARKETPLACE.md",
     "/docs/QUICKSTART.md",
     "/docs/TROUBLESHOOTING.md",

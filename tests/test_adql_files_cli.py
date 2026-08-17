@@ -278,7 +278,7 @@ HEAD 2;
         self.assertIn("AutoDQ Session", payload["outputs"][1]["data"])
         self.assertIn("Active dataset", payload["outputs"][1]["data"])
 
-    def test_let_assignment_uses_rich_notebook_table_output(self):
+    def test_let_assignment_uses_compact_notebook_confirmation(self):
         let_script = self.root / "let-assignment.adql"
         let_script.write_text(
             "# %% [Dataset]\n"
@@ -308,7 +308,14 @@ HEAD 2;
             ["text/plain", "text/html"],
         )
         self.assertIn("dataset regional_sales", payload["outputs"][0]["data"])
-        self.assertIn("total_revenue", payload["outputs"][1]["data"])
+        confirmation = payload["outputs"][1]["data"]
+        self.assertIn("Let output", confirmation)
+        self.assertIn("regional_sales", confirmation)
+        self.assertIn("SELECT result", confirmation)
+        self.assertIn("Rows", confirmation)
+        self.assertIn("Columns", confirmation)
+        self.assertNotIn("autodq-dataframe-wrap", confirmation)
+        self.assertNotIn("total_revenue</th>", confirmation)
         self.assertIn("autodq-output-toggle", payload["outputs"][1]["data"])
 
     def test_notebook_json_renders_visualization_as_png(self):
@@ -884,7 +891,7 @@ body { background: white; color: black; }
         self.assertNotIn("transientOutputs: true", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.3.10")
+        self.assertEqual(package["version"], "0.3.11")
         renderer = package["contributes"]["notebookRenderer"][0]
         self.assertEqual(renderer["id"], "autodq-adql-review-renderer")
         self.assertEqual(renderer["requiresMessaging"], "always")

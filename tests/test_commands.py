@@ -583,8 +583,21 @@ class ADQLTests(unittest.TestCase):
         )
 
         self.assertTrue(run.success)
-        self.assertEqual(run.results[0].statement.kind, "LET")
-        self.assertIn("dataset cleaned_customers", run.results[0].message)
+        let_result = run.results[0]
+        self.assertEqual(let_result.statement.kind, "LET")
+        self.assertIn("dataset cleaned_customers", let_result.message)
+        self.assertFalse(let_result.display_data)
+        self.assertEqual(
+            let_result.value,
+            {
+                "dataset": "cleaned_customers",
+                "source": "CLEANED stage",
+                "rows": len(expected),
+                "columns": len(expected.columns),
+                "overwritten": False,
+            },
+        )
+        assert_frame_equal(let_result.data, expected)
         assert_frame_equal(
             project.dataset_manager.get_data("cleaned_customers"),
             expected,
@@ -640,6 +653,11 @@ class ADQLTests(unittest.TestCase):
         )
         self.assertTrue(overwritten.success)
         self.assertEqual(len(overwritten.data), len(self.data))
+        self.assertFalse(overwritten.latest.display_data)
+        self.assertEqual(overwritten.value["dataset"], "main_copy")
+        self.assertEqual(overwritten.value["rows"], len(self.data))
+        self.assertTrue(overwritten.value["overwritten"])
+        self.assertNotIn("<table", overwritten.to_html())
 
         with self.assertRaisesRegex(
             ADQLExecutionError,

@@ -124,7 +124,10 @@ def _render_run(result) -> None:
             prefix = "OK" if statement_result.success else "ERROR"
             print(f"  [{prefix}] {statement_result.message}")
 
-            if statement_result.data is not None:
+            if (
+                statement_result.data is not None
+                and statement_result.display_data
+            ):
                 _print_dataframe(statement_result.data)
             elif (
                 statement_result.statement.kind == "SESSION"
@@ -211,7 +214,10 @@ def _notebook_payload(
                 }
             )
 
-            if statement_result.data is not None:
+            if (
+                statement_result.data is not None
+                and statement_result.display_data
+            ):
                 outputs.append(
                     _notebook_html_output(
                         _dataframe_html(

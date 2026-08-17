@@ -355,6 +355,11 @@ assigned name works anywhere a registered dataset name is accepted, including
 `SELECT`, `EXPORT`, `USE DATASET`, concise workflow targeting, `LIST DATASETS`,
 and `SESSION DATASETS`.
 
+Successful assignments display a compact confirmation instead of previewing
+the assigned rows. The confirmation reports the dataset name, source, row and
+column counts, and whether an existing snapshot was overwritten. Query the
+name explicitly with `SELECT` or `HEAD` when you want to inspect its contents.
+
 Assign the active project stage:
 
 ```adql

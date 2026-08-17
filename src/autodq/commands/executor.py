@@ -71,6 +71,7 @@ class ADQLExecutor:
                     message=message,
                     data=output.get("data"),
                     value=output.get("value"),
+                    display_data=output.get("display_data", True),
                     total_rows=output.get("total_rows"),
                     duration_seconds=round(perf_counter() - started, 4),
                 )
@@ -1289,7 +1290,7 @@ class ADQLExecutor:
             source_label = (
                 f"dataset {source}"
                 if source_kind == "dataset"
-                else f"{source} stage"
+                else f"{str(source).upper()} stage"
             )
 
         data = data.reset_index(drop=True)
@@ -1316,6 +1317,14 @@ class ADQLExecutor:
 
         return {
             "data": assigned,
+            "value": {
+                "dataset": name,
+                "source": source_label,
+                "rows": len(assigned),
+                "columns": len(assigned.columns),
+                "overwritten": overwrite,
+            },
+            "display_data": False,
             "total_rows": len(assigned),
             "message": message,
         }

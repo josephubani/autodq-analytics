@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.3.11 - 2026-08-16
+
+- Replaced automatic `LET` table previews with compact assignment metadata in
+  `.adql` notebook cells.
+- Kept assigned snapshots reusable by name and preserved their DataFrames for
+  Python consumers without rendering their rows automatically.
+- Bundled AutoDQ 0.1.18.
+
 ## 0.3.10 - 2026-08-15
 
 - Bundled AutoDQ 0.1.17 with complete Python 3.10 and 3.11 compatibility in

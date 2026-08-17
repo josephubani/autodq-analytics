@@ -81,6 +81,7 @@ class ADQLResult:
     message: str
     data: pd.DataFrame | None = field(default=None, repr=False)
     value: Any = field(default=None, repr=False)
+    display_data: bool = field(default=True, repr=False)
     total_rows: int | None = None
     duration_seconds: float = 0.0
     error_type: str | None = None
@@ -114,6 +115,7 @@ class ADQLResult:
             "message": self.message,
             "data": data_summary,
             "value": serializable_value(self.value),
+            "display_data": self.display_data,
             "duration_seconds": self.duration_seconds,
             "error_type": self.error_type,
             "error_message": self.error_message,
@@ -193,7 +195,7 @@ class ADQLRunResult:
             message = html.escape(result.message)
             content = ""
 
-            if result.data is not None:
+            if result.data is not None and result.display_data:
                 content = result.data.head(100).to_html(
                     index=False,
                     escape=True,

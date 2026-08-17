@@ -110,6 +110,10 @@ ORDER BY total_revenue DESC;
 
 `LET` turns a stage or query result into a named dataset for later cells:
 
+`LET` prints only a compact assignment confirmation. It does not repeat the
+assigned table; use `HEAD regional_summary 10` or a bounded `SELECT` when you
+want to inspect the saved snapshot.
+
 ```adql
 # %% [Reusable regional result]
 LET regional_summary = SELECT Region,

@@ -153,6 +153,12 @@ Every assignment resets the snapshot index to a zero-based integer sequence.
 The snapshot is independent: later source mutations cannot change it. `LET`
 does not activate the new dataset.
 
+A successful assignment returns compact metadata for the target name, source,
+row count, column count, and overwrite status. Notebook and terminal renderers
+MUST NOT display the assigned rows automatically. The result object MAY retain
+the DataFrame for Python access, and the complete snapshot remains available
+through its registered dataset name.
+
 An existing target name causes an execution error unless `OVERWRITE` is
 present. The active dataset cannot be overwritten. For a `SELECT` assignment,
 the default 1,000-row query limit applies unless an explicit valid `LIMIT` is

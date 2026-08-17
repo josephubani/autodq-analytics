@@ -5,6 +5,23 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.18 - 2026-08-16
+
+### Changed
+
+- Changed ADQL `LET` rendering to show a compact assignment confirmation with
+  the dataset name, source, dimensions, and overwrite status instead of
+  automatically repeating the assigned table.
+- Preserved the assigned DataFrame on the Python result object and the complete
+  independent snapshot in the dataset registry for later queries and exports.
+- Advanced the bundled AutoDQ ADQL VS Code extension to 0.3.11 with the same
+  compact `LET` behavior in executable `.adql` notebook cells.
+
+### Fixed
+
+- Prevented large `LET ... = SELECT ...` and stage assignments from flooding
+  terminal, Jupyter, and VS Code notebook output with unnecessary row previews.
+
 ## 0.1.17 - 2026-08-15
 
 ### Fixed
