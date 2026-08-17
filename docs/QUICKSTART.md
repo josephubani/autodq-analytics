@@ -259,4 +259,4 @@ DRIFT BASELINE EXPORT sales_baseline TO "baselines/sales.json" OVERWRITE;
 - [Python API reference](API_REFERENCE.md)
 - [ADQL language reference](ADQL_SPEC.md)
 - [Troubleshooting](TROUBLESHOOTING.md)
-- [Complete sales workflow](../examples/sales_analysis.adql)
+- [Automatic sales workflow](../examples/sales_auto.adql)

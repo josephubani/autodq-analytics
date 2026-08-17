@@ -27,8 +27,8 @@ jobs:
       - name: Verify command line and ADQL
         run: |
           autodq --version
-          autodq validate examples/sales_analysis.adql
           autodq validate examples/sales_auto.adql
+          autodq validate examples/schema_drift_monitoring.adql
 
   distribution:
     runs-on: ubuntu-latest

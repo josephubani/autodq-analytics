@@ -11,6 +11,7 @@ venv/
 .pypirc
 .pypi-token
 .ipynb_checkpoints/
+/examples/sales_analysis.adql
 build/
 dist/
 

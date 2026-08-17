@@ -37,21 +37,21 @@ ORDER BY total_revenue DESC;
 Run the complete file from any terminal:
 
 ```bash
-autodq run examples/sales_analysis.adql
+autodq run examples/sales_auto.adql
 ```
 
 The shorter form is equivalent:
 
 ```bash
-autodq examples/sales_analysis.adql
+autodq examples/sales_auto.adql
 ```
 
 On macOS and Linux, a file containing the shown shebang can also be made
 executable once and run directly:
 
 ```bash
-chmod +x examples/sales_analysis.adql
-./examples/sales_analysis.adql
+chmod +x examples/sales_auto.adql
+./examples/sales_auto.adql
 ```
 
 Use `autodq validate analysis.adql` to check the entire file without running

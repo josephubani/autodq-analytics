@@ -36,8 +36,8 @@ jobs:
         run: |
           python -m unittest discover -s tests
           autodq --version
-          autodq validate examples/sales_analysis.adql
           autodq validate examples/sales_auto.adql
+          autodq validate examples/schema_drift_monitoring.adql
       - name: Build distributions
         run: python -m build
       - name: Inspect distributions

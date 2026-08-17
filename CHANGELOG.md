@@ -15,6 +15,9 @@ versioning and Python package releases follow PEP 440.
   explicit-mutation safeguards independently of notebook length.
 - Advanced the bundled AutoDQ ADQL VS Code extension to 0.3.12 so long
   notebooks run consistently in VS Code and the CLI.
+- Made `sales_auto.adql` the public sales example and excluded the personal
+  `sales_analysis.adql` notebook from Git, source distributions, documentation,
+  and release validation.
 
 ### Validation
 

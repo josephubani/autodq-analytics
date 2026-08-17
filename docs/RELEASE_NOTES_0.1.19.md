@@ -30,6 +30,13 @@ Regression coverage validates a 250-statement script, and the complete Python,
 extension, distribution, and clean-wheel acceptance checks are run before
 publication.
 
+## Distribution privacy
+
+The public package uses `examples/sales_auto.adql` as its sales workflow.
+Personal `examples/sales_analysis.adql` notebooks are ignored locally and are
+explicitly rejected from source distributions, preventing saved notebook
+outputs or private analysis work from entering a release.
+
 ## Versions
 
 - AutoDQ Python package: `0.1.19`

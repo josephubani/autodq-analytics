@@ -60,7 +60,6 @@ REQUIRED_SDIST_SUFFIXES = {
     "/docs/QUICKSTART.md",
     "/docs/TROUBLESHOOTING.md",
     "/examples/sales_auto.adql",
-    "/examples/sales_analysis.adql",
     "/examples/schema_drift_monitoring.adql",
     "/pyproject.toml",
     "/scripts/check_distribution.py",
@@ -69,6 +68,7 @@ REQUIRED_SDIST_SUFFIXES = {
     "/tests/test_release_acceptance.py",
 }
 FORBIDDEN_PARTS = {"__pycache__", ".DS_Store"}
+FORBIDDEN_SDIST_SUFFIXES = {"/examples/sales_analysis.adql"}
 
 
 def normalized_name(value: str) -> str:
@@ -193,6 +193,17 @@ def inspect_sdist(path: Path) -> None:
         if not any(name.endswith(suffix) for name in names)
     }
     require(not missing, f"Source archive is missing: {', '.join(sorted(missing))}")
+
+    private_files = {
+        suffix
+        for suffix in FORBIDDEN_SDIST_SUFFIXES
+        if any(name.endswith(suffix) for name in names)
+    }
+    require(
+        not private_files,
+        "Source archive contains private files: "
+        + ", ".join(sorted(private_files)),
+    )
 
     forbidden = forbidden_members(names, allow_egg_info=True)
     require(not forbidden, f"Source archive contains forbidden files: {forbidden}")

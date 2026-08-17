@@ -39,8 +39,8 @@ python -m pip install -e ".[dev]"
 ```bash
 python -m unittest discover -s tests
 autodq --version
-autodq validate examples/sales_analysis.adql
 autodq validate examples/sales_auto.adql
+autodq validate examples/schema_drift_monitoring.adql
 ```
 
 All tests and commands must complete successfully before building artifacts.
@@ -106,7 +106,7 @@ python -m pip install dist/autodq-*.whl
 
 python -c "import autodq; print(autodq.__version__)"
 autodq --version
-autodq cells examples/sales_analysis.adql
+autodq cells examples/sales_auto.adql
 autodq vscode path
 python -m pip check
 ```

@@ -7,6 +7,7 @@ include requirements-dev.txt
 
 recursive-include docs *.md
 recursive-include examples *.adql *.py
+exclude examples/sales_analysis.adql
 recursive-include .github *.yml
 recursive-include scripts *.py
 recursive-include tests *.py

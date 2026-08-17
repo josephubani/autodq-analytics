@@ -236,6 +236,7 @@ class PackagingTests(unittest.TestCase):
 
         self.assertIn("recursive-include docs *.md", manifest)
         self.assertIn("recursive-include examples *.adql *.py", manifest)
+        self.assertIn("exclude examples/sales_analysis.adql", manifest)
         self.assertIn("recursive-include .github *.yml", manifest)
         self.assertIn("recursive-include scripts *.py", manifest)
         self.assertIn("recursive-include tests *.py", manifest)
