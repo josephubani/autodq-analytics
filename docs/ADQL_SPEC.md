@@ -900,5 +900,6 @@ the saved cell source.
 - Existing export files require `OVERWRITE`.
 - A query returns at most 1,000 rows by default.
 - Explicit `LIMIT` supports at most 10,000 rows.
-- Scripts support at most 100 statements and 100,000 source characters.
+- Scripts have no statement-count limit. Source text remains limited to
+  100,000 characters.
 - Every executed run is recorded in `project.adql_history` and the session log.

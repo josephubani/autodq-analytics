@@ -167,6 +167,17 @@ def write_adql(path: Path) -> None:
     )
 
 
+def write_long_adql(path: Path) -> None:
+    statements = "\n".join("HELP;" for _ in range(250))
+    path.write_text(
+        "# %% [Dataset]\n"
+        "DATASET \"acceptance.csv\" TARGET Revenue;\n"
+        "# %% [Long workflow validation]\n"
+        f"{statements}\n",
+        encoding="utf-8",
+    )
+
+
 def write_customers(path: Path) -> None:
     with path.open("w", encoding="utf-8", newline="") as stream:
         writer = csv.writer(stream)
@@ -205,10 +216,12 @@ def main() -> int:
         dataset = workspace / "acceptance.csv"
         customers = workspace / "customers.csv"
         workflow = workspace / "acceptance.adql"
+        long_workflow = workspace / "long-acceptance.adql"
         result_path = workspace / "result.json"
         row_count = write_dataset(dataset)
         write_customers(customers)
         write_adql(workflow)
+        write_long_adql(long_workflow)
 
         run(
             [
@@ -237,6 +250,7 @@ def main() -> int:
             )
 
         run([str(autodq), "validate", str(workflow)], cwd=workspace)
+        run([str(autodq), "validate", str(long_workflow)], cwd=workspace)
         run(
             [
                 str(autodq),

@@ -55,7 +55,7 @@ REQUIRED_SDIST_SUFFIXES = {
     "/MANIFEST.in",
     "/README.md",
     "/docs/RELEASING.md",
-    "/docs/RELEASE_NOTES_0.1.18.md",
+    "/docs/RELEASE_NOTES_0.1.19.md",
     "/docs/VSCODE_MARKETPLACE.md",
     "/docs/QUICKSTART.md",
     "/docs/TROUBLESHOOTING.md",
@@ -171,7 +171,21 @@ def inspect_wheel(path: Path) -> str:
 
 def inspect_sdist(path: Path) -> None:
     with tarfile.open(path, "r:gz") as archive:
-        names = {member.name for member in archive.getmembers()}
+        members = archive.getmembers()
+        names = {member.name for member in members}
+        cached_examples = []
+
+        for member in members:
+            if (
+                member.isfile()
+                and "/examples/" in member.name
+                and member.name.endswith(".adql")
+            ):
+                stream = archive.extractfile(member)
+                content = stream.read() if stream is not None else b""
+
+                if b"<autodq-output-cache" in content:
+                    cached_examples.append(member.name)
 
     missing = {
         suffix
@@ -182,6 +196,11 @@ def inspect_sdist(path: Path) -> None:
 
     forbidden = forbidden_members(names, allow_egg_info=True)
     require(not forbidden, f"Source archive contains forbidden files: {forbidden}")
+    require(
+        not cached_examples,
+        "Source archive contains saved notebook output in ADQL examples: "
+        + ", ".join(cached_examples),
+    )
 
 
 def find_one(directory: Path, pattern: str, label: str) -> Path:

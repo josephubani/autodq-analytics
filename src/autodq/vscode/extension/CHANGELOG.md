@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.3.12 - 2026-08-16
+
+- Removed the former 100-statement runtime limit from executable `.adql`
+  notebooks through the bundled AutoDQ 0.1.19 runtime.
+- Retained independent source-size, query-row, and execution safeguards for
+  long-running notebook workflows.
+
 ## 0.3.11 - 2026-08-16
 
 - Replaced automatic `LET` table previews with compact assignment metadata in

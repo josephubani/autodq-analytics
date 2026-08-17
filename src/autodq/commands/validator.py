@@ -15,7 +15,6 @@ class ADQLValidator:
     """Validate parsed ADQL before any project operation is executed."""
 
     MAX_SOURCE_LENGTH = 100_000
-    MAX_STATEMENTS = 100
     MAX_QUERY_ROWS = 10_000
     MAX_WHERE_CONDITIONS = 50
 
@@ -23,11 +22,6 @@ class ADQLValidator:
         if len(script.source) > self.MAX_SOURCE_LENGTH:
             raise ADQLValidationError(
                 f"ADQL source exceeds {self.MAX_SOURCE_LENGTH:,} characters."
-            )
-
-        if script.statement_count > self.MAX_STATEMENTS:
-            raise ADQLValidationError(
-                f"ADQL scripts support at most {self.MAX_STATEMENTS} statements."
             )
 
         for statement in script.statements:

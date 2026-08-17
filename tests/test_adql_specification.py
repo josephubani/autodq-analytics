@@ -264,7 +264,6 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
         validator = ADQLValidator()
 
         self.assertEqual(validator.MAX_SOURCE_LENGTH, 100_000)
-        self.assertEqual(validator.MAX_STATEMENTS, 100)
         self.assertEqual(validator.MAX_QUERY_ROWS, 10_000)
         self.assertEqual(validator.MAX_WHERE_CONDITIONS, 50)
 
@@ -273,6 +272,14 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
                 "SELECT * FROM CURRENT LIMIT 10001;"
             )
             validator.validate(script)
+
+    def test_adql_scripts_have_no_statement_count_limit(self):
+        source = "\n".join("HELP;" for _ in range(250))
+        script = ADQLParser().parse(source)
+
+        ADQLValidator().validate(script)
+
+        self.assertEqual(script.statement_count, 250)
 
     def test_adql_2_rejects_or_with_versioned_diagnostic(self):
         with self.assertRaisesRegex(ADQLSyntaxError, r"ADQL 2\.3"):

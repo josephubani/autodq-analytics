@@ -5,6 +5,21 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.19 - 2026-08-16
+
+### Changed
+
+- Removed the fixed 100-statement validation limit from ADQL scripts and
+  executable `.adql` notebooks.
+- Preserved source-size, query-row, WHERE-condition, command allowlist, and
+  explicit-mutation safeguards independently of notebook length.
+- Advanced the bundled AutoDQ ADQL VS Code extension to 0.3.12 so long
+  notebooks run consistently in VS Code and the CLI.
+
+### Validation
+
+- Added regression coverage that validates a 250-statement ADQL script.
+
 ## 0.1.18 - 2026-08-16
 
 ### Changed
