@@ -29,6 +29,7 @@ class AutoEngine:
 
         if config.refresh:
             project.state.reset_outputs()
+            project._clear_visualization_outputs()
             project.state.auto_run_report = result
 
         stages = [

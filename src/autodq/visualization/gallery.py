@@ -114,6 +114,29 @@ class VisualizationGallery:
     def clear(self) -> None:
         self._charts.clear()
 
+    def remove_stages(self, *stages: str) -> list[VisualizationSpec]:
+        """Remove charts derived from invalidated workflow stages."""
+        normalized = {
+            str(stage).lower().strip()
+            for stage in stages
+            if str(stage).strip()
+        }
+
+        if not normalized:
+            return []
+
+        removed = [
+            chart
+            for chart in self._charts
+            if str(chart.stage).lower().strip() in normalized
+        ]
+        self._charts = [
+            chart
+            for chart in self._charts
+            if str(chart.stage).lower().strip() not in normalized
+        ]
+        return removed
+
     def _find_index(self, candidate) -> int | None:
         signature = self._signature(candidate)
 

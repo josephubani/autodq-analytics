@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.3.13 - 2026-08-21
+
+- Bundled AutoDQ 0.1.20 lifecycle fixes for named datasets, cleaning,
+  feature engineering, model invalidation, and visualization galleries.
+- Added actionable notebook guidance when `STAGE cleaned` or
+  `STAGE engineered` is unavailable for a named snapshot.
+- Prevented invalid visualization stages from silently falling back to the
+  current dataset.
+
 ## 0.3.12 - 2026-08-16
 
 - Removed the former 100-statement runtime limit from executable `.adql`

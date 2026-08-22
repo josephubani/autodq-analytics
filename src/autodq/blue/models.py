@@ -68,6 +68,7 @@ class BLUEReport:
     features_analyzed: int
     overall_status: str
     suitability_score: float
+    source: str = "data"
     
     features_used: list[str] = field(default_factory=list)
     excluded_features: list[str] = field(default_factory=list)
@@ -103,6 +104,7 @@ class BLUEReport:
     def to_dict(self) -> dict:
         return {
             "target": self.target,
+            "source": self.source,
             "rows_analyzed": self.rows_analyzed,
             "features_analyzed": self.features_analyzed,
             "overall_status": self.overall_status,

@@ -239,13 +239,38 @@ class ADQLExecutor:
             parameters.setdefault("chart", "auto")
             parameters.setdefault("display", False)
             value = project.visualize(**parameters)
+            chart_count = value.chart_count if value is not None else 0
+
+            if chart_count:
+                message = f"Generated {chart_count} visualization(s)."
+            else:
+                stage = str(parameters.get("stage", "current")).lower()
+                active = project.dataset_manager.primary()
+                active_name = active.name if active is not None else "current"
+
+                if stage in {"engineered", "features"}:
+                    message = (
+                        "No visualization was generated because the engineered "
+                        f"stage is unavailable for dataset {active_name}. Run "
+                        "FEATURE APPLY, or use STAGE current when this named "
+                        "dataset already contains engineered columns."
+                    )
+                elif stage in {"after", "cleaned"}:
+                    message = (
+                        "No visualization was generated because the cleaned "
+                        f"stage is unavailable for dataset {active_name}. Run "
+                        "CLEAN or CLEANING APPLY, or use STAGE current when this "
+                        "named dataset is already a cleaned snapshot."
+                    )
+                else:
+                    message = (
+                        "No visualization matched the requested chart and "
+                        "columns. Check the active dataset and column names."
+                    )
+
             return {
                 "value": value,
-                "message": (
-                    f"Generated {value.chart_count} visualization(s)."
-                    if value is not None
-                    else "No visualization was generated."
-                ),
+                "message": message,
             }
 
         if kind == "MODEL":

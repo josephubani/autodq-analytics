@@ -145,6 +145,94 @@ class AutoDQ:
     def data(self):
         return self.state.data
 
+    def _registered_dataset_data(self, name: str) -> pd.DataFrame:
+        """Return the live active frame or a registered dataset snapshot."""
+        entry = self.dataset_manager.get(name)
+        active = self.dataset_manager.primary()
+
+        if (
+            active is not None
+            and active.name == entry.name
+            and self.state.data is not None
+        ):
+            return self.state.data
+
+        return entry.data
+
+    def _sync_active_dataset(self) -> None:
+        active = self.dataset_manager.primary()
+
+        if active is not None and self.state.data is not None:
+            active.data = self.state.data.copy()
+
+    def _refresh_visualization_report(self) -> None:
+        if not self.visualization_gallery.charts:
+            self.state.visualization_report = None
+            return
+
+        self.state.visualization_report = self.visualization_gallery.to_report()
+        self.state.visualization_report.auto_display = False
+
+    def _clear_visualization_outputs(self) -> None:
+        self.visualization_gallery.clear()
+        self.state.visualization_report = None
+
+    def _discard_visualization_stages(self, *stages: str) -> None:
+        self.visualization_gallery.remove_stages(*stages)
+        self._refresh_visualization_report()
+
+    def _invalidate_model_dependents(
+        self,
+        *,
+        preserve_data_blue: bool = False,
+    ) -> None:
+        keep_blue = bool(
+            preserve_data_blue
+            and self.state.blue_report is not None
+            and getattr(self.state.blue_report, "source", "data") == "data"
+        )
+        self.state.model_bundle = None
+        self.state.prediction_report = None
+        self.state.prediction_data = None
+        self.state.explainability_report = None
+        self.state.dashboard_report = None
+        self.state.auto_run_report = None
+
+        if not keep_blue:
+            self.state.blue_report = None
+            self._discard_visualization_stages("blue")
+
+    def _invalidate_engineered_pipeline(self) -> None:
+        self.state.engineered_data = None
+        self.state.model_report = None
+        self._invalidate_model_dependents()
+        self._discard_visualization_stages("engineered", "features")
+
+    def _invalidate_cleaned_pipeline(self) -> None:
+        self.state.validation_report = None
+        self._invalidate_engineered_pipeline()
+        self._discard_visualization_stages(
+            "after",
+            "cleaned",
+            "comparison",
+        )
+
+    def _invalidate_target_pipeline(self) -> None:
+        self.state.correlation_report = None
+        self.state.ml_readiness_report = None
+        self.state.feature_report = None
+        self._invalidate_engineered_pipeline()
+
+    def _activate_replaced_dataset(self, entry) -> None:
+        self.state.dataset_path = (
+            Path(entry.path)
+            if entry.path is not None
+            else Path(f"{entry.name}.in_memory")
+        )
+        self.state.reset_outputs()
+        self._clear_visualization_outputs()
+        self.state.data = entry.data.copy()
+
     @property
     def blue_engine(self):
         if self._blue_engine is None:
@@ -511,6 +599,7 @@ class AutoDQ:
 
     def change_dataset(self, dataset_path: str) -> pd.DataFrame:
         self.state.reset_all(dataset_path)
+        self._clear_visualization_outputs()
         self.dataset_manager.add(
             name="main",
             dataset_path=self.state.dataset_path,
@@ -528,12 +617,27 @@ class AutoDQ:
         return self.load()
 
     def set_target(self, target: str) -> None:
-        self.state.target = target
+        normalized = str(target).strip()
+
+        if not normalized:
+            raise ValueError("Target column cannot be empty.")
+
+        previous = self.state.target
+        changed = previous != normalized
+
+        if changed:
+            self._invalidate_target_pipeline()
+
+        self.state.target = normalized
 
         self.session.log(
             step="set_target",
             message="Target column updated.",
-            metadata={"target": target},
+            metadata={
+                "target": normalized,
+                "previous_target": previous,
+                "changed": changed,
+            },
         )
 
     _HUMAN_DATETIME_TOKENS = {
@@ -749,6 +853,8 @@ class AutoDQ:
         }
 
         self.state.reset_outputs()
+        self._clear_visualization_outputs()
+        self._sync_active_dataset()
 
         self.session.log(
             step="set_type",
@@ -1383,7 +1489,7 @@ class AutoDQ:
         if isinstance(dataset, pd.DataFrame):
             return dataset.copy(), "dataframe"
         if isinstance(dataset, str):
-            return self.dataset_manager.get_data(dataset).copy(), dataset
+            return self._registered_dataset_data(dataset).copy(), dataset
         if dataset is not None:
             raise TypeError("Dataset must be a registered name, DataFrame, or None.")
         if self.state.data is None:
@@ -1917,6 +2023,7 @@ class AutoDQ:
             decision_plan=decision_plan,
         )
 
+        self._invalidate_cleaned_pipeline()
         self.state.cleaned_data = cleaned_data
         self.state.cleaning_report = cleaning_report
 
@@ -2035,7 +2142,24 @@ class AutoDQ:
         if self.state.data is None:
             self.load()
 
-        stage_normalized = stage.lower().strip()
+        stage_normalized = str(stage).lower().strip()
+        supported_stages = {
+            "current",
+            "raw",
+            "data",
+            "before",
+            "cleaned",
+            "after",
+            "engineered",
+            "features",
+        }
+
+        if stage_normalized not in supported_stages:
+            supported = ", ".join(sorted(supported_stages))
+            raise ValueError(
+                f"Unsupported visualization stage: {stage}. "
+                f"Supported stages: {supported}."
+            )
 
         if stage_normalized in {"after", "cleaned"}:
             if self.state.cleaned_data is None:
@@ -2480,7 +2604,7 @@ class AutoDQ:
         """Evaluate transparent ML readiness, optionally against a baseline."""
         if isinstance(reference, str):
             reference_name = reference_name or reference
-            reference_data = self.dataset_manager.get_data(reference).copy()
+            reference_data = self._registered_dataset_data(reference).copy()
         elif isinstance(reference, pd.DataFrame):
             reference_data = reference.copy()
         elif reference is None:
@@ -2597,7 +2721,7 @@ class AutoDQ:
         else:
             active_df = self.state.data
 
-        self.state.engineered_data = self.feature_engine.create_manual_feature(
+        engineered_data = self.feature_engine.create_manual_feature(
             df=active_df,
             name=name,
             method=method,
@@ -2607,6 +2731,9 @@ class AutoDQ:
             bins=bins,
             labels=labels,
         )
+
+        self._invalidate_engineered_pipeline()
+        self.state.engineered_data = engineered_data
 
         self.session.log(
             step="create_feature",
@@ -2637,11 +2764,14 @@ class AutoDQ:
             if self.state.cleaned_data is not None
             else self.state.data
         )
-        self.state.engineered_data = self.feature_engine.apply(
+        engineered_data = self.feature_engine.apply(
             df=active_df,
             feature_report=self.state.feature_report,
             selected_features=features,
         )
+
+        self._invalidate_engineered_pipeline()
+        self.state.engineered_data = engineered_data
 
         added_columns = [
             column
@@ -2716,7 +2846,7 @@ class AutoDQ:
             final_exclusions.extend(leakage_candidates)
             final_exclusions = sorted(set(final_exclusions))
 
-        self.state.model_report = self.ml_engine.train(
+        model_report = self.ml_engine.train(
             df=active_df,
             target=self.state.target,
             algorithm=algorithm,
@@ -2724,10 +2854,8 @@ class AutoDQ:
             random_state=random_state,
             exclude_features=final_exclusions,
         )
-        self.state.model_bundle = None
-        self.state.prediction_report = None
-        self.state.prediction_data = None
-        self.state.explainability_report = None
+        self._invalidate_model_dependents(preserve_data_blue=True)
+        self.state.model_report = model_report
 
         self.session.log(
             step="model",
@@ -2840,12 +2968,10 @@ class AutoDQ:
         bundle = self.model_persistence_engine.load(source)
         report = bundle.model_report
 
-        self.state.target = report.target
+        self.set_target(report.target)
+        self._invalidate_model_dependents(preserve_data_blue=True)
         self.state.model_report = report
         self.state.model_bundle = bundle
-        self.state.prediction_report = None
-        self.state.prediction_data = None
-        self.state.explainability_report = None
 
         self.session.log(
             step="load_model",
@@ -3152,12 +3278,21 @@ class AutoDQ:
         data: pd.DataFrame | None = None,
         overwrite: bool = False,
     ) -> pd.DataFrame:
+        active = self.dataset_manager.primary()
+        replacing_active = bool(
+            overwrite
+            and active is not None
+            and active.name == str(name).strip()
+        )
         entry = self.dataset_manager.add(
             name=name,
             dataset_path=dataset_path,
             data=data,
             overwrite=overwrite,
         )
+
+        if replacing_active:
+            self._activate_replaced_dataset(entry)
 
         self.session.log(
             step="add_dataset",
@@ -3262,6 +3397,7 @@ class AutoDQ:
 
         if reset_outputs:
             self.state.reset_outputs()
+            self._clear_visualization_outputs()
 
         self.state.data = entry.data.copy()
 
@@ -3291,8 +3427,8 @@ class AutoDQ:
         suffixes: tuple[str, str] = ("_left", "_right"),
         make_active: bool = True,
     ) -> pd.DataFrame:
-        left_df = self.dataset_manager.get_data(left)
-        right_df = self.dataset_manager.get_data(right)
+        left_df = self._registered_dataset_data(left).copy()
+        right_df = self._registered_dataset_data(right).copy()
 
         merged_df, merge_report = self.dataset_merger.merge(
             left_df=left_df,
@@ -3309,20 +3445,33 @@ class AutoDQ:
 
         final_name = output_name or f"{left}_{right}_merged"
 
-        self.dataset_manager.add(
+        active = self.dataset_manager.primary()
+        replacing_active = bool(
+            active is not None and active.name == final_name
+        )
+
+        if replacing_active and not make_active:
+            raise ValueError(
+                "Cannot overwrite the active merge output while "
+                "make_active=False. Choose a different output name."
+            )
+
+        entry = self.dataset_manager.add(
             name=final_name,
             data=merged_df,
             overwrite=True,
         )
 
-        self.state.merge_report = merge_report
-
         if make_active:
-            self.use_dataset(
-                final_name,
-                reset_outputs=True,
-            )
-            self.state.merge_report = merge_report
+            if replacing_active:
+                self._activate_replaced_dataset(entry)
+            else:
+                self.use_dataset(
+                    final_name,
+                    reset_outputs=True,
+                )
+
+        self.state.merge_report = merge_report
 
         self.session.log(
             step="merge_datasets",
@@ -3342,7 +3491,7 @@ class AutoDQ:
         make_active: bool = True,
     ) -> pd.DataFrame:
         frames = [
-            self.dataset_manager.get_data(name)
+            self._registered_dataset_data(name).copy()
             for name in datasets
         ]
 
@@ -3354,20 +3503,33 @@ class AutoDQ:
             join=join,
         )
 
-        self.dataset_manager.add(
+        active = self.dataset_manager.primary()
+        replacing_active = bool(
+            active is not None and active.name == output_name
+        )
+
+        if replacing_active and not make_active:
+            raise ValueError(
+                "Cannot overwrite the active concatenation output while "
+                "make_active=False. Choose a different output name."
+            )
+
+        entry = self.dataset_manager.add(
             name=output_name,
             data=combined_df,
             overwrite=True,
         )
 
-        self.state.concat_report = concat_report
-
         if make_active:
-            self.use_dataset(
-                output_name,
-                reset_outputs=True,
-            )
-            self.state.concat_report = concat_report
+            if replacing_active:
+                self._activate_replaced_dataset(entry)
+            else:
+                self.use_dataset(
+                    output_name,
+                    reset_outputs=True,
+                )
+
+        self.state.concat_report = concat_report
 
         self.session.log(
             step="concat_datasets",

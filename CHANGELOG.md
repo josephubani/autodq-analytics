@@ -5,6 +5,34 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.20 - 2026-08-21
+
+### Fixed
+
+- Made named-dataset consumers use the live active dataset after type changes,
+  including schema contracts, drift baselines, readiness references, merges,
+  and concatenations.
+- Invalidated stale engineered data, models, predictions, explanations, BLUE
+  diagnostics, dashboards, and derived charts when cleaning, features, or the
+  target changes.
+- Cleared visualization galleries when changing or replacing the active
+  dataset so dashboards cannot reuse charts from another dataset.
+- Preserved the active-dataset pointer when `ADD DATASET ... OVERWRITE`
+  replaces the active name.
+- Added actionable ADQL guidance for unavailable cleaned and engineered
+  visualization stages and rejected unknown stages explicitly.
+
+### Changed
+
+- Recorded whether BLUE diagnostics came from data or the trained model so
+  model retraining invalidates only model-dependent BLUE results.
+- Advanced the bundled AutoDQ ADQL VS Code extension to 0.3.13.
+
+### Validation
+
+- Added cross-stage regression coverage and completed 219 Python tests, the
+  extension tests, public ADQL workflow checks, and clean distribution checks.
+
 ## 0.1.19 - 2026-08-16
 
 ### Changed

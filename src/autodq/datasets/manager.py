@@ -23,8 +23,9 @@ class DatasetManager:
         overwrite: bool = False,
     ) -> DatasetEntry:
         normalized_name = self._normalize_name(name)
+        existing = self._datasets.get(normalized_name)
 
-        if normalized_name in self._datasets and not overwrite:
+        if existing is not None and not overwrite:
             raise ValueError(
                 f"Dataset '{normalized_name}' already exists. "
                 "Use overwrite=True to replace it."
@@ -51,7 +52,12 @@ class DatasetManager:
                 "Loaded dataset must be a pandas DataFrame."
             )
 
-        if is_primary:
+        effective_primary = bool(
+            is_primary
+            or (existing is not None and existing.is_primary)
+        )
+
+        if effective_primary:
             for entry in self._datasets.values():
                 entry.is_primary = False
 
@@ -59,7 +65,7 @@ class DatasetManager:
             name=normalized_name,
             path=stored_path,
             data=loaded_data,
-            is_primary=is_primary,
+            is_primary=effective_primary,
         )
 
         self._datasets[normalized_name] = entry

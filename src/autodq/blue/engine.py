@@ -225,6 +225,7 @@ class BLUEEngine:
 
         return BLUEReport(
             target=target,
+            source="data",
             rows_analyzed=len(model_df),
             features_analyzed=len(feature_columns),
             overall_status=overall_status,
@@ -440,6 +441,7 @@ class BLUEEngine:
 
         return BLUEReport(
             target=target,
+            source="trained_model",
             rows_analyzed=len(X),
             features_analyzed=vif_frame.shape[1],
             overall_status=overall_status,
