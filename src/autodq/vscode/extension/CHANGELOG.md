@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+## 0.3.14 - 2026-08-26
+
+- Paired the ADQL notebook extension with AutoDQ 0.1.21 and its new headless
+  pipeline runner contract.
+- Documented that cloud and scheduled runs use the same validated ADQL runtime
+  as interactive VS Code notebook cells.
+- Preserved the ADQL 2.3 grammar and notebook behavior unchanged.
+
 ## 0.3.13 - 2026-08-21
 
 - Bundled AutoDQ 0.1.20 lifecycle fixes for named datasets, cleaning,

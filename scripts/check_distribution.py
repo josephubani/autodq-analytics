@@ -29,6 +29,10 @@ REQUIRED_WHEEL_FILES = {
     "autodq/__main__.py",
     "autodq/_version.py",
     "autodq/cli.py",
+    "autodq/pipeline/__init__.py",
+    "autodq/pipeline/connectors.py",
+    "autodq/pipeline/models.py",
+    "autodq/pipeline/runner.py",
     "autodq/quality_tests/__init__.py",
     "autodq/quality_tests/engine.py",
     "autodq/quality_tests/models.py",
@@ -55,7 +59,8 @@ REQUIRED_SDIST_SUFFIXES = {
     "/MANIFEST.in",
     "/README.md",
     "/docs/RELEASING.md",
-    "/docs/RELEASE_NOTES_0.1.20.md",
+    "/docs/PIPELINE_RUNNER.md",
+    "/docs/RELEASE_NOTES_0.1.21.md",
     "/docs/VSCODE_MARKETPLACE.md",
     "/docs/QUICKSTART.md",
     "/docs/TROUBLESHOOTING.md",
@@ -65,6 +70,7 @@ REQUIRED_SDIST_SUFFIXES = {
     "/scripts/check_distribution.py",
     "/scripts/smoke_test_wheel.py",
     "/tests/test_packaging.py",
+    "/tests/test_pipeline_runner.py",
     "/tests/test_release_acceptance.py",
 }
 FORBIDDEN_PARTS = {"__pycache__", ".DS_Store"}

@@ -5,6 +5,34 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.21 - 2026-08-26
+
+### Added
+
+- Added the platform-neutral `PipelineRunSpec`, `PipelineRunResult`, and
+  `PipelineRunner` Python APIs for headless ADQL execution.
+- Added `autodq pipeline` for direct workflows and reusable JSON run
+  specifications with one machine-readable JSON response.
+- Added stable orchestration exit codes for success, workflow-gate failures,
+  configuration errors, and unexpected platform failures.
+- Added UTC run identity and timing, orchestration metadata, environment
+  details, bounded stdout/stderr capture, lifecycle events, run metrics, and
+  artifact discovery.
+- Added replaceable source-resolver and artifact-store protocols with safe
+  local path and `file://` implementations as the foundation for Fabric,
+  Azure Data Factory, Databricks, and Snowflake adapters.
+
+### Changed
+
+- Advanced the paired AutoDQ ADQL VS Code extension to 0.3.14 while retaining
+  the ADQL 2.3 syntax and notebook behavior.
+
+### Validation
+
+- Added pipeline acceptance and failure-path coverage for direct runs, JSON
+  specifications, quality-gate failures, missing inputs, overwrite protection,
+  unsupported cloud URIs, custom artifact failures, and clean CLI JSON output.
+
 ## 0.1.20 - 2026-08-21
 
 ### Fixed

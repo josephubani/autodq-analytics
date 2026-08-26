@@ -17,6 +17,7 @@ from autodq._version import __version__
 from autodq.commands.errors import ADQLError
 from autodq.commands.models import serializable_value
 from autodq.commands.runner import ADQLFileRunner
+from autodq.pipeline import PipelineRunSpec, PipelineRunner
 from autodq.vscode import extension_path, install_extension
 
 
@@ -72,6 +73,59 @@ def _build_parser() -> argparse.ArgumentParser:
         help=argparse.SUPPRESS,
     )
 
+    pipeline = commands.add_parser(
+        "pipeline",
+        help="Run ADQL through the platform-neutral pipeline contract.",
+    )
+    pipeline_source = pipeline.add_mutually_exclusive_group(required=True)
+    pipeline_source.add_argument(
+        "--workflow",
+        help="Path to the .adql workflow.",
+    )
+    pipeline_source.add_argument(
+        "--spec",
+        help="Path to a pipeline run specification JSON file.",
+    )
+    pipeline.add_argument("--dataset", help="Override the dataset reference.")
+    pipeline.add_argument("--target", help="Override the target column.")
+    pipeline_selection = pipeline.add_mutually_exclusive_group()
+    pipeline_selection.add_argument("--cell", type=int)
+    pipeline_selection.add_argument("--through-cell", type=int)
+    pipeline.add_argument(
+        "--continue-on-error",
+        action="store_true",
+        default=None,
+        help="Continue after failed ADQL statements.",
+    )
+    pipeline.add_argument(
+        "--working-directory",
+        help="Base directory for relative workflow, dataset, and result paths.",
+    )
+    pipeline.add_argument(
+        "--result",
+        dest="result_path",
+        help="Persist the complete pipeline result as JSON.",
+    )
+    pipeline.add_argument(
+        "--overwrite-result",
+        action="store_true",
+        default=None,
+        help="Allow an existing pipeline result file to be replaced.",
+    )
+    pipeline.add_argument(
+        "--run-id",
+        help="Stable run identifier supplied by the orchestrator.",
+    )
+    pipeline.add_argument(
+        "--metadata",
+        help="JSON object containing orchestration metadata.",
+    )
+    pipeline.add_argument(
+        "--max-log-characters",
+        type=int,
+        help="Maximum captured characters for each stdout/stderr log.",
+    )
+
     kernel = commands.add_parser("kernel", help=argparse.SUPPRESS)
     kernel.add_argument("path")
 
@@ -109,6 +163,42 @@ def _normalise_argv(argv: list[str]) -> list[str]:
         return ["run", *argv]
 
     return argv
+
+
+def _pipeline_spec(options) -> PipelineRunSpec:
+    if options.spec is not None:
+        values = PipelineRunSpec.from_json(options.spec).to_dict()
+        values.pop("schema_version", None)
+    else:
+        values = {"workflow": options.workflow}
+
+    overrides = {
+        "dataset": options.dataset,
+        "target": options.target,
+        "cell": options.cell,
+        "through_cell": options.through_cell,
+        "continue_on_error": options.continue_on_error,
+        "working_directory": options.working_directory,
+        "result_path": options.result_path,
+        "overwrite_result": options.overwrite_result,
+        "run_id": options.run_id,
+        "max_log_characters": options.max_log_characters,
+    }
+
+    for name, value in overrides.items():
+        if value is not None:
+            values[name] = value
+
+    if options.metadata is not None:
+        metadata = json.loads(options.metadata)
+        if not isinstance(metadata, dict):
+            raise ValueError("--metadata must contain a JSON object.")
+        values["metadata"] = {
+            **values.get("metadata", {}),
+            **metadata,
+        }
+
+    return PipelineRunSpec.from_dict(values)
 
 
 def _render_run(result) -> None:
@@ -2076,6 +2166,32 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"Result JSON: {output}")
 
             return 0 if result.success else 1
+
+        if options.command == "pipeline":
+            pipeline_runner = PipelineRunner()
+
+            try:
+                spec = _pipeline_spec(options)
+                result = pipeline_runner.run(spec)
+            except (
+                json.JSONDecodeError,
+                FileNotFoundError,
+                TypeError,
+                ValueError,
+            ) as error:
+                result = pipeline_runner.configuration_error(
+                    error,
+                    run_id=options.run_id,
+                )
+
+            print(
+                json.dumps(
+                    result.to_dict(),
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            )
+            return result.exit_code
 
         if options.command == "validate":
             document = runner.validate(

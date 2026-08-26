@@ -45,6 +45,14 @@
     - Compact statistical baselines with no source-row storage
     - Schema, missingness, PSI, category, range, duplicate, and row-count drift
     - Python, ADQL, notebook, report, workspace, and release integration
+13. Platform-neutral pipeline foundation
+    - Serializable run specifications and results
+    - Stable orchestration exit codes and machine-readable CLI output
+    - Run IDs, UTC timing, environment metadata, metrics, bounded logs, and
+      lifecycle events
+    - Automatic output-artifact discovery
+    - Replaceable source-resolver and result-store protocols
+    - Installed-wheel pipeline acceptance coverage
 
 ## 0.1.0 release status
 
@@ -55,6 +63,19 @@
   and complete ADQL `AUTO` verification.
 
 All items in the original AutoDQ development roadmap are complete.
+
+## Next product phases
+
+1. Operational analytics
+   - KPI, process, bottleneck, SLA, anomaly, trend, and forecasting workflows
+2. Prescriptive analytics
+   - Objectives, constraints, what-if scenarios, optimization, prioritized
+     actions, expected impact, risk, confidence, approvals, and execution audit
+3. Native platform adapters
+   - Microsoft Fabric and OneLake
+   - Databricks jobs, wheels, and asset bundles
+   - Azure Data Factory orchestration templates
+   - Snowflake and Snowpark
 
 ## Post-0.1.0 maintenance
 

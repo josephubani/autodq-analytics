@@ -68,6 +68,19 @@ from autodq.schema_drift import (
     SchemaValidationReport,
     SchemaValidationResult,
 )
+from autodq.pipeline import (
+    PIPELINE_SCHEMA_VERSION,
+    LocalArtifactStore,
+    LocalSourceResolver,
+    PipelineArtifact,
+    PipelineArtifactStore,
+    PipelineEvent,
+    PipelineExitCode,
+    PipelineRunResult,
+    PipelineRunSpec,
+    PipelineRunner,
+    PipelineSourceResolver,
+)
 
 __all__ = [
     "__version__",
@@ -108,6 +121,17 @@ __all__ = [
     "MLReadinessIssue",
     "MLReadinessReport",
     "OutlierReviewReport",
+    "PIPELINE_SCHEMA_VERSION",
+    "LocalArtifactStore",
+    "LocalSourceResolver",
+    "PipelineArtifact",
+    "PipelineArtifactStore",
+    "PipelineEvent",
+    "PipelineExitCode",
+    "PipelineRunResult",
+    "PipelineRunSpec",
+    "PipelineRunner",
+    "PipelineSourceResolver",
     "QualityAssertion",
     "QualityTestEngine",
     "QualityTestReport",

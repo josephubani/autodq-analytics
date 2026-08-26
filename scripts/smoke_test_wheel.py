@@ -218,6 +218,7 @@ def main() -> int:
         workflow = workspace / "acceptance.adql"
         long_workflow = workspace / "long-acceptance.adql"
         result_path = workspace / "result.json"
+        pipeline_result_path = workspace / "pipeline-result.json"
         row_count = write_dataset(dataset)
         write_customers(customers)
         write_adql(workflow)
@@ -270,9 +271,43 @@ def main() -> int:
         if payload.get("completed_cell_count") != 11:
             raise RuntimeError("The ADQL acceptance workflow did not complete all cells.")
 
+        pipeline_output = run(
+            [
+                str(autodq),
+                "pipeline",
+                "--workflow",
+                str(workflow),
+                "--through-cell",
+                "2",
+                "--run-id",
+                "wheel-smoke-pipeline",
+                "--metadata",
+                '{"orchestrator":"wheel-smoke"}',
+                "--result",
+                str(pipeline_result_path),
+            ],
+            cwd=workspace,
+        )
+        pipeline_payload = json.loads(pipeline_output)
+
+        if not pipeline_payload.get("success"):
+            raise RuntimeError("The installed wheel failed the pipeline run.")
+
+        if pipeline_payload.get("exit_code") != 0:
+            raise RuntimeError("The installed wheel returned a bad pipeline exit code.")
+
+        if pipeline_payload.get("run_id") != "wheel-smoke-pipeline":
+            raise RuntimeError("The pipeline run ID was not preserved.")
+
+        if not pipeline_result_path.is_file():
+            raise RuntimeError("The pipeline result artifact was not written.")
+
         api_check = (
             "import sys; from autodq import (ADQL_LANGUAGE_VERSION, AutoDQ, "
+            "PIPELINE_SCHEMA_VERSION, PipelineRunSpec, PipelineRunner, "
             "QualityAssertion); assert ADQL_LANGUAGE_VERSION == '2.3'; "
+            "assert PIPELINE_SCHEMA_VERSION == '1.0'; "
+            "assert PipelineRunSpec and PipelineRunner; "
             "project = AutoDQ(sys.argv[1], target='Revenue'); "
             "profile = project.profile(); diagnosis = project.diagnose(); "
             f"assert profile['rows'] == {row_count}; "

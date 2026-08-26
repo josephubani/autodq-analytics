@@ -46,8 +46,8 @@ class PackagingTests(unittest.TestCase):
             "autodq._version.__version__",
         )
         self.assertEqual(autodq.__version__, __version__)
-        self.assertEqual(__version__, "0.1.20")
-        self.assertEqual(EXTENSION_VERSION, "0.3.13")
+        self.assertEqual(__version__, "0.1.21")
+        self.assertEqual(EXTENSION_VERSION, "0.3.14")
         self.assertRegex(__version__, r"^\d+\.\d+\.\d+(?:[a-z]+\d+)?$")
 
     def test_project_metadata_is_release_ready(self):
@@ -94,7 +94,7 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("actions/upload-artifact@v7", workflow)
         self.assertIn("actions/download-artifact@v8", workflow)
         self.assertIn("python scripts/smoke_test_wheel.py dist", workflow)
-        self.assertIn('default: "0.1.20"', workflow)
+        self.assertIn('default: "0.1.21"', workflow)
         self.assertNotIn("TWINE_PASSWORD", workflow)
         self.assertNotIn("API_TOKEN", workflow)
 
@@ -114,7 +114,7 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("actions/upload-artifact@v7", workflow)
         self.assertIn("actions/download-artifact@v8", workflow)
         self.assertIn("python scripts/smoke_test_wheel.py dist", workflow)
-        self.assertIn('default: "0.1.20"', workflow)
+        self.assertIn('default: "0.1.21"', workflow)
         self.assertIn("contents: write", workflow)
         self.assertIn("gh release create", workflow)
         self.assertIn("--generate-notes", workflow)
@@ -203,7 +203,7 @@ class PackagingTests(unittest.TestCase):
 
         self.assertIn("workflow_dispatch", workflow)
         self.assertIn("EXPECTED_VERSION", workflow)
-        self.assertIn('default: "0.3.13"', workflow)
+        self.assertIn('default: "0.3.14"', workflow)
         self.assertIn('mkdir -p "${GITHUB_WORKSPACE}/dist"', workflow)
         self.assertIn("@vscode/vsce@${VSCE_VERSION} package", workflow)
         self.assertIn("github_release", workflow)
@@ -244,22 +244,24 @@ class PackagingTests(unittest.TestCase):
     def test_public_release_documentation_is_current(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         notes = (
-            ROOT / "docs" / "RELEASE_NOTES_0.1.20.md"
+            ROOT / "docs" / "RELEASE_NOTES_0.1.21.md"
         ).read_text(encoding="utf-8")
         roadmap = (ROOT / "docs" / "ROADMAP.md").read_text(encoding="utf-8")
 
         self.assertIn("https://pypi.org/project/autodq/", readme)
         self.assertNotIn("Until the first PyPI release", readme)
-        self.assertIn("keeps every workflow stage consistent", notes)
-        self.assertIn("live active dataset", notes)
-        self.assertIn("AutoDQ ADQL VS Code extension: `0.3.13`", notes)
+        self.assertIn("platform-neutral pipeline execution", notes)
+        self.assertIn("stable orchestration exit codes", notes)
+        self.assertIn("AutoDQ ADQL VS Code extension: `0.3.14`", notes)
         self.assertIn(
             "All items in the original AutoDQ development roadmap are complete.",
             roadmap,
         )
         self.assertTrue((ROOT / "docs" / "QUICKSTART.md").is_file())
+        self.assertTrue((ROOT / "docs" / "PIPELINE_RUNNER.md").is_file())
         self.assertTrue((ROOT / "docs" / "TROUBLESHOOTING.md").is_file())
         self.assertTrue((ROOT / "scripts" / "smoke_test_wheel.py").is_file())
+        self.assertTrue((ROOT / "tests" / "test_pipeline_runner.py").is_file())
         self.assertTrue((ROOT / "tests" / "test_release_acceptance.py").is_file())
 
 

@@ -275,6 +275,32 @@ while retaining state between selected cells. See the
 [ADQL user guide](ADQL_SPEC.md) and
 [formal ADQL 2.3 specification](adql/SPECIFICATION.md).
 
+## Pipeline execution
+
+Use the pipeline API when an orchestrator needs one stable, headless result
+instead of interactive notebook output:
+
+```python
+from autodq import PipelineRunSpec, PipelineRunner
+
+result = PipelineRunner().run(
+    PipelineRunSpec(
+        workflow="workflows/sales-quality.adql",
+        dataset="datasets/daily-sales.csv",
+        target="Revenue",
+        result_path="artifacts/run-result.json",
+        overwrite_result=True,
+        metadata={"orchestrator": "fabric"},
+    )
+)
+```
+
+`PipelineRunResult` exposes `status`, `success`, `exit_code`, `metrics`,
+`artifacts`, `events`, `stdout`, `stderr`, and the complete ADQL
+`workflow_result`. Replace `LocalSourceResolver` or `LocalArtifactStore` when a
+platform adapter needs to materialize inputs or persist the result elsewhere.
+See the [pipeline runner reference](PIPELINE_RUNNER.md).
+
 ## Session inspection
 
 Use the structured session APIs when a Python workflow needs the same state
