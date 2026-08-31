@@ -32,6 +32,7 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
                     "Region",
                     "Revenue",
                     "Created_At",
+                    "Customer_Email",
                 ]
             )
 
@@ -45,11 +46,23 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
                     f"{8 + index % 12:02d}:30:00"
                 )
                 writer.writerow(
-                    [index + 1, units, price, region, revenue, created_at]
+                    [
+                        index + 1,
+                        units,
+                        price,
+                        region,
+                        revenue,
+                        created_at,
+                        f"customer{index + 1}@example.com",
+                    ]
                 )
 
-            writer.writerow([1, 1, 10, "North", 10, "01/07/2026 08:30:00"])
-            writer.writerow([49, "", 24, "", 240, "29/07/2026 14:45:00"])
+            writer.writerow(
+                [1, 1, 10, "North", 10, "01/07/2026 08:30:00", "customer1@example.com"]
+            )
+            writer.writerow(
+                [49, "", 24, "", 240, "29/07/2026 14:45:00", "customer49@example.com"]
+            )
 
     def _write_workflow(self):
         self.workflow.write_text(
@@ -60,6 +73,7 @@ class PublicReleaseAcceptanceTests(unittest.TestCase):
             "# %% [Data-quality gate]\n"
             "ASSERT SUITE ADD acceptance_gate Order_ID NOT NULL;\n"
             "ASSERT SUITE ADD acceptance_gate Revenue MIN 0;\n"
+            "ASSERT SUITE ADD acceptance_gate Customer_Email FORMAT email;\n"
             "ASSERT SUITE RUN acceptance_gate;\n"
             "# %% [Automatic review]\n"
             "AUTO MODE review VISUALIZE false CONTINUE_ON_ERROR false;\n"

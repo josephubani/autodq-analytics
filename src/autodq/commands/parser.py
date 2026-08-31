@@ -932,7 +932,7 @@ class ADQLParser:
         if not remainder:
             raise ADQLSyntaxError(
                 "Column ASSERT requires EXISTS, NOT NULL, UNIQUE, TYPE, MIN, "
-                "MAX, BETWEEN, ALLOWED, or MATCHES."
+                "MAX, BETWEEN, ALLOWED, MATCHES, or FORMAT."
             )
 
         predicate = remainder[0].upper()
@@ -986,10 +986,18 @@ class ADQLParser:
                     "expected": " ".join(remainder[1:]),
                 }
             )
+        elif predicate == "FORMAT" and len(remainder) == 2:
+            assertion.update(
+                {
+                    "predicate": "format",
+                    "expected": remainder[1].lower(),
+                }
+            )
         else:
             raise ADQLSyntaxError(
                 "Invalid column ASSERT. Use EXISTS, NOT NULL, UNIQUE, TYPE, "
-                "MIN, MAX, BETWEEN low AND high, ALLOWED values, or MATCHES pattern."
+                "MIN, MAX, BETWEEN low AND high, ALLOWED values, MATCHES pattern, "
+                "or FORMAT email."
             )
         return assertion
 

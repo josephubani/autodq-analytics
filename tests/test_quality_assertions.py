@@ -51,7 +51,7 @@ class QualityAssertionTests(unittest.TestCase):
         ASSERT Revenue TYPE numeric;
         ASSERT Revenue BETWEEN 0 AND 1000 SEVERITY warning NAME "Revenue range";
         ASSERT Region ALLOWED North,South,East,West;
-        ASSERT Email MATCHES "[^@]+@[^@]+";
+        ASSERT Email FORMAT email;
         ASSERT ROW_COUNT BETWEEN 1 AND 10;
         ASSERT MISSING_PERCENT Region <= 25;
         ASSERT DISTINCT_COUNT Region >= 3;
@@ -98,6 +98,7 @@ class QualityAssertionTests(unittest.TestCase):
             "ASSERT Revenue NOT NULL SEVERITY urgent;",
             "ASSERT ROW_COUNT >= 1 FAIL_ON sometimes;",
             "ASSERT SUITE EXPORT gate TO gate.csv;",
+            "ASSERT Email FORMAT phone;",
         ]
         for source in invalid_validation:
             with self.subTest(source=source):
@@ -167,6 +168,70 @@ class QualityAssertionTests(unittest.TestCase):
         self.assertEqual(run.results[2].data.loc[0, "status"], "passed")
         self.assertEqual(run.results[3].data.loc[0, "status"], "passed")
         self.assertEqual(run.results[4].data.loc[0, "status"], "failed")
+
+    def test_email_format_is_case_insensitive_and_ignores_nulls(self):
+        run = self.project.query(
+            "ASSERT Email FoRmAt EmAiL SEVERITY warning;",
+            auto_display=False,
+        )
+
+        result = run.latest.value.results[0]
+        self.assertTrue(run.success)
+        self.assertFalse(result.passed)
+        self.assertEqual(result.assertion.predicate, "format")
+        self.assertEqual(result.expected, "email")
+        self.assertEqual(result.failed_count, 1)
+        self.assertEqual(result.total_count, 4)
+        self.assertEqual(result.observed, ["invalid"])
+        self.assertEqual(result.assertion.display_name, "Email has email format")
+
+    def test_email_format_rejects_common_structural_errors(self):
+        dataset = self.root / "emails.csv"
+        pd.DataFrame(
+            {
+                "Email": [
+                    "valid.person+tag@example.co.uk",
+                    "missing-domain@example",
+                    "white space@example.com",
+                    ".leading@example.com",
+                    "double..dot@example.com",
+                    "name@-example.com",
+                    None,
+                ]
+            }
+        ).to_csv(dataset, index=False)
+
+        run = self.project.query(
+            f"""
+            ADD DATASET email_cases FROM "{dataset}";
+            ASSERT DATASET email_cases Email FORMAT email
+                SEVERITY warning NAME "Email structure";
+            """,
+            auto_display=False,
+        )
+
+        result = run.latest.value.results[0]
+        self.assertEqual(result.failed_count, 5)
+        self.assertNotIn(None, result.observed)
+        self.assertEqual(result.assertion.name, "Email structure")
+
+    def test_email_format_round_trips_through_quality_suite_json(self):
+        output = self.root / "email-suite.json"
+        self.project.query(
+            f"""
+            ASSERT SUITE ADD contacts Email FORMAT email
+                SEVERITY warning NAME "Valid email";
+            ASSERT SUITE EXPORT contacts TO "{output}";
+            ASSERT SUITE DROP contacts;
+            ASSERT SUITE LOAD restored_contacts FROM "{output}";
+            """,
+            auto_display=False,
+        )
+
+        assertion = self.project.quality_suite("restored_contacts").assertions[0]
+        self.assertEqual(assertion.predicate, "format")
+        self.assertEqual(assertion.expected, "email")
+        self.assertEqual(assertion.severity, "warning")
 
     def test_metric_assertion_vocabulary(self):
         run = self.project.query(

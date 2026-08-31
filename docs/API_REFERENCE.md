@@ -149,6 +149,16 @@ project.add_quality_test(
     "sales_gate",
     QualityAssertion(subject="column", column="Transaction_ID", predicate="unique"),
 )
+project.add_quality_test(
+    "sales_gate",
+    QualityAssertion(
+        subject="column",
+        column="Email",
+        predicate="format",
+        expected="email",
+        severity="warning",
+    ),
+)
 report = project.run_quality_suite("sales_gate", fail_on="error")
 project.export_quality_suite("sales_gate", "tests/sales-gate.json", overwrite=True)
 ```
@@ -262,7 +272,7 @@ HTML or JSON analytical reports.
 ```python
 from autodq import ADQL_LANGUAGE_VERSION
 
-print(ADQL_LANGUAGE_VERSION)  # 2.3
+print(ADQL_LANGUAGE_VERSION)  # 2.4
 result = project.query("PROFILE; DIAGNOSE;", auto_display=False)
 file_result = project.run_adql("analysis.adql", through_cell=3)
 ```
@@ -273,7 +283,7 @@ current project. Registered datasets can be targeted directly with
 `SELECT * FROM customers`. `run_adql()` executes a cell-based standalone file
 while retaining state between selected cells. See the
 [ADQL user guide](ADQL_SPEC.md) and
-[formal ADQL 2.3 specification](adql/SPECIFICATION.md).
+[formal ADQL 2.4 specification](adql/SPECIFICATION.md).
 
 ## Pipeline execution
 

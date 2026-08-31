@@ -118,6 +118,12 @@ ASSERT SUITE ADD sales_gate MISSING_PERCENT Region <= 2
 ASSERT SUITE RUN sales_gate FAIL_ON warning;
 ```
 
+For customer datasets, use the built-in email format directly or in a suite:
+
+```adql
+ASSERT Email FORMAT email SEVERITY warning NAME "Valid email format";
+```
+
 The result appears as a notebook table. Blocking failures mark the cell as
 failed, while `FAIL_ON never` records results without stopping later cells.
 Use `ASSERT SUITE EXPORT ... TO "suite.json"` to keep the suite with a project.

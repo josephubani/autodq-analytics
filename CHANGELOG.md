@@ -5,6 +5,32 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.22 - 2026-08-30
+
+### Added
+
+- Added the first built-in ADQL value-format assertion:
+  `ASSERT Email FORMAT email;`.
+- Added practical structural email validation for local-part rules, dotted
+  domains, domain-label boundaries, top-level domains, address lengths, and
+  whitespace without requiring user-authored regular expressions.
+- Added `FORMAT email` support to direct checks, reusable quality suites,
+  named-dataset targeting, JSON suite persistence, rich results, and the
+  public `QualityAssertion` API.
+
+### Changed
+
+- Advanced the language to ADQL 2.4 for the new `FORMAT` predicate and `email`
+  format value while preserving every valid ADQL 2.3 program.
+- Advanced the bundled AutoDQ ADQL VS Code extension to 0.3.15 with
+  case-insensitive highlighting for `FORMAT` and `email`.
+
+### Validation
+
+- Added coverage for valid and invalid email structures, null independence,
+  mixed-case syntax, named datasets, suite export/load, validation errors, and
+  TextMate grammar conformance.
+
 ## 0.1.21 - 2026-08-26
 
 ### Added

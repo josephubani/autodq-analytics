@@ -891,7 +891,7 @@ body { background: white; color: black; }
         self.assertNotIn("transientOutputs: true", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.3.14")
+        self.assertEqual(package["version"], "0.3.15")
         renderer = package["contributes"]["notebookRenderer"][0]
         self.assertEqual(renderer["id"], "autodq-adql-review-renderer")
         self.assertEqual(renderer["requiresMessaging"], "always")
@@ -1093,11 +1093,18 @@ body { background: white; color: black; }
                 f"Missing quality-metric highlighting for {metric}",
             )
 
-        for predicate in ("BETWEEN", "EXISTS", "MATCHES", "NOT NULL"):
+        for predicate in (
+            "BETWEEN", "EXISTS", "FORMAT", "MATCHES", "NOT NULL"
+        ):
             self.assertIsNotNone(
                 quality_predicate_pattern.fullmatch(predicate),
                 f"Missing quality-predicate highlighting for {predicate}",
             )
+
+        self.assertIsNotNone(
+            enum_pattern.fullmatch("email"),
+            "Missing FORMAT email value highlighting",
+        )
 
         for constant in ("TRUE", "false", "YeS", "nO", "On", "oFf"):
             self.assertIsNotNone(

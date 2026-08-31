@@ -18,6 +18,8 @@ from autodq.quality_tests.models import (
 class QualityTestEngine:
     """Evaluate non-mutating data-quality assertions against a dataframe."""
 
+    SUPPORTED_FORMATS = {"email"}
+
     METRICS = {
         "row_count",
         "column_count",
@@ -38,6 +40,7 @@ class QualityTestEngine:
         "between",
         "allowed",
         "matches",
+        "format",
     }
     COMPARISONS = {
         "=": operator.eq,
@@ -151,6 +154,14 @@ class QualityTestEngine:
                 re.compile(assertion.expected)
             except re.error as error:
                 raise ValueError(f"Invalid MATCHES regular expression: {error}") from error
+        elif assertion.predicate == "format":
+            expected = str(assertion.expected).lower().strip()
+            if expected not in self.SUPPORTED_FORMATS:
+                supported = ", ".join(sorted(self.SUPPORTED_FORMATS))
+                raise ValueError(
+                    f"Unsupported FORMAT: {assertion.expected}. "
+                    f"Supported formats: {supported}."
+                )
 
     def _evaluate_column(
         self,
@@ -246,7 +257,7 @@ class QualityTestEngine:
             )[:20]
             expected = assertion.values
             message = f"{failed:,} non-null {column} value(s) are not allowed."
-        else:
+        elif predicate == "matches":
             pattern = re.compile(str(assertion.expected))
             matches = non_null.astype(str).map(lambda value: bool(pattern.fullmatch(value)))
             failed = int((~matches).sum())
@@ -255,6 +266,19 @@ class QualityTestEngine:
             )[:20]
             expected = assertion.expected
             message = f"{failed:,} non-null {column} value(s) do not match the pattern."
+        elif predicate == "format":
+            expected = str(assertion.expected).lower()
+            matches = non_null.astype(str).map(self._matches_email)
+            failed = int((~matches).sum())
+            observed = sorted(
+                {str(value) for value in non_null[~matches].unique()}
+            )[:20]
+            message = (
+                f"{failed:,} non-null {column} value(s) do not use "
+                f"{expected} format."
+            )
+        else:  # pragma: no cover - guarded by validate_assertion
+            raise RuntimeError(f"Unsupported column assertion: {predicate}.")
 
         return self._result(
             assertion,
@@ -342,6 +366,45 @@ class QualityTestEngine:
             failed_count=0 if passed else 1,
             total_count=1,
             message=f"{target} observed {observed}; expected {expected}.",
+        )
+
+    @staticmethod
+    def _matches_email(value: str) -> bool:
+        """Validate a practical, non-internationalized mailbox address."""
+        if (
+            not value
+            or len(value) > 254
+            or value.count("@") != 1
+            or any(character.isspace() for character in value)
+        ):
+            return False
+
+        local, domain = value.rsplit("@", 1)
+        if (
+            not local
+            or len(local) > 64
+            or not domain
+            or len(domain) > 253
+            or local.startswith(".")
+            or local.endswith(".")
+            or ".." in local
+        ):
+            return False
+
+        if re.fullmatch(r"[A-Za-z0-9!#$%&'*+/=?^_`{|}~.-]+", local) is None:
+            return False
+
+        labels = domain.split(".")
+        if len(labels) < 2 or any(
+            re.fullmatch(r"(?!-)[A-Za-z0-9-]{1,63}(?<!-)", label) is None
+            for label in labels
+        ):
+            return False
+
+        top_level = labels[-1]
+        return bool(
+            re.fullmatch(r"[A-Za-z]{2,63}", top_level)
+            or re.fullmatch(r"xn--[A-Za-z0-9-]{2,59}", top_level)
         )
 
     @staticmethod

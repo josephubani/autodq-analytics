@@ -6,7 +6,7 @@ repeatable analytics while retaining named, executable cells. ADQL does not
 evaluate Python expressions or expose arbitrary object methods.
 
 This file is the practical command guide. The normative definition of ADQL
-2.3 is the [formal language specification](adql/SPECIFICATION.md), accompanied
+2.4 is the [formal language specification](adql/SPECIFICATION.md), accompanied
 by its [EBNF grammar](adql/grammar.ebnf),
 [execution model](adql/execution-model.md),
 [data-type rules](adql/data-types.md), [error model](adql/errors.md), and
@@ -541,6 +541,7 @@ ASSERT Revenue BETWEEN 0 AND 1000000;
 ASSERT Transaction_ID UNIQUE;
 ASSERT Region ALLOWED North,South,East,West,Central;
 ASSERT Email MATCHES "[^@]+@[^@]+" SEVERITY warning;
+ASSERT Email FORMAT email SEVERITY warning;
 
 ASSERT ROW_COUNT > 0;
 ASSERT COLUMN_COUNT >= 10;
@@ -550,6 +551,11 @@ ASSERT DUPLICATE_ROWS = 0;
 ASSERT DISTINCT_COUNT Region >= 4;
 ASSERT QUALITY_SCORE >= 90;
 ```
+
+`FORMAT email` is the preferred built-in structural check for email columns.
+It ignores nulls so it can be paired with a separate `NOT NULL` assertion and
+its own severity. `MATCHES` remains available when a project needs a custom
+regular expression. Neither form verifies DNS records or mailbox existence.
 
 Severity is `error`, `warning`, or `info`. By default only failed `error`
 checks fail the ADQL statement. Use `FAIL_ON warning`, `FAIL_ON info`, or

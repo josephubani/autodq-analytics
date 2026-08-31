@@ -78,6 +78,7 @@ class QualityAssertion:
             "between": f"is between {self.expected} and {self.expected_max}",
             "allowed": "uses allowed values",
             "matches": f"matches {self.expected}",
+            "format": f"has {self.expected} format",
             "compare": f"{self.operator} {self.expected}",
         }
         return f"{target} {labels.get(self.predicate, self.predicate)}"

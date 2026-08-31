@@ -562,6 +562,7 @@ class ADQLValidator:
             "between",
             "allowed",
             "matches",
+            "format",
         }
         if subject == "column":
             if predicate not in column_predicates:
@@ -633,6 +634,12 @@ class ADQLValidator:
                 raise ADQLValidationError(
                     f"ASSERT MATCHES pattern is invalid: {error}"
                 ) from error
+        elif predicate == "format" and str(
+            assertion.get("expected", "")
+        ).lower() not in {"email"}:
+            raise ADQLValidationError(
+                "ASSERT FORMAT is not supported. Supported formats: email."
+            )
 
     def _validate_schema(self, parameters) -> None:
         action = parameters.get("action")

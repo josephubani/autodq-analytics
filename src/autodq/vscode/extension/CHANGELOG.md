@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.3.15 - 2026-08-30
+
+- Added case-insensitive syntax highlighting for ADQL 2.4 `FORMAT` quality
+  assertions and the built-in `email` format.
+- Documented direct and reusable-suite email-format checks.
+- Bundled AutoDQ 0.1.22 while preserving all ADQL 2.3 notebook programs.
+
 ## 0.3.14 - 2026-08-26
 
 - Paired the ADQL notebook extension with AutoDQ 0.1.21 and its new headless

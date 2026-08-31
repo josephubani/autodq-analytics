@@ -60,7 +60,7 @@ REQUIRED_SDIST_SUFFIXES = {
     "/README.md",
     "/docs/RELEASING.md",
     "/docs/PIPELINE_RUNNER.md",
-    "/docs/RELEASE_NOTES_0.1.21.md",
+    "/docs/RELEASE_NOTES_0.1.22.md",
     "/docs/VSCODE_MARKETPLACE.md",
     "/docs/QUICKSTART.md",
     "/docs/TROUBLESHOOTING.md",

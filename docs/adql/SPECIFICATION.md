@@ -3,12 +3,12 @@
 | Field | Value |
 | --- | --- |
 | Language | AutoDQ Analytics Domain Query Language (ADQL) |
-| Language version | 2.3 |
+| Language version | 2.4 |
 | Specification status | Stable |
 | Text encoding | UTF-8 |
 | Canonical file extension | `.adql` |
 
-This document is the normative definition of ADQL 2.3. It defines the
+This document is the normative definition of ADQL 2.4. It defines the
 language independently of a particular user interface or AutoDQ package
 release. The public Python constant `autodq.ADQL_LANGUAGE_VERSION` identifies
 the language version implemented by an installed AutoDQ package.
@@ -304,9 +304,13 @@ false spelling overrides that default.
 `ASSERT` evaluates `CURRENT` without changing dataset values. Column
 assertions support existence, completeness, uniqueness, dtype, inclusive
 minimum and maximum bounds, inclusive ranges, allowed values, and full-string
-regular-expression matching. Missing values are evaluated only by `NOT NULL`
-and missing metrics; other column predicates ignore missing values so authors
-can state completeness and value-domain requirements independently.
+regular-expression matching. `FORMAT email` performs built-in structural email
+validation without requiring a user-authored regular expression. It accepts
+practical ASCII mailbox addresses with a valid local part and dotted domain;
+it does not perform DNS or mailbox-existence checks. Missing values are
+evaluated only by `NOT NULL` and missing metrics; other column predicates
+ignore missing values so authors can state completeness and value-domain
+requirements independently.
 
 Metric assertions support row count, column count, missing count and percent,
 removable exact-duplicate rows and percent, distinct non-null values, and the
@@ -378,7 +382,7 @@ MUST appear in `GROUP BY`. Output aliases are case-insensitively unique.
 
 `WHERE` conditions are combined only with `AND`. Supported operators are `=`,
 `!=`, `<`, `<=`, `>`, `>=`, `IN`, `NOT IN`, `IS NULL`, `IS NOT NULL`,
-`CONTAINS`, `STARTS WITH`, and `ENDS WITH`. ADQL 2.3 does not support `OR`,
+`CONTAINS`, `STARTS WITH`, and `ENDS WITH`. ADQL 2.4 does not support `OR`,
 joins inside `SELECT`, subqueries, window functions, or arbitrary functions.
 
 `DISTINCT` is applied after projection and aggregation. Ordering is stable,
@@ -414,7 +418,7 @@ overwritten by `LET`.
 
 ## 10. Safety limits
 
-A conforming AutoDQ ADQL 2.3 validator enforces:
+A conforming AutoDQ ADQL 2.4 validator enforces:
 
 | Limit | Value |
 | --- | ---: |
@@ -459,13 +463,13 @@ language behavior.
 
 ## 12. Conformance and extensions
 
-An implementation claiming **ADQL 2.3 parser conformance** MUST implement all
-productions in `grammar.ebnf`. An implementation claiming **AutoDQ ADQL 2.3
+An implementation claiming **ADQL 2.4 parser conformance** MUST implement all
+productions in `grammar.ebnf`. An implementation claiming **AutoDQ ADQL 2.4
 runtime conformance** MUST additionally implement every command listed by the
 runtime command set and the state transitions in this specification.
 
 Implementations MAY provide extra renderers, editors, transport protocols, and
-CLI options. They MUST NOT silently reinterpret valid ADQL 2.3 syntax.
+CLI options. They MUST NOT silently reinterpret valid ADQL 2.4 syntax.
 Language extensions require a later ADQL language version and MUST be rejected
 as unknown syntax by implementations that do not support that version.
 

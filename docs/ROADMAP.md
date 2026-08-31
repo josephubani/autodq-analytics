@@ -53,6 +53,9 @@
     - Automatic output-artifact discovery
     - Replaceable source-resolver and result-store protocols
     - Installed-wheel pipeline acceptance coverage
+14. Built-in quality formats
+    - ADQL 2.4 `ASSERT column FORMAT email`
+    - Direct, suite, named-dataset, persistence, notebook, and Python support
 
 ## 0.1.0 release status
 

@@ -2,7 +2,7 @@
 
 # Public language version. This is intentionally independent from the AutoDQ
 # package and VS Code extension versions.
-ADQL_LANGUAGE_VERSION = "2.3"
+ADQL_LANGUAGE_VERSION = "2.4"
 
 SUPPORTED_COMMANDS = {
     "SELECT",
@@ -328,7 +328,8 @@ COMMAND_HELP = [
     {
         "command": "ASSERT",
         "syntax": (
-            "ASSERT Revenue NOT NULL; ASSERT ROW_COUNT > 0; "
+            "ASSERT Revenue NOT NULL; ASSERT Email FORMAT email; "
+            "ASSERT ROW_COUNT > 0; "
             "ASSERT SUITE ADD release_gate Revenue MIN 0; "
             "ASSERT SUITE RUN release_gate [FAIL_ON error|warning|info|never]"
         ),

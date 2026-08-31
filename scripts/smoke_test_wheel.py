@@ -91,8 +91,18 @@ def write_dataset(path: Path) -> int:
         region = regions[index % len(regions)]
         revenue = round(units * price * (1 - discount), 2)
         recorded_at = f"{1 + index % 28:02d}/07/2026 {8 + index % 12:02d}:30:00"
+        customer_email = f"customer{index + 1}@example.com"
         rows.append(
-            [index + 1, units, price, discount, region, revenue, recorded_at]
+            [
+                index + 1,
+                units,
+                price,
+                discount,
+                region,
+                revenue,
+                recorded_at,
+                customer_email,
+            ]
         )
 
     rows[8][4] = ""
@@ -110,6 +120,7 @@ def write_dataset(path: Path) -> int:
                 "Region",
                 "Revenue",
                 "Recorded_At",
+                "Customer_Email",
             ]
         )
         writer.writerows(rows)
@@ -126,6 +137,7 @@ def write_adql(path: Path) -> None:
         "# %% [Data-quality gate]\n"
         "ASSERT SUITE ADD release_gate Transaction_ID NOT NULL;\n"
         "ASSERT SUITE ADD release_gate Revenue MIN 0;\n"
+        "ASSERT SUITE ADD release_gate Customer_Email FORMAT email;\n"
         "ASSERT SUITE RUN release_gate;\n"
         "# %% [Automatic review]\n"
         "AUTO MODE review VISUALIZE false CONTINUE_ON_ERROR false;\n"
@@ -305,7 +317,7 @@ def main() -> int:
         api_check = (
             "import sys; from autodq import (ADQL_LANGUAGE_VERSION, AutoDQ, "
             "PIPELINE_SCHEMA_VERSION, PipelineRunSpec, PipelineRunner, "
-            "QualityAssertion); assert ADQL_LANGUAGE_VERSION == '2.3'; "
+            "QualityAssertion); assert ADQL_LANGUAGE_VERSION == '2.4'; "
             "assert PIPELINE_SCHEMA_VERSION == '1.0'; "
             "assert PipelineRunSpec and PipelineRunner; "
             "project = AutoDQ(sys.argv[1], target='Revenue'); "
@@ -316,6 +328,11 @@ def main() -> int:
             "quality = project.assert_quality(QualityAssertion("
             "subject='row_count', predicate='compare', operator='>', expected=0)); "
             "assert quality.success; "
+            "email_quality = project.assert_quality(QualityAssertion("
+            "subject='column', column='Customer_Email', predicate='format', "
+            "expected='email', severity='warning')); "
+            "assert email_quality.success; "
+            "assert email_quality.results[0].assertion.predicate == 'format'; "
             "project.create_schema_contract('acceptance_v1', "
             "infer_categories=False); "
             "schema = project.validate_schema('acceptance_v1'); "

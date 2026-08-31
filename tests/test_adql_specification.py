@@ -30,7 +30,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
         )
         grammar = (SPEC_ROOT / "grammar.ebnf").read_text(encoding="utf-8")
 
-        self.assertEqual(ADQL_LANGUAGE_VERSION, "2.3")
+        self.assertEqual(ADQL_LANGUAGE_VERSION, "2.4")
         self.assertIn(
             f"| Language version | {ADQL_LANGUAGE_VERSION} |",
             specification,
@@ -52,7 +52,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
         examples = {
             "ADD": 'ADD DATASET CustomerData FROM "customers.csv"',
             "APPROVE": "APPROVE ALL",
-            "ASSERT": "ASSERT Revenue NOT NULL",
+            "ASSERT": "ASSERT Email FORMAT email",
             "AUDIT": 'AUDIT EXPORT TO "audit.json"',
             "AUTO": "AUTO MODE review VISUALIZE false",
             "BLUE": "BLUE MAX_FEATURES 4",
@@ -282,7 +282,10 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
         self.assertEqual(script.statement_count, 250)
 
     def test_adql_2_rejects_or_with_versioned_diagnostic(self):
-        with self.assertRaisesRegex(ADQLSyntaxError, r"ADQL 2\.3"):
+        with self.assertRaisesRegex(
+            ADQLSyntaxError,
+            rf"ADQL {re.escape(ADQL_LANGUAGE_VERSION)}",
+        ):
             ADQLParser().parse(
                 "SELECT * FROM CURRENT WHERE Region = North OR Region = South;"
             )
