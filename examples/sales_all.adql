@@ -1,0 +1,478 @@
+#!/usr/bin/env autodq
+# %% [markdown] AutoDQ + ADQL complete sales workflow
+
+This executable notebook exercises every ADQL top-level command family and the
+major AutoDQ capabilities exposed through ADQL 2.4. Run the cells from top to
+bottom. It uses only the bundled sample datasets and writes generated artifacts
+under `reports/sales_all`, `exports`, `models`, `contracts`, `baselines`, and
+`tests`.
+
+The workflow deliberately uses separate registered copies for automatic,
+one-command cleaning, datatype, merge, and interactive-review demonstrations.
+That keeps the final analytical pipeline reproducible.
+# %% [Primary dataset]
+DATASET "../datasets/sample/sales.csv" TARGET Revenue;
+LOAD;
+SET TARGET Revenue;
+LET raw_sales = CURRENT OVERWRITE;
+# %% [Language help]
+HELP;
+HELP MODEL;
+# %% [Datatype conversion and formatting]
+ADD DATASET type_demo FROM "../datasets/sample/sales.csv" OVERWRITE;
+SET DATASET type_demo TYPE Date datetime FORMAT AUTO;
+SET DATASET type_demo TYPE Revenue decimal DECIMALS 2;
+SET DATASET type_demo TYPE Customer_Age int DECIMALS 0;
+SET DATASET type_demo TYPE Region category;
+HEAD DATASET type_demo 5;
+# %% [Register related and reference datasets]
+ADD DATASET customers FROM "../datasets/sample/customers.csv" OVERWRITE;
+ADD DATASET cleaned_reference FROM "../datasets/sample/sales_cleaned11.csv" OVERWRITE;
+ADD DATASET auto_sales FROM "../datasets/sample/sales.csv" OVERWRITE;
+ADD DATASET clean_command_sales FROM "../datasets/sample/sales.csv" OVERWRITE;
+LIST DATASETS;
+SESSION DATASETS;
+# %% [Automatic workflow orchestration]
+AUTO DATASET auto_sales MODE review
+    VISUALIZE false
+    APPLY_CLEANING false
+    APPLY_FEATURES false
+    TRAIN_MODEL false
+    PREDICT false
+    EXPLAIN false
+    REFRESH true
+    CONTINUE_ON_ERROR true;
+# %% [One-command automatic cleaning]
+CLEAN DATASET clean_command_sales;
+VALIDATE;
+LET clean_command_result = CLEANED OVERWRITE;
+# %% [Multiple-dataset merge and concatenation]
+MERGE raw_sales WITH customers AS sales_with_customers
+    ON Customer_ID
+    HOW left
+    VALIDATE many_to_one
+    SUFFIXES "_sales,_customer"
+    MAKE_ACTIVE false;
+
+CONCAT raw_sales,cleaned_reference AS combined_sales
+    AXIS 0
+    IGNORE_INDEX true
+    JOIN outer
+    MAKE_ACTIVE false;
+
+LIST DATASETS;
+HEAD DATASET sales_with_customers 5;
+SAMPLE DATASET combined_sales 5 RANDOM_STATE 42;
+# %% [Activate the main workflow]
+USE DATASET main;
+SET TYPE Date datetime FORMAT AUTO;
+SET TYPE Revenue float DECIMALS 2;
+SET TYPE Cost float DECIMALS 2;
+SET TYPE Profit float DECIMALS 2;
+HEAD 10;
+TAIL 10;
+SAMPLE 10 RANDOM_STATE 42;
+# %% [Profiling, statistics, interpretation, and knowledge]
+KNOWLEDGE;
+PROFILE;
+STATISTICS;
+INTERPRET;
+DIAGNOSE;
+RECOMMEND;
+DECIDE;
+PREVIEW;
+# %% [Interactive cleaning and partial decisions]
+REVIEW;
+REJECT 1 REASON "Demonstration of a manually rejected recommendation";
+APPROVE 2;
+CLEANING PREVIEW ACTIONS 1,2 MAX_ROWS 5;
+APPROVE ALL;
+CLEANING PREVIEW MAX_ROWS 5;
+# %% [Audited manual row editing]
+EDIT ROW 0
+    CHANGES '{"Region": "South", "Customer_Age": 40}'
+    REASON "Verified against the source record";
+# %% [Explicit missing-value review and treatment]
+MISSING SUMMARY;
+MISSING FILL City VALUE "Not provided"
+    REASON "Preserve rows with an explicit unknown city";
+MISSING FILL Customer_Age STRATEGY median;
+MISSING FILL Region STRATEGY mode;
+MISSING FILL Revenue STRATEGY interpolate;
+MISSING FILL Customer_Satisfaction STRATEGY median;
+MISSING FILL ALL STRATEGY auto;
+MISSING DROP ROWS COLUMNS City,Region HOW any
+    REASON "Remove only rows still incomplete after filling";
+MISSING DROP COLUMNS MIN_PERCENT 100
+    REASON "Remove only completely empty non-target columns";
+MISSING SUMMARY;
+# %% [Exact duplicate inspection and treatment]
+DUPLICATES SUMMARY;
+DUPLICATES DROP KEEP first REASON "Repeated source-system import";
+DUPLICATES SUMMARY;
+# %% [Domain validation and outlier review]
+DOMAIN ADD Revenue MIN 0 NULLABLE false
+    DESCRIPTION "Revenue must be present and non-negative";
+DOMAIN ADD Customer_Age MIN 18 MAX 100 NULLABLE false
+    DESCRIPTION "Expected adult customer age range";
+DOMAIN ADD Customer_ID PATTERN "^CUST-[0-9]+$" NULLABLE false;
+DOMAIN ADD Region ALLOWED "North,South,East,West,Central" NULLABLE false;
+DOMAIN VALIDATE;
+
+OUTLIERS REVIEW COLUMNS Revenue,Profit,Quantity,Customer_Age IQR 1.5;
+OUTLIERS TREAT COLUMN Revenue STRATEGY clip IQR 1.5
+    REASON "Reviewed IQR clipping for extreme revenue values";
+# %% [Apply, validate, audit, and retain cleaned data]
+CLEANING APPLY;
+VALIDATE;
+MISSING SUMMARY;
+DUPLICATES SUMMARY;
+AUDIT EXPORT TO "../reports/sales_all/cleaning-audit.json";
+LET cleaned_sales = CLEANED OVERWRITE;
+EXPORT cleaned_sales TO "../exports/sales_all-cleaned.csv" OVERWRITE;
+EXPORT CLEANED TO "../exports/sales_all-cleaned.xlsx" OVERWRITE;
+# %% [Use the cleaned snapshot as the analytical dataset]
+USE DATASET cleaned_sales;
+SET TARGET Revenue;
+PROFILE;
+STATISTICS;
+INTERPRET;
+DIAGNOSE;
+# %% [Direct data-quality assertions]
+ASSERT Revenue EXISTS NAME "Revenue column exists";
+ASSERT Revenue NOT NULL NAME "Revenue is complete";
+ASSERT Revenue TYPE numeric NAME "Revenue is numeric";
+ASSERT Revenue MIN 0 NAME "Revenue is non-negative";
+ASSERT Revenue MAX 1000000 NAME "Revenue is within a plausible ceiling";
+ASSERT Revenue BETWEEN 0 AND 1000000 NAME "Revenue range";
+ASSERT Region ALLOWED North,South,East,West,Central
+    NAME "Regions use approved values";
+ASSERT Customer_ID MATCHES "^CUST-[0-9]+$"
+    NAME "Customer ID format";
+ASSERT Transaction_ID UNIQUE SEVERITY warning FAIL_ON never
+    NAME "Transaction identifiers should be unique";
+ASSERT ROW_COUNT > 0;
+ASSERT COLUMN_COUNT >= 20;
+ASSERT MISSING_COUNT Region = 0;
+ASSERT MISSING_PERCENT <= 1;
+ASSERT DUPLICATE_ROWS = 0;
+ASSERT DUPLICATE_PERCENT = 0;
+ASSERT DISTINCT_COUNT Region >= 5;
+ASSERT QUALITY_SCORE >= 90 FAIL_ON never;
+# %% [Reusable data-quality test suite]
+ASSERT SUITE ADD sales_release_gate Revenue NOT NULL
+    NAME "Revenue is complete";
+ASSERT SUITE ADD sales_release_gate Revenue MIN 0
+    NAME "Revenue is non-negative";
+ASSERT SUITE ADD sales_release_gate Region ALLOWED North,South,East,West,Central
+    SEVERITY warning NAME "Region values are governed";
+ASSERT SUITE ADD sales_release_gate DUPLICATE_ROWS = 0
+    NAME "No exact duplicate rows";
+ASSERT SUITE SHOW sales_release_gate;
+ASSERT SUITE RUN sales_release_gate FAIL_ON never;
+ASSERT SUITE LIST;
+ASSERT SUITE EXPORT sales_release_gate
+    TO "../tests/sales_all-quality-suite.json" OVERWRITE;
+ASSERT SUITE LOAD restored_sales_gate
+    FROM "../tests/sales_all-quality-suite.json" OVERWRITE;
+ASSERT SUITE DROP restored_sales_gate;
+# %% [Schema contract]
+CONTRACT sales_contract FROM cleaned_sales
+    VERSION 1.0.0
+    EXTRA_COLUMNS warning
+    INFER_RANGES false
+    INFER_CATEGORIES true
+    OVERWRITE;
+CONTRACT sales_contract REQUIRE Transaction_ID
+    TYPE integer NOT NULL UNIQUE SEVERITY error;
+CONTRACT sales_contract REQUIRE Customer_ID
+    TYPE string NOT NULL
+    MATCHES "^CUST-[0-9]+$" SEVERITY error;
+CONTRACT sales_contract REQUIRE Revenue
+    TYPE numeric NOT NULL MIN 0 MAX 1000000
+    SEVERITY error;
+CONTRACT sales_contract REQUIRE Region
+    TYPE string NOT NULL UNIQUE false
+    ALLOWED "North,South,East,West,Central" SEVERITY warning;
+CHECK CONTRACT sales_contract ON cleaned_sales FAIL ON never;
+CONTRACT SHOW sales_contract;
+CONTRACT LIST;
+CONTRACT SAVE sales_contract
+    TO "../contracts/sales_all-contract.json" OVERWRITE;
+CONTRACT LOAD restored_sales_contract
+    FROM "../contracts/sales_all-contract.json" OVERWRITE;
+CONTRACT DROP restored_sales_contract;
+# %% [Schema and distribution drift]
+BASELINE sales_baseline FROM cleaned_sales OVERWRITE;
+BASELINE SHOW sales_baseline;
+BASELINE LIST;
+BASELINE SAVE sales_baseline
+    TO "../baselines/sales_all-baseline.json" OVERWRITE;
+BASELINE LOAD restored_sales_baseline
+    FROM "../baselines/sales_all-baseline.json" OVERWRITE;
+CHECK DRIFT sales_baseline ON cleaned_sales
+    CONTRACT sales_contract
+    SENSITIVITY normal
+    FAIL ON never;
+BASELINE DROP restored_sales_baseline;
+# %% [SQL-like analytical queries]
+SELECT DISTINCT Region
+FROM CURRENT
+WHERE Region IS NOT NULL
+ORDER BY Region ASC;
+
+SELECT Transaction_ID,Region,Product,Revenue,Profit
+FROM CURRENT
+WHERE Region IN ("North","South")
+    AND Product CONTAINS "a"
+    AND Revenue >= 0
+ORDER BY Revenue DESC
+LIMIT 25;
+
+SELECT Customer_ID,Region,City
+FROM CURRENT
+WHERE Customer_ID STARTS WITH "CUST-"
+    AND Region NOT IN ("Unknown")
+    AND City IS NOT NULL
+ORDER BY Customer_ID ASC
+LIMIT 25;
+
+LET regional_sales = SELECT Region,
+                            COUNT(*) AS transactions,
+                            SUM(Revenue) AS total_revenue,
+                            AVG(Revenue) AS average_revenue,
+                            MEAN(Profit) AS mean_profit,
+                            MIN(Revenue) AS minimum_revenue,
+                            MAX(Revenue) AS maximum_revenue,
+                            MEDIAN(Revenue) AS median_revenue,
+                            NUNIQUE(Customer_ID) AS unique_customers
+                     FROM CURRENT
+                     WHERE Revenue IS NOT NULL AND Region IS NOT NULL
+                     GROUP BY Region
+                     ORDER BY total_revenue DESC
+                     LIMIT 10
+                     OVERWRITE;
+
+SELECT * FROM regional_sales ORDER BY total_revenue DESC LIMIT 10;
+LET cleaned_snapshot = DATASET cleaned_sales OVERWRITE;
+LET current_snapshot = CURRENT OVERWRITE;
+# %% [Correlation and transparent ML readiness]
+CORRELATION MIN_ABS 0.25;
+READINESS REFERENCE cleaned_reference;
+# %% [Automatic and manual feature engineering]
+FEATURES;
+FEATURE APPLY;
+FEATURE CREATE Revenue_Log METHOD log COLUMN Revenue;
+FEATURE CREATE Revenue_Square_Root METHOD sqrt COLUMN Revenue;
+FEATURE CREATE Customer_Age_Squared METHOD square COLUMN Customer_Age;
+FEATURE CREATE Profit_to_Revenue METHOD ratio COLUMNS Profit,Revenue;
+FEATURE CREATE Gross_Margin_Check METHOD difference COLUMNS Revenue,Cost;
+FEATURE CREATE Revenue_Cost_Total METHOD sum COLUMNS Revenue,Cost;
+FEATURE CREATE Price_Quantity_Product METHOD product COLUMNS Unit_Price,Quantity;
+FEATURE CREATE Revenue_Band METHOD bin COLUMN Revenue
+    BINS "0,100,500,1000,1000000"
+    LABELS "Micro,Small,Medium,Large";
+FEATURE CREATE Delivery_Is_Slow METHOD flag_greater_equal
+    COLUMN Delivery_Days EXPRESSION "5";
+FEATURE CREATE Was_Returned METHOD flag_equal
+    COLUMN Returned EXPRESSION "1";
+FEATURE CREATE Order_Year METHOD date_year COLUMN Date;
+FEATURE CREATE Order_Month METHOD date_month COLUMN Date;
+FEATURE CREATE Order_Weekday METHOD date_weekday COLUMN Date;
+FEATURE CREATE Order_Is_Weekend METHOD date_weekend COLUMN Date;
+FEATURE CREATE Custom_Profit_Ratio METHOD expression
+    EXPRESSION "Profit / Revenue";
+LET engineered_sales = ENGINEERED OVERWRITE;
+EXPORT ENGINEERED TO "../exports/sales_all-engineered.csv" OVERWRITE;
+# %% [Visual analytics: every supported explicit chart type]
+VISUALIZE bar X Region Y Revenue STAGE engineered
+    TITLE "Revenue by Region"
+    SUBTITLE "Cleaned and engineered sales"
+    X_LABEL "Region"
+    Y_LABEL "Average revenue"
+    THEME light
+    PALETTE "cool"
+    FIGSIZE "10,6"
+    DPI 160
+    GRID true
+    LEGEND false
+    APPEND true;
+
+VISUALIZE scatter X Revenue Y Profit STAGE engineered
+    TITLE "Revenue and Profit"
+    X_LABEL "Revenue"
+    Y_LABEL "Profit"
+    THEME presentation
+    COLOR "#059669"
+    FIGSIZE "10,6"
+    DPI 160
+    GRID true;
+
+VISUALIZE histogram COLUMN Revenue STAGE engineered
+    TITLE "Revenue Distribution"
+    X_LABEL "Revenue"
+    Y_LABEL "Transactions"
+    THEME journal
+    COLOR "#2563eb"
+    FIGSIZE "10,6"
+    DPI 160
+    GRID true;
+
+VISUALIZE boxplot COLUMN Profit STAGE engineered
+    TITLE "Profit Boxplot"
+    Y_LABEL "Profit"
+    THEME dark
+    COLOR "#7c3aed"
+    FIGSIZE "9,6"
+    DPI 160
+    GRID true;
+
+VISUALIZE correlation_heatmap STAGE engineered
+    TITLE "Engineered Feature Correlations"
+    THEME journal
+    PALETTE "viridis"
+    FIGSIZE "12,9"
+    DPI 180
+    GRID false;
+
+VISUALIZE distribution COLUMN Customer_Age STAGE engineered
+    TITLE "Customer Age Distribution"
+    THEME light
+    COLOR "#ea580c";
+
+VISUALIZE quality_score STAGE current;
+VISUALIZE missing_values STAGE current;
+VISUALIZE issue_breakdown STAGE current;
+VISUALIZE cleaning_status STAGE current;
+VISUALIZE comparison STAGE current;
+# %% [Visualization gallery management]
+GALLERY LIST;
+GALLERY LIST TYPE bar STAGE engineered;
+GALLERY GET bar_Region_by_Revenue_engineered;
+GALLERY CUSTOMIZE bar_Region_by_Revenue_engineered
+    TITLE "Regional Revenue Performance"
+    SUBTITLE "Average revenue after quality review"
+    X_LABEL "Sales region"
+    Y_LABEL "Average revenue"
+    THEME journal
+    PALETTE "cool"
+    FIGSIZE "11,7"
+    DPI 220
+    GRID true
+    LEGEND false
+    LEGEND_POSITION best
+    TEMPLATE publication
+    TRANSPARENT false;
+GALLERY SAVE TO "../reports/sales_all/charts" FORMAT png;
+LIST VISUALIZATIONS;
+# %% [Model training and persistence]
+MODEL TARGET Revenue USING random_forest_regressor
+    TEST_SIZE 0.20
+    RANDOM_STATE 42
+    USE_ENGINEERED true
+    EXCLUDE_LEAKAGE true
+    EXCLUDE Transaction_ID,Customer_ID;
+MODEL SAVE TO "../models/sales_all-revenue-model" OVERWRITE;
+MODEL LOAD FROM "../models/sales_all-revenue-model";
+# %% [Prediction and uncertainty]
+PREDICT CONFIDENCE 0.90
+    UNCERTAINTY true
+    LOW_CONFIDENCE 0.60;
+LET sales_predictions = PREDICTIONS OVERWRITE;
+SELECT Transaction_ID,Region,Revenue,
+       AutoDQ_Prediction,
+       AutoDQ_Prediction_Lower,
+       AutoDQ_Prediction_Upper,
+       AutoDQ_Interval_Width,
+       AutoDQ_Confidence_Level
+FROM PREDICTIONS
+ORDER BY AutoDQ_Prediction DESC
+LIMIT 25;
+# %% [Model explainability and all SHAP chart types]
+EXPLAIN MAX_ROWS 20 USE_ENGINEERED true;
+SHAP CHART summary SAVE "../reports/sales_all/shap-summary.png";
+SHAP CHART bar SAVE "../reports/sales_all/shap-bar.png";
+SHAP CHART beeswarm SAVE "../reports/sales_all/shap-beeswarm.png";
+SHAP CHART waterfall ROW 0
+    SAVE "../reports/sales_all/shap-waterfall.png";
+SHAP CHART dependence FEATURE Customer_Age
+    SAVE "../reports/sales_all/shap-customer-age.png";
+# %% [BLUE assumptions, diagnostics, visual interpretation, and prescriptions]
+BLUE SOURCE data
+    USE_ENGINEERED true
+    EXCLUDE_LEAKAGE true
+    MAX_FEATURES 12
+    SIGNIFICANCE 0.05
+    LEAKAGE_THRESHOLD 0.95
+    EXCLUDE Transaction_ID,Customer_ID;
+BLUE VISUALIZE APPEND true ALLOW_DUPLICATES false;
+BLUE INTERPRET;
+BLUE PRESCRIBE;
+# %% [Dashboard and project reports]
+DASHBOARD
+    TITLE "AutoDQ Complete Sales Analytics"
+    SUBTITLE "Quality, cleaning, contracts, drift, features, modeling, SHAP, uncertainty, and BLUE diagnostics"
+    THEME executive
+    STAGE engineered
+    MAX_CHARTS 20
+    MAX_ROWS 25
+    CHARTS true
+    PREVIEW true
+    REFRESH false
+    DISPLAY false
+    SAVE "../reports/sales_all/dashboard.html"
+    OVERWRITE;
+
+REPORT TO "../reports/sales_all/report.html"
+    STYLE executive
+    OVERWRITE;
+REPORT TO "../reports/sales_all/report.json"
+    STYLE executive
+    OVERWRITE;
+# %% [All export sources]
+EXPORT CURRENT TO "../exports/sales_all-current.csv" OVERWRITE;
+EXPORT cleaned_sales TO "../exports/sales_all-cleaned-snapshot.csv" OVERWRITE;
+EXPORT ENGINEERED TO "../exports/sales_all-features.xlsx" OVERWRITE;
+EXPORT PREDICTIONS TO "../exports/sales_all-predictions.csv" OVERWRITE;
+EXPORT regional_sales TO "../exports/sales_all-regional-summary.csv" OVERWRITE;
+EXPORT sales_with_customers TO "../exports/sales_all-merged.csv" OVERWRITE;
+EXPORT combined_sales TO "../exports/sales_all-concatenated.csv" OVERWRITE;
+# %% [Workspace and session inspection]
+WORKSPACE LIST ROOT "../workspaces";
+LIST WORKSPACES;
+SESSION;
+SESSION EVENTS LIMIT 30;
+SESSION DATASETS;
+HISTORY LIMIT 20;
+# %% [markdown] Optional state-changing administration commands
+
+The following supported commands are intentionally documented rather than run
+automatically because they are destructive or non-idempotent. Convert this
+markdown cell to an ADQL code cell when you specifically want the operation.
+
+```adql
+WORKSPACE CREATE sales_all_workspace ROOT "../workspaces" TARGET Revenue;
+WORKSPACE SAVE INCLUDE_MODEL true MODEL_NAME "sales_all-revenue-model";
+WORKSPACE INFO;
+WORKSPACE OPEN sales_all_workspace ROOT "../workspaces" LOAD_MODEL true;
+
+GALLERY REMOVE boxplot_Profit_engineered;
+GALLERY CLEAR;
+
+MISSING FILL Revenue STRATEGY mean;
+MISSING FILL Quantity STRATEGY zero;
+MISSING FILL Region STRATEGY ffill;
+MISSING FILL City STRATEGY bfill;
+DUPLICATES DROP KEEP last;
+DUPLICATES DROP KEEP none;
+OUTLIERS TREAT COLUMN Profit STRATEGY winsorize;
+OUTLIERS TREAT COLUMN Profit STRATEGY median;
+OUTLIERS TREAT COLUMN Profit STRATEGY set_null;
+OUTLIERS TREAT COLUMN Profit STRATEGY remove;
+OUTLIERS TREAT COLUMN Profit STRATEGY keep;
+
+ASSERT Email FORMAT email SEVERITY warning FAIL_ON never;
+```
+# %% [Completed]
+SESSION;
+

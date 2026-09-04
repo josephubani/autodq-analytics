@@ -1,10 +1,10 @@
-(* AutoDQ Analytics Domain Query Language 2.4 concrete grammar.
+(* AutoDQ Analytics Domain Query Language 2.5 concrete grammar.
    Keywords and enum terminals are case-insensitive.
    Command options may appear in any order unless a production fixes an order.
    Repeated options are syntactically expressible below but are rejected by
    semantic validation. *)
 
-language-version = "2.4" ;
+language-version = "2.5" ;
 
 script = statement, { ";", statement }, [ ";" ] ;
 
@@ -16,6 +16,9 @@ statement =
   | assert-statement
   | schema-statement
   | drift-statement
+  | contract-statement
+  | baseline-statement
+  | check-statement
   | let-statement
   | profile-statement
   | statistics-statement
@@ -203,6 +206,42 @@ drift-detect-option = "DATASET", dataset-name
                     | "MISSING_WARNING", number
                     | "MISSING_ERROR", number ;
 baseline-name = bare-token ;
+
+(* command: CONTRACT *)
+contract-statement = "CONTRACT",
+    ( "LIST"
+    | ( "SHOW" | "DROP" ), contract-name
+    | ( "SAVE" | "EXPORT" ), contract-name, "TO", path,
+      [ overwrite-flag ]
+    | "LOAD", contract-name, "FROM", path, [ overwrite-flag ]
+    | contract-name,
+      ( "REQUIRE", identifier, { concise-contract-option }
+      | { schema-create-option } ) ) ;
+concise-contract-option = schema-add-option
+                        | "NOT", "NULL"
+                        | "UNIQUE" ;
+
+(* command: BASELINE *)
+baseline-statement = "BASELINE",
+    ( "LIST"
+    | ( "SHOW" | "DROP" ), baseline-name
+    | ( "SAVE" | "EXPORT" ), baseline-name, "TO", path,
+      [ overwrite-flag ]
+    | "LOAD", baseline-name, "FROM", path, [ overwrite-flag ]
+    | baseline-name, { "FROM", dataset-name | overwrite-flag } ) ;
+
+(* command: CHECK *)
+check-statement = "CHECK",
+    ( "CONTRACT", contract-name, { concise-contract-check-option }
+    | "DRIFT", baseline-name, { concise-drift-check-option } ) ;
+concise-contract-check-option = ( "ON" | "DATASET" ), dataset-name
+                              | fail-on-option ;
+concise-drift-check-option = concise-contract-check-option
+                           | "CONTRACT", contract-name
+                           | "SENSITIVITY", drift-sensitivity
+                           | drift-detect-option ;
+fail-on-option = ( "FAIL_ON" | "FAIL", "ON" ), quality-failure-level ;
+drift-sensitivity = "strict" | "normal" | "relaxed" ;
 
 (* command: LET *)
 let-statement = "LET", assignment-identifier, "=", let-source,

@@ -5,6 +5,34 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.23 - 2026-09-03
+
+### Added
+
+- Added concise schema-contract and drift syntax: `CONTRACT`, `BASELINE`, and
+  `CHECK`.
+- Added readable contract rules such as
+  `CONTRACT sales REQUIRE Revenue TYPE numeric NOT NULL MIN 0`.
+- Added `strict`, `normal`, and `relaxed` drift sensitivity presets, with
+  explicit thresholds still available as overrides.
+- Added concise save, load, show, list, and drop operations for contracts and
+  baselines.
+
+### Changed
+
+- Advanced the language to ADQL 2.5 while retaining every valid ADQL 2.4
+  program and the complete legacy `SCHEMA CONTRACT` and `DRIFT` syntax.
+- Advanced the bundled AutoDQ ADQL VS Code extension to 0.3.16 with complete
+  highlighting for the new commands, `REQUIRE`, `SENSITIVITY`, and preset
+  values.
+- Updated the formal specification, command guide, quickstart, public examples,
+  and help inventory to prefer the concise syntax.
+
+### Validation
+
+- Added parser, validation, execution, mixed-case, sensitivity, and artifact
+  lifecycle coverage for the concise aliases.
+
 ## 0.1.22 - 2026-08-30
 
 ### Added

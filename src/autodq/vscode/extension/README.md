@@ -149,18 +149,17 @@ Protect future batches with a structural contract and a distribution
 baseline:
 
 ```adql
-SCHEMA CONTRACT CREATE sales_v1 FROM approved_sales;
-SCHEMA CONTRACT ADD sales_v1 COLUMN Revenue
-    TYPE numeric REQUIRED true NULLABLE false MIN 0;
-SCHEMA CONTRACT VALIDATE sales_v1 DATASET august_sales FAIL_ON error;
+CONTRACT sales_v1 FROM approved_sales;
+CONTRACT sales_v1 REQUIRE Revenue TYPE numeric NOT NULL MIN 0;
+CHECK CONTRACT sales_v1 ON august_sales FAIL ON error;
 
-DRIFT BASELINE CREATE sales_baseline FROM approved_sales;
-DRIFT DETECT REFERENCE sales_baseline DATASET august_sales
-    CONTRACT sales_v1 FAIL_ON warning;
+BASELINE sales_baseline FROM approved_sales;
+CHECK DRIFT sales_baseline ON august_sales
+    CONTRACT sales_v1 SENSITIVITY normal FAIL ON warning;
 ```
 
 The contract and baseline remain reusable when another dataset becomes active.
-Use `SCHEMA CONTRACT EXPORT|LOAD` and `DRIFT BASELINE EXPORT|LOAD` for portable
+Use `CONTRACT SAVE|LOAD` and `BASELINE SAVE|LOAD` for portable
 JSON artifacts, or `WORKSPACE SAVE` to persist them with the project. Neither
 validation nor drift detection changes the evaluated data.
 

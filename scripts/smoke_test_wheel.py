@@ -317,7 +317,7 @@ def main() -> int:
         api_check = (
             "import sys; from autodq import (ADQL_LANGUAGE_VERSION, AutoDQ, "
             "PIPELINE_SCHEMA_VERSION, PipelineRunSpec, PipelineRunner, "
-            "QualityAssertion); assert ADQL_LANGUAGE_VERSION == '2.4'; "
+            "QualityAssertion); assert ADQL_LANGUAGE_VERSION == '2.5'; "
             "assert PIPELINE_SCHEMA_VERSION == '1.0'; "
             "assert PipelineRunSpec and PipelineRunner; "
             "project = AutoDQ(sys.argv[1], target='Revenue'); "

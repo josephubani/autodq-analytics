@@ -458,11 +458,20 @@ class ADQLValidator:
         elif statement.kind == "ASSERT":
             self._validate_assert(parameters)
 
-        elif statement.kind == "SCHEMA":
+        elif statement.kind in {"SCHEMA", "CONTRACT"}:
             self._validate_schema(parameters)
 
-        elif statement.kind == "DRIFT":
+        elif statement.kind in {"DRIFT", "BASELINE"}:
             self._validate_drift(parameters)
+
+        elif statement.kind == "CHECK":
+            entity = parameters.get("entity")
+            if entity == "contract":
+                self._validate_schema(parameters)
+            elif entity == "drift":
+                self._validate_drift(parameters)
+            else:
+                raise ADQLValidationError("CHECK entity is not recognized.")
 
         elif statement.kind == "HELP":
             command = parameters.get("command")
@@ -756,6 +765,13 @@ class ADQLValidator:
             contract = parameters.get("contract")
             if contract is not None:
                 self._validate_artifact_name(contract, label="DRIFT CONTRACT")
+            sensitivity = parameters.get("sensitivity")
+            if sensitivity is not None and str(sensitivity).lower() not in {
+                "strict", "normal", "relaxed"
+            }:
+                raise ADQLValidationError(
+                    "DRIFT SENSITIVITY must be strict, normal, or relaxed."
+                )
             if str(parameters.get("fail_on", "error")).lower() not in {
                 "error", "warning", "info", "never"
             }:

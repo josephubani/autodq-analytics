@@ -228,30 +228,28 @@ two reusable safeguards:
 ```adql
 LET approved_sales = CLEANED;
 
-SCHEMA CONTRACT CREATE sales_v1 FROM approved_sales;
-SCHEMA CONTRACT ADD sales_v1 COLUMN Transaction_ID
-    TYPE integer REQUIRED true NULLABLE false;
-SCHEMA CONTRACT ADD sales_v1 COLUMN Revenue
-    TYPE numeric REQUIRED true NULLABLE false MIN 0;
+CONTRACT sales_v1 FROM approved_sales;
+CONTRACT sales_v1 REQUIRE Transaction_ID TYPE integer NOT NULL;
+CONTRACT sales_v1 REQUIRE Revenue TYPE numeric NOT NULL MIN 0;
 
-DRIFT BASELINE CREATE sales_baseline FROM approved_sales;
+BASELINE sales_baseline FROM approved_sales;
 ```
 
 When a later batch is registered, validate its structure and compare its
 distributions without changing it:
 
 ```adql
-SCHEMA CONTRACT VALIDATE sales_v1 DATASET august_sales FAIL_ON error;
-DRIFT DETECT REFERENCE sales_baseline DATASET august_sales
-    CONTRACT sales_v1 FAIL_ON warning;
+CHECK CONTRACT sales_v1 ON august_sales FAIL ON error;
+CHECK DRIFT sales_baseline ON august_sales
+    CONTRACT sales_v1 SENSITIVITY normal FAIL ON warning;
 ```
 
 Export the JSON definitions when they should travel independently of a saved
 workspace:
 
 ```adql
-SCHEMA CONTRACT EXPORT sales_v1 TO "contracts/sales-v1.json" OVERWRITE;
-DRIFT BASELINE EXPORT sales_baseline TO "baselines/sales.json" OVERWRITE;
+CONTRACT SAVE sales_v1 TO "contracts/sales-v1.json" OVERWRITE;
+BASELINE SAVE sales_baseline TO "baselines/sales.json" OVERWRITE;
 ```
 
 ## Continue from here

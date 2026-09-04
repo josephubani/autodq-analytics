@@ -2,7 +2,30 @@
 
 # Public language version. This is intentionally independent from the AutoDQ
 # package and VS Code extension versions.
-ADQL_LANGUAGE_VERSION = "2.4"
+ADQL_LANGUAGE_VERSION = "2.5"
+
+# Human-readable drift sensitivity presets. Explicit threshold options on a
+# CHECK DRIFT statement override the selected preset.
+DRIFT_SENSITIVITY_PRESETS = {
+    "strict": {
+        "psi_warning": 0.05,
+        "psi_error": 0.15,
+        "missing_warning": 1.0,
+        "missing_error": 2.0,
+    },
+    "normal": {
+        "psi_warning": 0.10,
+        "psi_error": 0.25,
+        "missing_warning": 2.0,
+        "missing_error": 5.0,
+    },
+    "relaxed": {
+        "psi_warning": 0.20,
+        "psi_error": 0.35,
+        "missing_warning": 5.0,
+        "missing_error": 10.0,
+    },
+}
 
 SUPPORTED_COMMANDS = {
     "SELECT",
@@ -60,6 +83,9 @@ SUPPORTED_COMMANDS = {
     "ASSERT",
     "SCHEMA",
     "DRIFT",
+    "CONTRACT",
+    "BASELINE",
+    "CHECK",
 }
 
 SIMPLE_COMMANDS = {
@@ -350,6 +376,18 @@ COMMAND_HELP = [
         ),
     },
     {
+        "command": "CONTRACT",
+        "syntax": (
+            "CONTRACT name FROM dataset; "
+            "CONTRACT name REQUIRE column TYPE numeric NOT NULL MIN 0; "
+            "CONTRACT SHOW|LIST|SAVE|LOAD|DROP ..."
+        ),
+        "description": (
+            "Create and manage schema contracts with concise, readable syntax. "
+            "The legacy SCHEMA CONTRACT syntax remains supported."
+        ),
+    },
+    {
         "command": "DRIFT",
         "syntax": (
             "DRIFT BASELINE CREATE name FROM dataset; "
@@ -358,6 +396,29 @@ COMMAND_HELP = [
         "description": (
             "Create reusable statistical baselines and detect schema, "
             "missingness, cardinality, range, category, and PSI drift."
+        ),
+    },
+    {
+        "command": "BASELINE",
+        "syntax": (
+            "BASELINE name FROM dataset; "
+            "BASELINE SHOW|LIST|SAVE|LOAD|DROP ..."
+        ),
+        "description": (
+            "Create and manage compact statistical drift baselines with "
+            "concise syntax."
+        ),
+    },
+    {
+        "command": "CHECK",
+        "syntax": (
+            "CHECK CONTRACT name ON dataset [FAIL_ON level]; "
+            "CHECK DRIFT baseline ON dataset [CONTRACT name] "
+            "[SENSITIVITY strict|normal|relaxed]"
+        ),
+        "description": (
+            "Validate a dataset against a contract or drift baseline without "
+            "mutating the data."
         ),
     },
     {

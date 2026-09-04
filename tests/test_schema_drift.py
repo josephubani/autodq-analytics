@@ -183,6 +183,49 @@ class SchemaDriftTests(unittest.TestCase):
         self.assertTrue(run.success)
         self.assertEqual(run.latest.value.baseline_name, "sales_base")
 
+    def test_concise_contract_and_drift_workflow_reuses_existing_engines(self):
+        source = '''
+        CoNtRaCt concise_sales FROM baseline;
+        CONTRACT concise_sales REQUIRE Revenue TYPE numeric NOT NULL MIN 0;
+        CHECK CONTRACT concise_sales ON baseline FAIL ON never;
+        BaSeLiNe concise_baseline FROM baseline;
+        CHECK DRIFT concise_baseline ON current CONTRACT concise_sales
+            SENSITIVITY strict FAIL ON never;
+        '''
+        script = ADQLParser().parse(source)
+        ADQLValidator().validate(script)
+        drift_check = script.statements[-1].parameters
+        self.assertEqual(drift_check["sensitivity"], "strict")
+        self.assertEqual(drift_check["psi_warning"], 0.05)
+        self.assertEqual(drift_check["psi_error"], 0.15)
+        self.assertEqual(drift_check["missing_warning"], 1.0)
+        self.assertEqual(drift_check["missing_error"], 2.0)
+
+        run = self.project.query(
+            source,
+            continue_on_error=False,
+            auto_display=False,
+        )
+        self.assertTrue(run.success)
+        self.assertEqual(run.statement_count, 5)
+        self.assertEqual(run.latest.value.baseline_name, "concise_baseline")
+
+    def test_concise_contract_and_baseline_lifecycle_syntax(self):
+        source = f'''
+        CONTRACT sales FROM baseline;
+        CONTRACT SAVE sales TO "{self.root / 'concise-contract.json'}" OVERWRITE;
+        CONTRACT SHOW sales;
+        CONTRACT LIST;
+        BASELINE sales_base FROM baseline;
+        BASELINE SAVE sales_base TO "{self.root / 'concise-baseline.json'}" OVERWRITE;
+        BASELINE SHOW sales_base;
+        BASELINE LIST;
+        '''
+        run = self.project.query(source, auto_display=False)
+        self.assertTrue(run.success)
+        self.assertTrue((self.root / "concise-contract.json").is_file())
+        self.assertTrue((self.root / "concise-baseline.json").is_file())
+
     def test_invalid_schema_and_drift_are_rejected_before_execution(self):
         parser = ADQLParser()
         for source in (

@@ -14,6 +14,7 @@ from autodq.commands.grammar import (
     DASHBOARD_OPTIONS,
     DATASET_SCOPED_COMMANDS,
     DATA_SOURCES,
+    DRIFT_SENSITIVITY_PRESETS,
     EXPLAIN_OPTIONS,
     GALLERY_STYLE_OPTIONS,
     MODEL_OPTIONS,
@@ -37,6 +38,9 @@ class ADQLParser:
         "chart",
         "chart_type",
         "format",
+        "dtype",
+        "extra_columns",
+        "fail_on",
         "how",
         "join",
         "keep",
@@ -46,6 +50,8 @@ class ADQLParser:
         "report_style",
         "save_format",
         "source",
+        "sensitivity",
+        "severity",
         "stage",
         "strategy",
         "style",
@@ -328,6 +334,15 @@ class ADQLParser:
 
         if kind == "DRIFT":
             return self._parse_drift(arguments)
+
+        if kind == "CONTRACT":
+            return self._parse_contract(arguments)
+
+        if kind == "BASELINE":
+            return self._parse_baseline(arguments)
+
+        if kind == "CHECK":
+            return self._parse_check(arguments)
 
         if kind == "MISSING":
             return self._parse_missing(arguments)
@@ -746,6 +761,257 @@ class ADQLParser:
         raise ADQLSyntaxError(
             "DRIFT BASELINE action must be CREATE, SHOW, LIST, DROP, EXPORT, or LOAD."
         )
+
+    def _parse_contract(self, arguments: list[str]) -> dict[str, Any]:
+        """Parse the concise schema-contract syntax."""
+        if not arguments:
+            raise ADQLSyntaxError(
+                "CONTRACT requires a name or LIST, SHOW, SAVE, LOAD, or DROP."
+            )
+
+        action = arguments[0].upper()
+        if action == "LIST":
+            if len(arguments) != 1:
+                raise ADQLSyntaxError("CONTRACT LIST accepts no arguments.")
+            return {"action": "list"}
+
+        if action in {"SHOW", "DROP"}:
+            if len(arguments) != 2:
+                raise ADQLSyntaxError(
+                    f"CONTRACT {action} requires exactly one contract name."
+                )
+            return {
+                "action": action.lower(),
+                "contract_name": arguments[1],
+            }
+
+        if action in {"SAVE", "EXPORT", "LOAD"}:
+            if len(arguments) < 2:
+                raise ADQLSyntaxError(f"CONTRACT {action} requires a name.")
+            keyword = "FROM" if action == "LOAD" else "TO"
+            options = self._parse_options(
+                arguments[2:],
+                {keyword: "path", "OVERWRITE": "overwrite"},
+                flags={"OVERWRITE"},
+            )
+            if "path" not in options:
+                raise ADQLSyntaxError(
+                    f"CONTRACT {action} requires {keyword} followed by a path."
+                )
+            return {
+                "action": "export" if action in {"SAVE", "EXPORT"} else "load",
+                "contract_name": arguments[1],
+                **self._coerce_options(options),
+            }
+
+        name = arguments[0]
+        if len(arguments) >= 2 and arguments[1].upper() == "REQUIRE":
+            if len(arguments) < 3:
+                raise ADQLSyntaxError(
+                    "CONTRACT name REQUIRE requires a column name."
+                )
+            normalized = []
+            index = 3
+            while index < len(arguments):
+                token = arguments[index]
+                upper = token.upper()
+                if upper == "NOT" and index + 1 < len(arguments) and (
+                    arguments[index + 1].upper() == "NULL"
+                ):
+                    normalized.extend(["NULLABLE", "false"])
+                    index += 2
+                    continue
+                if upper == "UNIQUE":
+                    next_is_boolean = (
+                        index + 1 < len(arguments)
+                        and arguments[index + 1].lower()
+                        in {"true", "false", "yes", "no", "1", "0", "on", "off"}
+                    )
+                    normalized.extend(
+                        ["UNIQUE", arguments[index + 1] if next_is_boolean else "true"]
+                    )
+                    index += 2 if next_is_boolean else 1
+                    continue
+                normalized.append(token)
+                index += 1
+
+            options = self._parse_options(
+                normalized,
+                {
+                    "TYPE": "dtype",
+                    "REQUIRED": "required",
+                    "NULLABLE": "nullable",
+                    "UNIQUE": "unique",
+                    "MIN": "minimum",
+                    "MINIMUM": "minimum",
+                    "MAX": "maximum",
+                    "MAXIMUM": "maximum",
+                    "ALLOWED": "allowed_values",
+                    "MATCHES": "pattern",
+                    "PATTERN": "pattern",
+                    "SEVERITY": "severity",
+                },
+            )
+            options.setdefault("required", True)
+            options = self._coerce_options(options)
+            if "minimum" in options:
+                options["minimum"] = self._literal(str(options["minimum"]))
+            if "maximum" in options:
+                options["maximum"] = self._literal(str(options["maximum"]))
+            if "allowed_values" in options:
+                options["allowed_values"] = [
+                    self._literal(value)
+                    for value in self._string_list(
+                        options["allowed_values"], option="ALLOWED"
+                    )
+                ]
+            return {
+                "action": "add",
+                "contract_name": name,
+                "column": arguments[2],
+                **options,
+            }
+
+        options = self._parse_options(
+            arguments[1:],
+            {
+                "FROM": "source_dataset",
+                "VERSION": "contract_version",
+                "EXTRA_COLUMNS": "extra_columns",
+                "INFER_RANGES": "infer_ranges",
+                "INFER_CATEGORIES": "infer_categories",
+                "OVERWRITE": "overwrite",
+            },
+            flags={"OVERWRITE"},
+        )
+        return {
+            "action": "create",
+            "contract_name": name,
+            **self._coerce_options(options),
+        }
+
+    def _parse_baseline(self, arguments: list[str]) -> dict[str, Any]:
+        """Parse the concise drift-baseline syntax."""
+        if not arguments:
+            raise ADQLSyntaxError(
+                "BASELINE requires a name or LIST, SHOW, SAVE, LOAD, or DROP."
+            )
+        action = arguments[0].upper()
+        if action == "LIST":
+            if len(arguments) != 1:
+                raise ADQLSyntaxError("BASELINE LIST accepts no arguments.")
+            return {"action": "baseline_list"}
+        if action in {"SHOW", "DROP"}:
+            if len(arguments) != 2:
+                raise ADQLSyntaxError(
+                    f"BASELINE {action} requires exactly one baseline name."
+                )
+            return {
+                "action": f"baseline_{action.lower()}",
+                "baseline_name": arguments[1],
+            }
+        if action in {"SAVE", "EXPORT", "LOAD"}:
+            if len(arguments) < 2:
+                raise ADQLSyntaxError(f"BASELINE {action} requires a name.")
+            keyword = "FROM" if action == "LOAD" else "TO"
+            options = self._parse_options(
+                arguments[2:],
+                {keyword: "path", "OVERWRITE": "overwrite"},
+                flags={"OVERWRITE"},
+            )
+            if "path" not in options:
+                raise ADQLSyntaxError(
+                    f"BASELINE {action} requires {keyword} followed by a path."
+                )
+            resolved_action = "export" if action in {"SAVE", "EXPORT"} else "load"
+            return {
+                "action": f"baseline_{resolved_action}",
+                "baseline_name": arguments[1],
+                **self._coerce_options(options),
+            }
+
+        options = self._parse_options(
+            arguments[1:],
+            {"FROM": "source_dataset", "OVERWRITE": "overwrite"},
+            flags={"OVERWRITE"},
+        )
+        return {
+            "action": "baseline_create",
+            "baseline_name": arguments[0],
+            **self._coerce_options(options),
+        }
+
+    def _parse_check(self, arguments: list[str]) -> dict[str, Any]:
+        """Parse concise contract validation and drift detection commands."""
+        if len(arguments) < 2:
+            raise ADQLSyntaxError(
+                "CHECK requires CONTRACT name or DRIFT baseline_name."
+            )
+        entity = arguments[0].upper()
+        normalized = []
+        index = 2
+        while index < len(arguments):
+            if (
+                arguments[index].upper() == "FAIL"
+                and index + 1 < len(arguments)
+                and arguments[index + 1].upper() == "ON"
+            ):
+                normalized.append("FAIL_ON")
+                index += 2
+                continue
+            normalized.append(arguments[index])
+            index += 1
+
+        if entity == "CONTRACT":
+            options = self._parse_options(
+                normalized,
+                {"ON": "source_dataset", "DATASET": "source_dataset", "FAIL_ON": "fail_on"},
+            )
+            return {
+                "entity": "contract",
+                "action": "validate",
+                "contract_name": arguments[1],
+                **self._coerce_options(options),
+            }
+
+        if entity != "DRIFT":
+            raise ADQLSyntaxError("CHECK requires CONTRACT or DRIFT.")
+        options = self._parse_options(
+            normalized,
+            {
+                "ON": "source_dataset",
+                "DATASET": "source_dataset",
+                "CONTRACT": "contract",
+                "SENSITIVITY": "sensitivity",
+                "FAIL_ON": "fail_on",
+                "PSI_WARNING": "psi_warning",
+                "PSI_ERROR": "psi_error",
+                "MISSING_WARNING": "missing_warning",
+                "MISSING_ERROR": "missing_error",
+            },
+        )
+        options = self._coerce_options(options)
+        sensitivity = str(options.pop("sensitivity", "normal")).lower()
+        if sensitivity not in DRIFT_SENSITIVITY_PRESETS:
+            raise ADQLSyntaxError(
+                "CHECK DRIFT SENSITIVITY must be strict, normal, or relaxed."
+            )
+        thresholds = dict(DRIFT_SENSITIVITY_PRESETS[sensitivity])
+        thresholds.update(
+            {
+                key: options.pop(key)
+                for key in tuple(thresholds)
+                if key in options
+            }
+        )
+        return {
+            "entity": "drift",
+            "action": "detect",
+            "reference": arguments[1],
+            "sensitivity": sensitivity,
+            **thresholds,
+            **options,
+        }
 
     def _parse_assert(self, arguments: list[str]) -> dict[str, Any]:
         if not arguments:

@@ -3,12 +3,12 @@
 | Field | Value |
 | --- | --- |
 | Language | AutoDQ Analytics Domain Query Language (ADQL) |
-| Language version | 2.4 |
+| Language version | 2.5 |
 | Specification status | Stable |
 | Text encoding | UTF-8 |
 | Canonical file extension | `.adql` |
 
-This document is the normative definition of ADQL 2.4. It defines the
+This document is the normative definition of ADQL 2.5. It defines the
 language independently of a particular user interface or AutoDQ package
 release. The public Python constant `autodq.ADQL_LANGUAGE_VERSION` identifies
 the language version implemented by an installed AutoDQ package.
@@ -241,8 +241,8 @@ defines its purpose and primary state effect.
 | `SELECT`, `HEAD`, `TAIL`, `SAMPLE` | Read bounded tabular results without changing dataset values. |
 | `LET` | Create an independent named dataset snapshot from a stage, dataset, or bounded `SELECT` result. |
 | `ASSERT` | Evaluate a non-mutating data-quality expectation or manage and run a reusable quality suite. |
-| `SCHEMA` | Infer, refine, validate, inspect, export, and load a versioned schema contract. |
-| `DRIFT` | Create portable statistical baselines and detect schema and distribution drift. |
+| `CONTRACT`, `SCHEMA` | Infer, refine, validate, inspect, export, and load a versioned schema contract. `CONTRACT` is the concise form. |
+| `BASELINE`, `CHECK`, `DRIFT` | Create portable statistical baselines and detect schema and distribution drift. `BASELINE` and `CHECK` are the concise forms. |
 | `PROFILE`, `STATISTICS`, `INTERPRET`, `DIAGNOSE`, `KNOWLEDGE`, `RECOMMEND`, `DECIDE`, `PREVIEW`, `REVIEW` | Build ordered quality and review artifacts in project state. |
 | `APPROVE`, `REJECT` | Change the status of proposed cleaning actions. |
 | `EDIT`, `MISSING`, `DUPLICATES`, `DOMAIN`, `OUTLIERS` | Inspect or mutate the audited cleaning-review working copy. |
@@ -291,8 +291,8 @@ appear at most once. The following semantic constraints supplement the EBNF:
 | `EXPORT` | Output suffix is `.csv` or `.xlsx`. |
 | `AUDIT EXPORT` | Output suffix is `.json` or `.csv`. |
 | `ASSERT` | Severity is `error`, `warning`, or `info`; `FAIL_ON` additionally accepts `never`; suite JSON paths end with `.json`; `BETWEEN` bounds are ascending. |
-| `SCHEMA` | Contract and JSON artifact names are bounded identifiers; `EXTRA_COLUMNS` is `ignore`, `info`, `warning`, or `error`; contract paths end with `.json`. |
-| `DRIFT` | `REFERENCE` is required for detection; PSI and missingness warning thresholds cannot exceed error thresholds; baseline paths end with `.json`. |
+| `SCHEMA`, `CONTRACT`, `CHECK CONTRACT` | Contract and JSON artifact names are bounded identifiers; `EXTRA_COLUMNS` is `ignore`, `info`, `warning`, or `error`; contract paths end with `.json`. |
+| `DRIFT`, `BASELINE`, `CHECK DRIFT` | A baseline is required for detection; PSI and missingness warning thresholds cannot exceed error thresholds; baseline paths end with `.json`; sensitivity is `strict`, `normal`, or `relaxed`. |
 | `HEAD`, `TAIL`, `SAMPLE`, `HISTORY`, `SESSION EVENTS LIMIT` | Explicit row or event counts are positive integers. |
 
 Boolean flags written as `OVERWRITE` without a value mean true. When the
@@ -336,27 +336,35 @@ active dataset changes.
 
 ### 7.3 Schema contracts and drift baselines
 
-`SCHEMA CONTRACT CREATE` infers required columns, canonical data types,
+`CONTRACT name FROM dataset` is the preferred concise form of
+`SCHEMA CONTRACT CREATE name FROM dataset`. Both forms invoke the same engine
+and produce the same versioned contract. Contract creation infers required
+columns, canonical data types,
 nullability, identifier uniqueness, and bounded categorical domains from a
 current or registered dataset. Numeric and datetime ranges are inferred only
-when `INFER_RANGES true` is explicit. `ADD` creates or updates a column rule.
-Contract validation is non-mutating and uses the same `error`, `warning`,
-`info`, and `FAIL_ON` gate semantics as quality assertions.
+when `INFER_RANGES true` is explicit. `CONTRACT name REQUIRE column ...` is the
+concise form of `SCHEMA CONTRACT ADD`; `REQUIRE` implies `REQUIRED true`,
+`NOT NULL` means `NULLABLE false`, and bare `UNIQUE` means `UNIQUE true`.
+`CHECK CONTRACT name ON dataset` validates without mutation and uses the same
+`error`, `warning`, `info`, and `FAIL_ON` gate semantics as quality assertions.
 
 Contracts use a versioned JSON format. Registered definitions survive active
 dataset switches and are persisted with an attached workspace. The latest
 validation report is dataset-derived and is invalidated by a dataset switch.
 
-`DRIFT BASELINE CREATE` stores compact distributions rather than raw records.
+`BASELINE name FROM dataset` is the preferred concise form of
+`DRIFT BASELINE CREATE`. It stores compact distributions rather than raw records.
 Numeric and datetime columns retain baseline quantile bins; categorical
 columns retain at most 50 frequent values plus explicit other and missing
 buckets. Detection compares required and added columns, compatible dtypes,
 missing percentages, distinct-value ratios, PSI, values outside baseline
 ranges, complete categorical domains, duplicate rate, and batch row count.
 
-PSI is stable at or below 0.10, moderate through 0.25, and major above 0.25 by
-default. Missingness deltas use 2 and 5 percentage points. Thresholds are
-configurable per `DRIFT DETECT`. The transparent stability score is
+`CHECK DRIFT baseline ON dataset` performs detection. `SENSITIVITY normal` is
+the default and uses PSI warning/error thresholds of 0.10/0.25 and missingness
+deltas of 2/5 percentage points. `strict` uses 0.05/0.15 and 1/2 points;
+`relaxed` uses 0.20/0.35 and 5/10 points. Explicit threshold options override
+the preset. The legacy `DRIFT DETECT` syntax remains available. The transparent stability score is
 `(stable checks + 0.5 × moderate checks) / all checks × 100`. An optional
 contract contributes its failed checks to the drift gate. Drift operations do
 not mutate current, cleaned, engineered, or named datasets.
@@ -382,7 +390,7 @@ MUST appear in `GROUP BY`. Output aliases are case-insensitively unique.
 
 `WHERE` conditions are combined only with `AND`. Supported operators are `=`,
 `!=`, `<`, `<=`, `>`, `>=`, `IN`, `NOT IN`, `IS NULL`, `IS NOT NULL`,
-`CONTAINS`, `STARTS WITH`, and `ENDS WITH`. ADQL 2.4 does not support `OR`,
+`CONTAINS`, `STARTS WITH`, and `ENDS WITH`. ADQL 2.5 does not support `OR`,
 joins inside `SELECT`, subqueries, window functions, or arbitrary functions.
 
 `DISTINCT` is applied after projection and aggregation. Ordering is stable,
@@ -418,12 +426,11 @@ overwritten by `LET`.
 
 ## 10. Safety limits
 
-A conforming AutoDQ ADQL 2.4 validator enforces:
+A conforming AutoDQ ADQL 2.5 validator enforces:
 
 | Limit | Value |
 | --- | ---: |
 | Source length | 100,000 characters |
-| Statements per parsed script | 100 |
 | Explicit `SELECT LIMIT` | 10,000 rows |
 | `WHERE` conditions | 50 |
 | Default returned query rows | 1,000 |
@@ -463,13 +470,13 @@ language behavior.
 
 ## 12. Conformance and extensions
 
-An implementation claiming **ADQL 2.4 parser conformance** MUST implement all
-productions in `grammar.ebnf`. An implementation claiming **AutoDQ ADQL 2.4
+An implementation claiming **ADQL 2.5 parser conformance** MUST implement all
+productions in `grammar.ebnf`. An implementation claiming **AutoDQ ADQL 2.5
 runtime conformance** MUST additionally implement every command listed by the
 runtime command set and the state transitions in this specification.
 
 Implementations MAY provide extra renderers, editors, transport protocols, and
-CLI options. They MUST NOT silently reinterpret valid ADQL 2.4 syntax.
+CLI options. They MUST NOT silently reinterpret valid ADQL 2.5 syntax.
 Language extensions require a later ADQL language version and MUST be rejected
 as unknown syntax by implementations that do not support that version.
 

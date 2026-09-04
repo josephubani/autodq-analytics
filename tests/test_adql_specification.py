@@ -30,7 +30,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
         )
         grammar = (SPEC_ROOT / "grammar.ebnf").read_text(encoding="utf-8")
 
-        self.assertEqual(ADQL_LANGUAGE_VERSION, "2.4")
+        self.assertEqual(ADQL_LANGUAGE_VERSION, "2.5")
         self.assertIn(
             f"| Language version | {ADQL_LANGUAGE_VERSION} |",
             specification,
@@ -55,10 +55,13 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
             "ASSERT": "ASSERT Email FORMAT email",
             "AUDIT": 'AUDIT EXPORT TO "audit.json"',
             "AUTO": "AUTO MODE review VISUALIZE false",
+            "BASELINE": "BASELINE LIST",
             "BLUE": "BLUE MAX_FEATURES 4",
+            "CHECK": "CHECK DRIFT sales_baseline SENSITIVITY normal FAIL_ON never",
             "CLEAN": "CLEAN",
             "CLEANING": "CLEANING PREVIEW MAX_ROWS 5",
             "CONCAT": "CONCAT SalesData,CustomerData AS Combined",
+            "CONTRACT": "CONTRACT LIST",
             "CORRELATION": "CORRELATION MIN_ABS 0.2",
             "DASHBOARD": "DASHBOARD THEME dark DISPLAY false",
             "DATASET": 'DATASET "sales.csv" TARGET Revenue',

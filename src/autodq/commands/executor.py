@@ -180,11 +180,20 @@ class ADQLExecutor:
         if kind == "ASSERT":
             return self._execute_assert(project, parameters)
 
-        if kind == "SCHEMA":
+        if kind in {"SCHEMA", "CONTRACT"}:
             return self._execute_schema(project, parameters)
 
-        if kind == "DRIFT":
+        if kind in {"DRIFT", "BASELINE"}:
             return self._execute_drift(project, parameters)
+
+        if kind == "CHECK":
+            entity = parameters.pop("entity")
+            if entity == "contract":
+                return self._execute_schema(project, parameters)
+            if entity == "drift":
+                parameters.pop("sensitivity", None)
+                return self._execute_drift(project, parameters)
+            raise RuntimeError(f"Unsupported CHECK entity: {entity}.")
 
         simple = {
             "LOAD": project.load,
@@ -1641,6 +1650,8 @@ class ADQLExecutor:
             "ASSERT": ("path",),
             "SCHEMA": ("path",),
             "DRIFT": ("path",),
+            "CONTRACT": ("path",),
+            "BASELINE": ("path",),
             "WORKSPACE": ("workspace_root",),
             "GALLERY": ("output_dir",),
         }

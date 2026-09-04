@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.3.16 - 2026-09-03
+
+- Added case-insensitive highlighting for ADQL 2.5 `CONTRACT`, `BASELINE`, and
+  `CHECK` commands.
+- Added highlighting for `REQUIRE`, `SENSITIVITY`, and the `strict`, `normal`,
+  and `relaxed` drift presets.
+- Updated notebook documentation to lead with the concise contract and drift
+  workflow while preserving legacy ADQL 2.4 syntax.
+- Bundled AutoDQ 0.1.23.
+
 ## 0.3.15 - 2026-08-30
 
 - Added case-insensitive syntax highlighting for ADQL 2.4 `FORMAT` quality

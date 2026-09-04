@@ -6,7 +6,7 @@ repeatable analytics while retaining named, executable cells. ADQL does not
 evaluate Python expressions or expose arbitrary object methods.
 
 This file is the practical command guide. The normative definition of ADQL
-2.4 is the [formal language specification](adql/SPECIFICATION.md), accompanied
+2.5 is the [formal language specification](adql/SPECIFICATION.md), accompanied
 by its [EBNF grammar](adql/grammar.ebnf),
 [execution model](adql/execution-model.md),
 [data-type rules](adql/data-types.md), [error model](adql/errors.md), and
@@ -596,29 +596,29 @@ compares a new batch with a compact approved baseline to detect changes that
 may still satisfy the schema.
 
 ```adql
-SCHEMA CONTRACT CREATE sales_v1 FROM cleaned_sales
+CONTRACT sales_v1 FROM cleaned_sales
     VERSION 1.0.0
     EXTRA_COLUMNS warning
     INFER_RANGES false
     INFER_CATEGORIES true
     OVERWRITE;
 
-SCHEMA CONTRACT ADD sales_v1 COLUMN Transaction_ID
-    TYPE integer REQUIRED true NULLABLE false UNIQUE true
+CONTRACT sales_v1 REQUIRE Transaction_ID
+    TYPE integer NOT NULL UNIQUE
     SEVERITY error;
-SCHEMA CONTRACT ADD sales_v1 COLUMN Revenue
-    TYPE numeric REQUIRED true NULLABLE false MIN 0
+CONTRACT sales_v1 REQUIRE Revenue
+    TYPE numeric NOT NULL MIN 0
     SEVERITY error;
-SCHEMA CONTRACT ADD sales_v1 COLUMN Region
+CONTRACT sales_v1 REQUIRE Region
     TYPE string ALLOWED "North,South,East,West,Central"
     SEVERITY warning;
 
-SCHEMA CONTRACT VALIDATE sales_v1 DATASET august_sales FAIL_ON error;
-SCHEMA CONTRACT SHOW sales_v1;
-SCHEMA CONTRACT LIST;
-SCHEMA CONTRACT EXPORT sales_v1 TO "contracts/sales-v1.json" OVERWRITE;
-SCHEMA CONTRACT LOAD restored_sales FROM "contracts/sales-v1.json" OVERWRITE;
-SCHEMA CONTRACT DROP restored_sales;
+CHECK CONTRACT sales_v1 ON august_sales FAIL ON error;
+CONTRACT SHOW sales_v1;
+CONTRACT LIST;
+CONTRACT SAVE sales_v1 TO "contracts/sales-v1.json" OVERWRITE;
+CONTRACT LOAD restored_sales FROM "contracts/sales-v1.json" OVERWRITE;
+CONTRACT DROP restored_sales;
 ```
 
 `EXTRA_COLUMNS` accepts `ignore`, `info`, `warning`, or `error`. Contract
@@ -630,20 +630,25 @@ Create the drift baseline from a representative, approved dataset—not from a
 known-bad batch:
 
 ```adql
-DRIFT BASELINE CREATE sales_baseline FROM july_sales OVERWRITE;
-DRIFT BASELINE SHOW sales_baseline;
-DRIFT BASELINE LIST;
-DRIFT BASELINE EXPORT sales_baseline TO "baselines/sales.json" OVERWRITE;
-DRIFT BASELINE LOAD restored_base FROM "baselines/sales.json" OVERWRITE;
+BASELINE sales_baseline FROM july_sales OVERWRITE;
+BASELINE SHOW sales_baseline;
+BASELINE LIST;
+BASELINE SAVE sales_baseline TO "baselines/sales.json" OVERWRITE;
+BASELINE LOAD restored_base FROM "baselines/sales.json" OVERWRITE;
 
-DRIFT DETECT REFERENCE sales_baseline DATASET august_sales
+CHECK DRIFT sales_baseline ON august_sales
     CONTRACT sales_v1
-    FAIL_ON warning
-    PSI_WARNING 0.10 PSI_ERROR 0.25
-    MISSING_WARNING 2 MISSING_ERROR 5;
+    SENSITIVITY normal
+    FAIL ON warning;
 
-DRIFT BASELINE DROP restored_base;
+BASELINE DROP restored_base;
 ```
+
+Sensitivity presets make the common choice readable: `strict` uses PSI
+warning/error thresholds 0.05/0.15 and missingness deltas 1/2 points;
+`normal` uses 0.10/0.25 and 2/5; `relaxed` uses 0.20/0.35 and 5/10. Advanced
+users can still add `PSI_WARNING`, `PSI_ERROR`, `MISSING_WARNING`, and
+`MISSING_ERROR`; explicit values override the preset.
 
 The baseline contains schema metadata, quantile buckets, bounded category
 frequencies, missingness, distinct ratios, duplicate rate, and row count; it
@@ -654,6 +659,10 @@ checks × 100`. A `CONTRACT` clause includes contract failures in the same gate.
 Contracts and baselines remain available when the active dataset changes and
 are persisted by `WORKSPACE SAVE`. The latest validation and drift reports are
 dataset-derived artifacts and reset when another dataset is activated.
+
+The original `SCHEMA CONTRACT ...` and `DRIFT ...` forms remain fully
+supported for existing notebooks. The concise forms above call the same
+runtime engines and create the same persisted JSON artifacts.
 
 ### Interactive cleaning and domain review
 
