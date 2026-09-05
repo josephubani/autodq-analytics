@@ -945,6 +945,7 @@ body { background: white; color: black; }
         )
 
         command_pattern = re.compile(repository["commands"]["match"])
+        action_pattern = re.compile(repository["actions"]["match"])
         option_pattern = re.compile(repository["options"]["match"])
         function_pattern = re.compile(
             repository["aggregateFunctions"]["match"]
@@ -966,6 +967,32 @@ body { background: white; color: black; }
             self.assertIsNotNone(
                 command_pattern.fullmatch(command),
                 f"Missing command highlighting for {command}",
+            )
+
+        for spelling in ("INVENTORY", "inventory", "Inventory"):
+            self.assertIsNotNone(
+                command_pattern.fullmatch(spelling),
+                f"Missing case-insensitive inventory command highlighting for {spelling}",
+            )
+        for action in ("NETWORK", "REBALANCE", "network", "rebalance"):
+            self.assertIsNotNone(
+                action_pattern.fullmatch(action),
+                f"Missing inventory action highlighting for {action}",
+            )
+        inventory_option_keywords = set(INVENTORY_OPTIONS) - {"DATASET"}
+        for option in inventory_option_keywords:
+            self.assertIsNotNone(
+                option_pattern.fullmatch(option),
+                f"Missing inventory option highlighting for {option}",
+            )
+            self.assertIsNotNone(
+                option_pattern.fullmatch(option.lower()),
+                f"Missing lowercase inventory option highlighting for {option}",
+            )
+        for spelling in ("DATASET", "dataset", "Dataset"):
+            self.assertIsNotNone(
+                command_pattern.fullmatch(spelling),
+                f"Missing named-dataset highlighting for {spelling}",
             )
 
         option_groups = (

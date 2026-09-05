@@ -39,6 +39,8 @@ jobs:
           autodq validate examples/sales_auto.adql
           autodq validate examples/schema_drift_monitoring.adql
           autodq validate examples/inventory_network.adql
+      - name: Remove saved output from release examples
+        run: python scripts/prepare_release_examples.py
       - name: Build distributions
         run: python -m build
       - name: Inspect distributions

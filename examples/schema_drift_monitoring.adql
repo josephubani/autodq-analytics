@@ -1,12 +1,10 @@
 #!/usr/bin/env autodq
 # %% [markdown] Schema contracts and drift monitoring
 # Establish a trusted sales baseline, then validate a later registered batch.
-
 # %% [Approved dataset]
 DATASET "../datasets/sample/sales.csv" TARGET Revenue;
 SET TYPE Date datetime FORMAT AUTO;
 LET approved_sales = CURRENT;
-
 # %% [Schema contract]
 CONTRACT sales_v1 FROM approved_sales
     VERSION 1.0.0
@@ -24,20 +22,17 @@ CONTRACT sales_v1 REQUIRE Region
     TYPE string ALLOWED "North,South,East,West,Central"
     SEVERITY warning;
 CHECK CONTRACT sales_v1 ON approved_sales FAIL ON error;
-
 # %% [Drift baseline]
 BASELINE sales_baseline FROM approved_sales OVERWRITE;
 CHECK DRIFT sales_baseline ON approved_sales
     CONTRACT sales_v1
     SENSITIVITY normal
     FAIL ON warning;
-
 # %% [Portable artifacts]
 CONTRACT SAVE sales_v1
     TO "../reports/sales-schema-contract.json" OVERWRITE;
 BASELINE SAVE sales_baseline
     TO "../reports/sales-drift-baseline.json" OVERWRITE;
-
 # %% [Inventory]
 CONTRACT LIST;
 BASELINE LIST;

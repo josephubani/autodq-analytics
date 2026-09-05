@@ -2,6 +2,7 @@ import json
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -75,6 +76,7 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("actions/checkout@v6", workflow)
         self.assertIn("actions/setup-python@v6", workflow)
         self.assertIn("python scripts/smoke_test_wheel.py dist", workflow)
+        self.assertIn("python scripts/prepare_release_examples.py", workflow)
         self.assertIn("npx --yes @vscode/vsce@3.9.2 package", workflow)
         self.assertIn("actions/setup-node@v6", workflow)
 
@@ -94,6 +96,7 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("actions/upload-artifact@v7", workflow)
         self.assertIn("actions/download-artifact@v8", workflow)
         self.assertIn("python scripts/smoke_test_wheel.py dist", workflow)
+        self.assertIn("python scripts/prepare_release_examples.py", workflow)
         self.assertIn('default: "0.1.24"', workflow)
         self.assertNotIn("TWINE_PASSWORD", workflow)
         self.assertNotIn("API_TOKEN", workflow)
@@ -114,6 +117,7 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("actions/upload-artifact@v7", workflow)
         self.assertIn("actions/download-artifact@v8", workflow)
         self.assertIn("python scripts/smoke_test_wheel.py dist", workflow)
+        self.assertIn("python scripts/prepare_release_examples.py", workflow)
         self.assertIn('default: "0.1.24"', workflow)
         self.assertIn("contents: write", workflow)
         self.assertIn("gh release create", workflow)
@@ -241,6 +245,32 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("recursive-include .github *.yml", manifest)
         self.assertIn("recursive-include scripts *.py", manifest)
         self.assertIn("recursive-include tests *.py", manifest)
+
+    def test_release_example_preparer_removes_only_output_cache(self):
+        with tempfile.TemporaryDirectory() as directory:
+            example = Path(directory) / "example.adql"
+            example.write_text(
+                'DATASET "sample.csv";\n\n'
+                '# <autodq-output-cache version="1">\n'
+                "# cached-payload\n"
+                "# </autodq-output-cache>\n",
+                encoding="utf-8",
+            )
+
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(ROOT / "scripts" / "prepare_release_examples.py"),
+                    str(example),
+                ],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+
+            self.assertEqual(example.read_text(encoding="utf-8"), 'DATASET "sample.csv";\n')
+            self.assertIn("removed 1 output cache(s)", completed.stdout)
 
     def test_public_release_documentation_is_current(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

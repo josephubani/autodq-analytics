@@ -74,6 +74,7 @@ REQUIRED_SDIST_SUFFIXES = {
     "/datasets/sample/inventory_network.csv",
     "/pyproject.toml",
     "/scripts/check_distribution.py",
+    "/scripts/prepare_release_examples.py",
     "/scripts/smoke_test_wheel.py",
     "/tests/test_packaging.py",
     "/tests/test_pipeline_runner.py",

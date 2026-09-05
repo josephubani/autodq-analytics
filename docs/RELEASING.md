@@ -54,6 +54,7 @@ Remove artifacts from any previous release, then build both the source archive
 and wheel:
 
 ```bash
+python scripts/prepare_release_examples.py
 rm -rf build dist
 python -m build
 python -m twine check dist/*
