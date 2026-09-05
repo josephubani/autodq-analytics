@@ -2,7 +2,7 @@
 
 # Public language version. This is intentionally independent from the AutoDQ
 # package and VS Code extension versions.
-ADQL_LANGUAGE_VERSION = "2.5"
+ADQL_LANGUAGE_VERSION = "2.6"
 
 # Human-readable drift sensitivity presets. Explicit threshold options on a
 # CHECK DRIFT statement override the selected preset.
@@ -71,6 +71,7 @@ SUPPORTED_COMMANDS = {
     "PROCESS",
     "BOTTLENECKS",
     "ROOT",
+    "INVENTORY",
     "FEATURES",
     "FEATURE",
     "BLUE",
@@ -158,6 +159,7 @@ DATASET_SCOPED_COMMANDS = {
     "PROCESS",
     "BOTTLENECKS",
     "ROOT",
+    "INVENTORY",
     "RECOMMEND",
     "REJECT",
     "REPORT",
@@ -309,6 +311,26 @@ OPERATIONS_OPTIONS = {
     "GROUP_BY": "group_by",
     "SLA": "sla_target",
     "PERIOD": "period",
+    "TOP": "top",
+    "DATASET": "dataset_name",
+}
+
+INVENTORY_OPTIONS = {
+    "ITEM": "item_column",
+    "LOCATION": "location_column",
+    "ECHELON": "echelon_column",
+    "PARENT": "parent_location_column",
+    "TIME": "time_column",
+    "ON_HAND": "on_hand_column",
+    "ON_ORDER": "on_order_column",
+    "BACKORDER": "backorder_column",
+    "DEMAND": "demand_column",
+    "LEAD_TIME": "lead_time_column",
+    "SAFETY_STOCK": "safety_stock_column",
+    "UNIT_COST": "unit_cost_column",
+    "CAPACITY": "capacity_column",
+    "SERVICE_LEVEL": "service_level",
+    "HORIZON": "horizon_days",
     "TOP": "top",
     "DATASET": "dataset_name",
 }
@@ -578,6 +600,18 @@ COMMAND_HELP = [
         "description": (
             "Recognize operational data, calculate KPIs, analyze process flow, "
             "rank bottlenecks, and surface evidence-based root-cause signals."
+        ),
+    },
+    {
+        "command": "INVENTORY",
+        "syntax": (
+            "INVENTORY [DATASET name] [ITEM sku] [LOCATION node] "
+            "[ECHELON level] [ON_HAND stock] [DEMAND daily_demand]; "
+            "INVENTORY NETWORK; INVENTORY REBALANCE"
+        ),
+        "description": (
+            "Manage multi-echelon inventory position, coverage, shortage, "
+            "excess, internal transfers, and replenishment requirements."
         ),
     },
     {

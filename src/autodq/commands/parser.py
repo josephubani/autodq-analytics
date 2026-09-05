@@ -17,6 +17,7 @@ from autodq.commands.grammar import (
     DRIFT_SENSITIVITY_PRESETS,
     EXPLAIN_OPTIONS,
     GALLERY_STYLE_OPTIONS,
+    INVENTORY_OPTIONS,
     MODEL_OPTIONS,
     OPERATIONS_OPTIONS,
     PREDICT_OPTIONS,
@@ -379,6 +380,9 @@ class ADQLParser:
 
         if kind in {"OPERATIONS", "KPI", "PROCESS", "BOTTLENECKS", "ROOT"}:
             return self._parse_operations(kind, arguments)
+
+        if kind == "INVENTORY":
+            return self._parse_inventory(arguments)
 
         if kind == "FEATURES":
             if arguments:
@@ -1830,6 +1834,14 @@ class ADQLParser:
             )
         return self._coerce_options(options)
 
+    def _parse_inventory(self, arguments: list[str]) -> dict[str, Any]:
+        action = "analyze"
+        if arguments and arguments[0].upper() in {"NETWORK", "REBALANCE"}:
+            action = arguments[0].lower()
+            arguments = arguments[1:]
+        options = self._parse_options(arguments, INVENTORY_OPTIONS)
+        return {"action": action, **self._coerce_options(options)}
+
     def _parse_gallery(self, arguments: list[str]) -> dict[str, Any]:
         if not arguments:
             raise ADQLSyntaxError(
@@ -2238,6 +2250,7 @@ class ADQLParser:
             "max_features",
             "decimals",
             "top",
+            "horizon_days",
         }
         float_options = {
             "test_size",
@@ -2255,6 +2268,7 @@ class ADQLParser:
             "missing_warning",
             "missing_error",
             "sla_target",
+            "service_level",
         }
         list_options = {"exclude_features", "chart_ids"}
         coerced = {}

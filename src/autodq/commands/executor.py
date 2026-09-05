@@ -569,6 +569,34 @@ class ADQLExecutor:
             }
             return {"value": display_value, "message": messages[kind]}
 
+        if kind == "INVENTORY":
+            action = parameters.pop("action", "analyze")
+            operations = {
+                "analyze": (project.inventory, "overview"),
+                "network": (project.inventory_network, "network"),
+                "rebalance": (project.inventory_rebalance, "rebalancing"),
+            }
+            operation, section = operations[action]
+            value = operation(**parameters)
+            report = getattr(value, "report", value)
+            display_value = report.view(section) if action == "analyze" else value
+            messages = {
+                "analyze": (
+                    f"Recognized {report.detection.dataset_type.replace('_', ' ')} "
+                    f"with {report.detection.confidence * 100:.1f}% confidence; "
+                    f"analyzed {report.node_count} inventory node(s)."
+                ),
+                "network": (
+                    f"Analyzed {len(report.echelons)} echelon(s) and "
+                    f"{report.at_risk_count} at-risk node(s)."
+                ),
+                "rebalance": (
+                    f"Recommended {report.transfer_count} transfer(s) and "
+                    f"{report.replenishment_count} replenishment action(s)."
+                ),
+            }
+            return {"value": display_value, "message": messages[action]}
+
         if kind == "FEATURES":
             value = project.features()
             return {

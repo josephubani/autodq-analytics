@@ -317,9 +317,11 @@ def main() -> int:
         api_check = (
             "import sys; from autodq import (ADQL_LANGUAGE_VERSION, AutoDQ, "
             "PIPELINE_SCHEMA_VERSION, PipelineRunSpec, PipelineRunner, "
-            "QualityAssertion); assert ADQL_LANGUAGE_VERSION == '2.5'; "
+            "QualityAssertion, MultiEchelonInventoryEngine); "
+            "assert ADQL_LANGUAGE_VERSION == '2.6'; "
             "assert PIPELINE_SCHEMA_VERSION == '1.0'; "
             "assert PipelineRunSpec and PipelineRunner; "
+            "assert MultiEchelonInventoryEngine; "
             "project = AutoDQ(sys.argv[1], target='Revenue'); "
             "profile = project.profile(); diagnosis = project.diagnose(); "
             f"assert profile['rows'] == {row_count}; "

@@ -42,7 +42,9 @@ from autodq.renderers.console.correlation import ConsoleCorrelationRenderer
 from autodq.ml_readiness.engine import MLReadinessEngine
 from autodq.renderers.console.ml_readiness import ConsoleMLReadinessRenderer
 from autodq.operations.engine import OperationalAnalyticsEngine
+from autodq.operations.inventory import MultiEchelonInventoryEngine
 from autodq.renderers.console.operations import ConsoleOperationsRenderer
+from autodq.renderers.console.inventory import ConsoleInventoryRenderer
 from autodq.features.engine import FeatureEngineeringEngine
 from autodq.renderers.console.features import ConsoleFeatureRenderer
 from autodq.ml.engine import MLEngine
@@ -101,6 +103,7 @@ class AutoDQ:
         self.correlation_engine = CorrelationEngine()
         self.ml_readiness_engine = MLReadinessEngine()
         self.operational_analytics_engine = OperationalAnalyticsEngine()
+        self.multi_echelon_inventory_engine = MultiEchelonInventoryEngine()
         self.feature_engine = FeatureEngineeringEngine()
         self.ml_engine = MLEngine()
         self.prediction_engine = PredictionEngine()
@@ -2751,8 +2754,84 @@ class AutoDQ:
         ConsoleOperationsRenderer.render(
             self.state.operations_report.view(section)
         )
-        
-        
+
+    def inventory(
+        self,
+        *,
+        item_column: str | None = None,
+        location_column: str | None = None,
+        echelon_column: str | None = None,
+        parent_location_column: str | None = None,
+        time_column: str | None = None,
+        on_hand_column: str | None = None,
+        on_order_column: str | None = None,
+        backorder_column: str | None = None,
+        demand_column: str | None = None,
+        lead_time_column: str | None = None,
+        safety_stock_column: str | None = None,
+        unit_cost_column: str | None = None,
+        capacity_column: str | None = None,
+        service_level: float = 0.95,
+        horizon_days: int = 30,
+        top: int = 10,
+    ):
+        """Analyze inventory across SKUs, locations, and network echelons."""
+        if self.state.data is None:
+            self.load()
+
+        active = self.dataset_manager.primary()
+        dataset_name = active.name if active is not None else "current"
+        self.state.inventory_report = self.multi_echelon_inventory_engine.analyze(
+            self.state.data,
+            dataset_name=dataset_name,
+            item_column=item_column,
+            location_column=location_column,
+            echelon_column=echelon_column,
+            parent_location_column=parent_location_column,
+            time_column=time_column,
+            on_hand_column=on_hand_column,
+            on_order_column=on_order_column,
+            backorder_column=backorder_column,
+            demand_column=demand_column,
+            lead_time_column=lead_time_column,
+            safety_stock_column=safety_stock_column,
+            unit_cost_column=unit_cost_column,
+            capacity_column=capacity_column,
+            service_level=service_level,
+            horizon_days=horizon_days,
+            top=top,
+        )
+        report = self.state.inventory_report
+        self.session.log(
+            step="inventory",
+            message="Multi-echelon inventory analysis generated.",
+            metadata={
+                "dataset": report.dataset_name,
+                "dataset_type": report.detection.dataset_type,
+                "confidence": report.detection.confidence,
+                "nodes": report.node_count,
+                "at_risk_nodes": report.at_risk_count,
+                "transfers": report.transfer_count,
+                "replenishments": report.replenishment_count,
+            },
+        )
+        return report
+
+    def inventory_network(self, **options):
+        """Summarize inventory position by echelon and priority node."""
+        return self.inventory(**options).view("network")
+
+    def inventory_rebalance(self, **options):
+        """Recommend bounded same-SKU transfers and residual replenishment."""
+        return self.inventory(**options).view("rebalancing")
+
+    def show_inventory(self, section: str = "overview") -> None:
+        if self.state.inventory_report is None:
+            self.inventory()
+        ConsoleInventoryRenderer.render(
+            self.state.inventory_report.view(section)
+        )
+
     def features(self):
         if self.state.data is None:
             self.load()

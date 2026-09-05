@@ -3,7 +3,7 @@
 
 # Complete sales workflow
 
-This executable ADQL 2.5 notebook demonstrates every top-level ADQL command
+This executable ADQL 2.6 notebook demonstrates every top-level ADQL command
 and the major AutoDQ capabilities in a realistic order. Each code cell has a
 small, focused responsibility so its output is easy to read.
 
@@ -383,7 +383,7 @@ ASSERT SUITE DROP restored_sales_gate;
 
 # %% [markdown] 13. Create and check a schema contract
 
-The concise ADQL 2.5 contract syntax defines an understandable structural
+The concise ADQL 2.6 contract syntax defines an understandable structural
 agreement for future sales batches.
 
 # %% [Infer the sales contract]
@@ -558,7 +558,31 @@ BOTTLENECKS GROUP_BY Region,Sales_Channel
 ROOT CAUSE DURATION Delivery_Days
     GROUP_BY Region,Sales_Channel TOP 10;
 
-# %% [markdown] 18. Engineer features
+# %% [markdown] 18. Manage a multi-echelon inventory network
+
+Inventory commands use a separate network snapshot, calculate stock position
+and coverage, and recommend same-SKU transfers before external replenishment.
+
+# %% [Register inventory network]
+ADD DATASET inventory_network
+    FROM "../datasets/sample/inventory_network.csv" OVERWRITE;
+
+# %% [Analyze inventory policy]
+INVENTORY DATASET inventory_network
+    SERVICE_LEVEL 95 HORIZON 14 TOP 20;
+
+# %% [Review inventory network]
+INVENTORY DATASET inventory_network NETWORK
+    SERVICE_LEVEL 95 HORIZON 14 TOP 20;
+
+# %% [Recommend inventory rebalancing]
+INVENTORY DATASET inventory_network REBALANCE
+    SERVICE_LEVEL 95 HORIZON 14 TOP 20;
+
+# %% [Restore sales workflow]
+USE DATASET current_snapshot;
+
+# %% [markdown] 19. Engineer features
 
 Start with AutoDQ recommendations, apply them, and then create representative
 manual numeric, categorical, flag, date, and expression features.
@@ -607,7 +631,7 @@ LET engineered_sales = ENGINEERED OVERWRITE;
 # %% [Export engineered sales]
 EXPORT ENGINEERED TO "../exports/sales_all-engineered.csv" OVERWRITE;
 
-# %% [markdown] 19. Build visual analysis
+# %% [markdown] 20. Build visual analysis
 
 Each visualization has its own cell so the chart and its metadata remain easy
 to understand in the notebook.
@@ -688,7 +712,7 @@ VISUALIZE cleaning_status STAGE current;
 # %% [Before and after comparison chart]
 VISUALIZE comparison STAGE current;
 
-# %% [markdown] 20. Manage the visualization gallery
+# %% [markdown] 21. Manage the visualization gallery
 
 Inspect, customize, save, and list reusable chart objects.
 
@@ -723,7 +747,7 @@ GALLERY SAVE TO "../reports/sales_all/charts" FORMAT png;
 # %% [List registered visualizations]
 LIST VISUALIZATIONS;
 
-# %% [markdown] 21. Train and persist a model
+# %% [markdown] 22. Train and persist a model
 
 Train on engineered features while excluding likely identifiers and leakage.
 
@@ -741,7 +765,7 @@ MODEL SAVE TO "../models/sales_all-revenue-model" OVERWRITE;
 # %% [Reload the revenue model]
 MODEL LOAD FROM "../models/sales_all-revenue-model";
 
-# %% [markdown] 22. Predict with uncertainty
+# %% [markdown] 23. Predict with uncertainty
 
 Generate point predictions, intervals, confidence metadata, and a reusable
 prediction dataset.
@@ -765,7 +789,7 @@ FROM PREDICTIONS
 ORDER BY AutoDQ_Prediction DESC
 LIMIT 25;
 
-# %% [markdown] 23. Explain the model with SHAP
+# %% [markdown] 24. Explain the model with SHAP
 
 Generate the structured explanation followed by each supported SHAP chart.
 
@@ -789,7 +813,7 @@ SHAP CHART waterfall ROW 0
 SHAP CHART dependence FEATURE Customer_Age
     SAVE "../reports/sales_all/shap-customer-age.png";
 
-# %% [markdown] 24. Run BLUE diagnostics
+# %% [markdown] 25. Run BLUE diagnostics
 
 Evaluate linear-model assumptions, visualize diagnostics, explain their
 meaning, and produce prescriptive recommendations.
@@ -812,7 +836,7 @@ BLUE INTERPRET;
 # %% [Prescribe BLUE improvements]
 BLUE PRESCRIBE;
 
-# %% [markdown] 25. Publish dashboards and reports
+# %% [markdown] 26. Publish dashboards and reports
 
 Build the presentation layer after quality, feature, model, SHAP, and BLUE
 artifacts are available.
@@ -842,7 +866,7 @@ REPORT TO "../reports/sales_all/report.json"
     STYLE executive
     OVERWRITE;
 
-# %% [markdown] 26. Export reusable analysis artifacts
+# %% [markdown] 27. Export reusable analysis artifacts
 
 Export current, cleaned, engineered, prediction, summary, merged, and
 concatenated datasets explicitly.
@@ -862,7 +886,7 @@ EXPORT sales_with_customers TO "../exports/sales_all-merged.csv" OVERWRITE;
 # %% [Export concatenated sales]
 EXPORT combined_sales TO "../exports/sales_all-concatenated.csv" OVERWRITE;
 
-# %% [markdown] 27. Inspect workspaces and session history
+# %% [markdown] 28. Inspect workspaces and session history
 
 These final read-only commands show persistent workspace inventory and the
 state accumulated during this notebook run.

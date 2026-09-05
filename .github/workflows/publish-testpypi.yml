@@ -6,7 +6,7 @@ on:
       version:
         description: Version to verify and publish
         required: true
-        default: "0.1.23"
+        default: "0.1.24"
         type: string
 
 jobs:
@@ -38,6 +38,7 @@ jobs:
           autodq --version
           autodq validate examples/sales_auto.adql
           autodq validate examples/schema_drift_monitoring.adql
+          autodq validate examples/inventory_network.adql
       - name: Build distributions
         run: python -m build
       - name: Inspect distributions

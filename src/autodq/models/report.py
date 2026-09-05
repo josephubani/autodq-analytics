@@ -30,6 +30,7 @@ class AutoDQReport:
     drift: object | None = None
     ml_readiness: object | None = None
     operations: object | None = None
+    inventory: object | None = None
 
     visualizations: object | None = None
     rendered_visualizations: list | None = None

@@ -50,6 +50,7 @@ class ReportingEngine:
             drift=state.drift_report,
             ml_readiness=state.ml_readiness_report,
             operations=state.operations_report,
+            inventory=state.inventory_report,
             visualizations=state.visualization_report,
             rendered_visualizations=rendered_visualizations,
             model=state.model_report,

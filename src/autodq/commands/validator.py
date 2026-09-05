@@ -302,6 +302,34 @@ class ADQLValidator:
                     "Operational START and END must be supplied together."
                 )
 
+        elif statement.kind == "INVENTORY":
+            action = parameters.get("action", "analyze")
+            if action not in {"analyze", "network", "rebalance"}:
+                raise ADQLValidationError("Inventory action is not recognized.")
+            service_level = parameters.get("service_level", 0.95)
+            if not 0 < service_level <= 100:
+                raise ADQLValidationError(
+                    "Inventory SERVICE_LEVEL must be between 0 and 1, or 1 and 100 percent."
+                )
+            horizon = parameters.get("horizon_days", 30)
+            if (
+                not isinstance(horizon, int)
+                or isinstance(horizon, bool)
+                or not 1 <= horizon <= 3650
+            ):
+                raise ADQLValidationError(
+                    "Inventory HORIZON must be an integer between 1 and 3,650 days."
+                )
+            top = parameters.get("top", 10)
+            if (
+                not isinstance(top, int)
+                or isinstance(top, bool)
+                or not 1 <= top <= 100
+            ):
+                raise ADQLValidationError(
+                    "Inventory TOP must be an integer between 1 and 100."
+                )
+
         elif statement.kind == "AUDIT":
             if Path(parameters["output"]).suffix.lower() not in {".json", ".csv"}:
                 raise ADQLValidationError(

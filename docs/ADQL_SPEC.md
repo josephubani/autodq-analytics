@@ -6,7 +6,7 @@ repeatable analytics while retaining named, executable cells. ADQL does not
 evaluate Python expressions or expose arbitrary object methods.
 
 This file is the practical command guide. The normative definition of ADQL
-2.5 is the [formal language specification](adql/SPECIFICATION.md), accompanied
+2.6 is the [formal language specification](adql/SPECIFICATION.md), accompanied
 by its [EBNF grammar](adql/grammar.ebnf),
 [execution model](adql/execution-model.md),
 [data-type rules](adql/data-types.md), [error model](adql/errors.md), and
@@ -788,6 +788,57 @@ PROCESS DATASET tickets
 All five commands support `DATASET name`. `OPERATIONS`, `KPI`, `PROCESS`, and
 `BOTTLENECKS` additionally support the short positional form, such as
 `KPI cleaned_orders;`.
+
+### Multi-echelon inventory management
+
+Use `INVENTORY` with a current inventory snapshot containing one row per SKU
+and location, or multiple dated snapshots. AutoDQ recognizes item, location,
+echelon, parent, stock, demand, lead-time, safety-stock, cost, and capacity
+roles automatically:
+
+```adql
+INVENTORY SERVICE_LEVEL 95 HORIZON 30 TOP 20;
+INVENTORY NETWORK SERVICE_LEVEL 95 HORIZON 30 TOP 20;
+INVENTORY REBALANCE SERVICE_LEVEL 95 HORIZON 30 TOP 20;
+```
+
+- `INVENTORY` explains the recognized network and calculates inventory KPIs.
+- `INVENTORY NETWORK` shows rollups by echelon and priority SKU-location nodes.
+- `INVENTORY REBALANCE` first allocates available same-SKU excess to shortages,
+  then recommends external or upstream replenishment for the residual gap.
+
+`DEMAND` is interpreted as expected units per day, `LEAD_TIME` as days, and
+`HORIZON` as the number of planning days. Inventory position is `ON_HAND +
+ON_ORDER - BACKORDER`. Reorder point is lead-time demand plus supplied safety
+stock. The planning target adds horizon demand. AutoDQ never transfers between
+different SKUs or allocates more than calculated donor excess.
+
+For non-standard source columns, map roles explicitly:
+
+```adql
+INVENTORY DATASET stock_snapshot
+    ITEM Material_Code
+    LOCATION Facility
+    ECHELON Network_Level
+    PARENT Supplying_Facility
+    TIME Snapshot_Date
+    ON_HAND Available_Units
+    ON_ORDER Inbound_Units
+    BACKORDER Unfilled_Units
+    DEMAND Average_Daily_Demand
+    LEAD_TIME Replenishment_Days
+    SAFETY_STOCK Buffer_Units
+    UNIT_COST Standard_Cost
+    CAPACITY Storage_Limit
+    SERVICE_LEVEL 0.95
+    HORIZON 30
+    TOP 20;
+```
+
+Use the `DATASET name` selector before `NETWORK` or `REBALANCE`, as shown by
+`INVENTORY DATASET stock_snapshot NETWORK;`. Recommendations are analytical
+decision support: transport cost, shelf life, lot size, supplier, and routing
+constraints must be validated before execution.
 
 ### BLUE diagnostics and visualization gallery
 

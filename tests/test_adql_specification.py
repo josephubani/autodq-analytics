@@ -31,7 +31,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
         )
         grammar = (SPEC_ROOT / "grammar.ebnf").read_text(encoding="utf-8")
 
-        self.assertEqual(ADQL_LANGUAGE_VERSION, "2.5")
+        self.assertEqual(ADQL_LANGUAGE_VERSION, "2.6")
         self.assertIn(
             f"| Language version | {ADQL_LANGUAGE_VERSION} |",
             specification,
@@ -112,6 +112,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
             "HELP": "HELP MODEL",
             "HISTORY": "HISTORY LIMIT 5",
             "INTERPRET": "INTERPRET",
+            "INVENTORY": "INVENTORY NETWORK HORIZON 30 TOP 10",
             "KNOWLEDGE": "KNOWLEDGE",
             "KPI": "KPI SLA 5 PERIOD month",
             "LET": "LET CleanSnapshot = CLEANED",

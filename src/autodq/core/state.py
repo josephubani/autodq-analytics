@@ -29,6 +29,7 @@ class AutoDQState:
     correlation_report = None
     ml_readiness_report = None
     operations_report = None
+    inventory_report = None
     feature_report = None
     engineered_data = None
     model_report = None
@@ -66,6 +67,7 @@ class AutoDQState:
         self.correlation_report = None
         self.ml_readiness_report = None
         self.operations_report = None
+        self.inventory_report = None
         self.feature_report = None
         self.engineered_data = None
         self.model_report = None

@@ -76,6 +76,10 @@ class OperationalAnalyticsEngine:
         "priority", "carrier", "route", "machine", "resource", "customer_segment",
     )
     DOMAIN_SIGNALS = {
+        "inventory_operations": (
+            "inventory", "stock", "sku", "warehouse", "echelon", "on_hand",
+            "backorder", "safety_stock", "reorder", "lead_time",
+        ),
         "sales_operations": (
             "transaction", "order", "customer", "product", "revenue", "sales",
             "discount", "payment", "channel",

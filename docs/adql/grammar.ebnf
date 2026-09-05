@@ -1,10 +1,10 @@
-(* AutoDQ Analytics Domain Query Language 2.5 concrete grammar.
+(* AutoDQ Analytics Domain Query Language 2.6 concrete grammar.
    Keywords and enum terminals are case-insensitive.
    Command options may appear in any order unless a production fixes an order.
    Repeated options are syntactically expressible below but are rejected by
    semantic validation. *)
 
-language-version = "2.5" ;
+language-version = "2.6" ;
 
 script = statement, { ";", statement }, [ ";" ] ;
 
@@ -58,6 +58,7 @@ statement =
   | process-statement
   | bottlenecks-statement
   | root-statement
+  | inventory-statement
   | features-statement
   | feature-statement
   | blue-statement
@@ -554,6 +555,28 @@ operational-option =
   | ( "GROUP" | "GROUP_BY" ), identifier-list
   | "SLA", number
   | "PERIOD", ( "day" | "week" | "month" )
+  | "TOP", positive-integer ;
+
+(* command: INVENTORY *)
+inventory-statement = "INVENTORY", [ dataset-selector ],
+    [ "NETWORK" | "REBALANCE" ], { inventory-option } ;
+
+inventory-option =
+    "ITEM", identifier
+  | "LOCATION", identifier
+  | "ECHELON", identifier
+  | "PARENT", identifier
+  | "TIME", identifier
+  | "ON_HAND", identifier
+  | "ON_ORDER", identifier
+  | "BACKORDER", identifier
+  | "DEMAND", identifier
+  | "LEAD_TIME", identifier
+  | "SAFETY_STOCK", identifier
+  | "UNIT_COST", identifier
+  | "CAPACITY", identifier
+  | "SERVICE_LEVEL", number
+  | "HORIZON", positive-integer
   | "TOP", positive-integer ;
 
 (* command: FEATURES *)

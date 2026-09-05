@@ -41,6 +41,7 @@ python -m unittest discover -s tests
 autodq --version
 autodq validate examples/sales_auto.adql
 autodq validate examples/schema_drift_monitoring.adql
+autodq validate examples/inventory_network.adql
 ```
 
 All tests and commands must complete successfully before building artifacts.

@@ -18,6 +18,7 @@ dist/
 datasets/raw/
 reports/generated/
 *.csv
+!datasets/sample/inventory_network.csv
 *.xlsx
 
 .DS_Store

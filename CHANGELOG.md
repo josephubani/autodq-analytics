@@ -5,6 +5,32 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.24 - 2026-09-05
+
+### Added
+
+- Added operational dataset recognition, explainable KPIs, process trends,
+  bottleneck ranking, and non-causal root-cause signals.
+- Added multi-echelon inventory management with inferred network roles,
+  inventory position, coverage, reorder points, service risk, echelon rollups,
+  and capacity/value metrics.
+- Added bounded same-SKU transfer recommendations and residual replenishment
+  planning through Python and `INVENTORY`, `INVENTORY NETWORK`, and
+  `INVENTORY REBALANCE` in ADQL.
+- Added rich notebook, console, dashboard, HTML, and JSON inventory output plus
+  a runnable network-inventory example.
+
+### Changed
+
+- Advanced the language to ADQL 2.6 while retaining existing ADQL 2.x syntax.
+- Advanced the bundled AutoDQ ADQL VS Code extension to 0.3.17 with complete
+  case-insensitive operational and inventory syntax highlighting.
+
+### Validation
+
+- Added network inference, latest-snapshot, risk, rebalancing, named-dataset,
+  mixed-case, validation, report, dashboard, and release coverage.
+
 ## 0.1.23 - 2026-09-03
 
 ### Added

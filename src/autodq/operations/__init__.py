@@ -1,6 +1,17 @@
 """Operational analytics for event, process, service, and transaction data."""
 
 from autodq.operations.engine import OperationalAnalyticsEngine
+from autodq.operations.inventory import MultiEchelonInventoryEngine
+from autodq.operations.inventory_models import (
+    EchelonSummary,
+    InventoryAnalysisView,
+    InventoryColumnMap,
+    InventoryDetection,
+    InventoryKPI,
+    InventoryNode,
+    InventoryRecommendation,
+    InventoryReport,
+)
 from autodq.operations.models import (
     OperationalAnalysisView,
     OperationalBottleneck,
@@ -14,6 +25,15 @@ from autodq.operations.models import (
 )
 
 __all__ = [
+    "EchelonSummary",
+    "InventoryAnalysisView",
+    "InventoryColumnMap",
+    "InventoryDetection",
+    "InventoryKPI",
+    "InventoryNode",
+    "InventoryRecommendation",
+    "InventoryReport",
+    "MultiEchelonInventoryEngine",
     "OperationalAnalysisView",
     "OperationalAnalyticsEngine",
     "OperationalBottleneck",

@@ -45,6 +45,8 @@ workflow.
   assessment coverage, and optional `REFERENCE`-dataset PSI stability
 - Operational recognition, KPI calculation, process trends, bottleneck
   ranking, and root-cause signals through focused notebook commands
+- Multi-echelon inventory network rollups, coverage and service risk, bounded
+  same-SKU rebalancing, and replenishment planning
 
 ## Requirements
 
@@ -160,6 +162,18 @@ ROOT CAUSE TOP 10;
 Use role options such as `TIME`, `START`, `END`, `STATUS`, `STAGE`,
 `DURATION`, `VALUE`, `COST`, `QUANTITY`, and `CAPACITY` when unusual column
 names need explicit guidance.
+
+Manage inventory across network echelons with focused notebook outputs:
+
+```adql
+INVENTORY SERVICE_LEVEL 95 HORIZON 30;
+INVENTORY NETWORK SERVICE_LEVEL 95 HORIZON 30;
+INVENTORY REBALANCE SERVICE_LEVEL 95 HORIZON 30 TOP 20;
+```
+
+Map unusual schemas with `ITEM`, `LOCATION`, `ECHELON`, `PARENT`, `TIME`,
+`ON_HAND`, `ON_ORDER`, `BACKORDER`, `DEMAND`, `LEAD_TIME`, `SAFETY_STOCK`,
+`UNIT_COST`, and `CAPACITY`.
 
 Protect future batches with a structural contract and a distribution
 baseline:

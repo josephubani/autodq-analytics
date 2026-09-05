@@ -34,6 +34,9 @@ class DashboardHTMLRenderer:
         if dashboard.operations:
             nav_items.append(("operations", "Operations"))
 
+        if dashboard.inventory:
+            nav_items.append(("inventory", "Inventory"))
+
         if dashboard.preview or dashboard.columns:
             nav_items.append(("data", "Data explorer"))
 
@@ -49,6 +52,7 @@ class DashboardHTMLRenderer:
                 self._workflow(dashboard),
                 self._modeling(dashboard),
                 self._operations(dashboard),
+                self._inventory(dashboard),
                 self._data_explorer(dashboard),
             ]
         )
@@ -579,6 +583,40 @@ footer {{ margin: 30px 0 4px; padding-top: 16px; border-top: 1px solid var(--bor
   <div class="section-heading"><div><h2>Operational analytics</h2>
   <p>{self._e(str(detection.get('dataset_type', 'operations')).replace('_', ' ').title())} · {self._e(self._format_percent(detection.get('confidence', 0)))} confidence</p></div></div>
   <div class="metric-grid">{kpi_cards}</div>{bottlenecks}
+</section>"""
+
+    def _inventory(self, dashboard) -> str:
+        inventory = dashboard.inventory
+        if not inventory:
+            return ""
+
+        detection = inventory.get("detection", {})
+        kpi_cards = "".join(
+            f"""<article class="metric" data-status="{self._e('bad' if item.get('status') == 'critical' else item.get('status', 'neutral'))}">
+  <div class="metric-label">{self._e(item.get('name'))}</div>
+  <div class="metric-value">{self._e(self._display_value(item.get('value')))}</div>
+  <div class="metric-description">{self._e(item.get('unit', ''))} · {self._e(item.get('description', ''))}</div>
+</article>"""
+            for item in inventory.get("kpis", [])[:8]
+        )
+        action_rows = "".join(
+            f"""<tr><td>{self._e(item.get('priority', '').title())}</td>
+<td>{self._e(item.get('action', '').title())}</td><td>{self._e(item.get('item'))}</td>
+<td>{self._e(item.get('source_location') or 'External supply')}</td>
+<td>{self._e(item.get('target_location'))}</td><td>{self._e(item.get('quantity'))}</td></tr>"""
+            for item in inventory.get("recommendations", [])[:10]
+        )
+        actions = (
+            f"""<div class="panel table-wrap" style="margin-top:14px"><h3>Priority inventory actions</h3><table>
+<thead><tr><th>Priority</th><th>Action</th><th>Item</th><th>From</th><th>To</th><th>Quantity</th></tr></thead>
+<tbody>{action_rows}</tbody></table></div>"""
+            if action_rows
+            else '<div class="empty" style="margin-top:14px">No inventory transfer or replenishment action is currently required.</div>'
+        )
+        return f"""<section id="inventory">
+  <div class="section-heading"><div><h2>Multi-echelon inventory</h2>
+  <p>{self._e(str(detection.get('dataset_type', 'inventory')).replace('_', ' ').title())} · {self._e(self._format_percent(detection.get('confidence', 0)))} confidence</p></div></div>
+  <div class="metric-grid">{kpi_cards}</div>{actions}
 </section>"""
 
     def _data_explorer(self, dashboard) -> str:

@@ -46,8 +46,8 @@ class PackagingTests(unittest.TestCase):
             "autodq._version.__version__",
         )
         self.assertEqual(autodq.__version__, __version__)
-        self.assertEqual(__version__, "0.1.23")
-        self.assertEqual(EXTENSION_VERSION, "0.3.16")
+        self.assertEqual(__version__, "0.1.24")
+        self.assertEqual(EXTENSION_VERSION, "0.3.17")
         self.assertRegex(__version__, r"^\d+\.\d+\.\d+(?:[a-z]+\d+)?$")
 
     def test_project_metadata_is_release_ready(self):
@@ -94,7 +94,7 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("actions/upload-artifact@v7", workflow)
         self.assertIn("actions/download-artifact@v8", workflow)
         self.assertIn("python scripts/smoke_test_wheel.py dist", workflow)
-        self.assertIn('default: "0.1.23"', workflow)
+        self.assertIn('default: "0.1.24"', workflow)
         self.assertNotIn("TWINE_PASSWORD", workflow)
         self.assertNotIn("API_TOKEN", workflow)
 
@@ -114,7 +114,7 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("actions/upload-artifact@v7", workflow)
         self.assertIn("actions/download-artifact@v8", workflow)
         self.assertIn("python scripts/smoke_test_wheel.py dist", workflow)
-        self.assertIn('default: "0.1.23"', workflow)
+        self.assertIn('default: "0.1.24"', workflow)
         self.assertIn("contents: write", workflow)
         self.assertIn("gh release create", workflow)
         self.assertIn("--generate-notes", workflow)
@@ -203,7 +203,7 @@ class PackagingTests(unittest.TestCase):
 
         self.assertIn("workflow_dispatch", workflow)
         self.assertIn("EXPECTED_VERSION", workflow)
-        self.assertIn('default: "0.3.16"', workflow)
+        self.assertIn('default: "0.3.17"', workflow)
         self.assertIn('mkdir -p "${GITHUB_WORKSPACE}/dist"', workflow)
         self.assertIn("@vscode/vsce@${VSCE_VERSION} package", workflow)
         self.assertIn("github_release", workflow)
@@ -237,6 +237,7 @@ class PackagingTests(unittest.TestCase):
         self.assertIn("recursive-include docs *.md", manifest)
         self.assertIn("recursive-include examples *.adql *.py", manifest)
         self.assertIn("exclude examples/sales_analysis.adql", manifest)
+        self.assertIn("include datasets/sample/inventory_network.csv", manifest)
         self.assertIn("recursive-include .github *.yml", manifest)
         self.assertIn("recursive-include scripts *.py", manifest)
         self.assertIn("recursive-include tests *.py", manifest)
@@ -244,15 +245,15 @@ class PackagingTests(unittest.TestCase):
     def test_public_release_documentation_is_current(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         notes = (
-            ROOT / "docs" / "RELEASE_NOTES_0.1.23.md"
+            ROOT / "docs" / "RELEASE_NOTES_0.1.24.md"
         ).read_text(encoding="utf-8")
         roadmap = (ROOT / "docs" / "ROADMAP.md").read_text(encoding="utf-8")
 
         self.assertIn("https://pypi.org/project/autodq/", readme)
         self.assertNotIn("Until the first PyPI release", readme)
-        self.assertIn("concise schema-contract and drift syntax", notes)
-        self.assertIn("CHECK DRIFT", notes)
-        self.assertIn("AutoDQ ADQL VS Code extension: `0.3.16`", notes)
+        self.assertIn("multi-echelon inventory", notes)
+        self.assertIn("INVENTORY REBALANCE", notes)
+        self.assertIn("AutoDQ ADQL VS Code extension: `0.3.17`", notes)
         self.assertIn(
             "All items in the original AutoDQ development roadmap are complete.",
             roadmap,

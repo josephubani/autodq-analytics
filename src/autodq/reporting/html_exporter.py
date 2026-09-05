@@ -29,6 +29,7 @@ class HTMLExporter:
         drift = getattr(report, "drift", None)
         ml_readiness = getattr(report, "ml_readiness", None)
         operations = getattr(report, "operations", None)
+        inventory = getattr(report, "inventory", None)
         diagnosis = report.diagnosis
         recommendations = report.recommendations or []
 
@@ -72,6 +73,7 @@ class HTMLExporter:
         drift_section = self._build_drift_section(drift)
         ml_readiness_section = self._build_ml_readiness_section(ml_readiness)
         operations_section = self._build_operations_section(operations)
+        inventory_section = self._build_inventory_section(inventory)
 
         visualization_cards = self._build_visualization_cards(
             getattr(report, "visualizations", None)
@@ -734,6 +736,8 @@ th {{
 
     {operations_section}
 
+    {inventory_section}
+
     <div class="section card">
         <h2 class="section-title">Rendered Visualization Assets</h2>
         <div class="rendered-viz-grid">
@@ -1207,6 +1211,21 @@ th {{
         return (
             '<div class="section card">'
             '<h2 class="section-title">Operational Analytics</h2>'
+            + "".join(sections)
+            + "</div>"
+        )
+
+    def _build_inventory_section(self, inventory):
+        if inventory is None:
+            return ""
+
+        sections = [
+            inventory.view(section).to_notebook_html()
+            for section in ("overview", "network", "rebalancing")
+        ]
+        return (
+            '<div class="section card">'
+            '<h2 class="section-title">Multi-Echelon Inventory</h2>'
             + "".join(sections)
             + "</div>"
         )

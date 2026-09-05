@@ -3,12 +3,12 @@
 | Field | Value |
 | --- | --- |
 | Language | AutoDQ Analytics Domain Query Language (ADQL) |
-| Language version | 2.5 |
+| Language version | 2.6 |
 | Specification status | Stable |
 | Text encoding | UTF-8 |
 | Canonical file extension | `.adql` |
 
-This document is the normative definition of ADQL 2.5. It defines the
+This document is the normative definition of ADQL 2.6. It defines the
 language independently of a particular user interface or AutoDQ package
 release. The public Python constant `autodq.ADQL_LANGUAGE_VERSION` identifies
 the language version implemented by an installed AutoDQ package.
@@ -252,6 +252,7 @@ defines its purpose and primary state effect.
 | `SET` | Change the target or directly convert a column in `CURRENT`. |
 | `CORRELATION`, `READINESS`, `FEATURES`, `FEATURE` | Produce analytical and feature-engineering artifacts. |
 | `OPERATIONS`, `KPI`, `PROCESS`, `BOTTLENECKS`, `ROOT CAUSE` | Recognize operational structure, calculate process KPIs, analyze flow and trends, rank bottlenecks, and surface non-causal driver evidence. |
+| `INVENTORY` | Infer or map an inventory network, calculate SKU-location-echelon positions, summarize network risk, and produce bounded transfer and replenishment recommendations. |
 | `MODEL`, `PREDICT`, `EXPLAIN`, `SHAP`, `BLUE` | Train, persist, predict, explain, visualize, and diagnose models. |
 | `VISUALIZE`, `GALLERY`, `DASHBOARD`, `REPORT` | Create reusable charts and publication artifacts. |
 | `MERGE`, `CONCAT` | Register combined datasets and optionally make the result active. |
@@ -276,6 +277,7 @@ appear at most once. The following semantic constraints supplement the EBNF:
 | `EXPLAIN` | `MAX_ROWS` MUST be positive. |
 | `READINESS` | `REFERENCE` MUST name a registered dataset. PSI stability requires at least 50 rows in both the current and reference datasets. |
 | `OPERATIONS`, `KPI`, `PROCESS`, `BOTTLENECKS`, `ROOT CAUSE` | `PERIOD` is `day`, `week`, or `month`; `TOP` is from 1 through 100; `SLA` is positive; `START` and `END` are supplied together; explicit column roles MUST exist in the selected dataset. |
+| `INVENTORY` | `SERVICE_LEVEL` is greater than zero and at most 1, or a percentage greater than 1 and at most 100; `HORIZON` is from 1 through 3,650 days; `TOP` is from 1 through 100; explicit column roles MUST exist. Inventory calculation requires item, location, on-hand, and daily-demand roles. |
 | `SHAP` | `ROW` cannot be negative; chart is `summary`, `bar`, `beeswarm`, `waterfall`, or `dependence`. |
 | `MERGE` | `WITH` is REQUIRED; `SUFFIXES` contains exactly two values. |
 | `CONCAT` | The initial dataset list contains at least two names. |
@@ -393,7 +395,7 @@ MUST appear in `GROUP BY`. Output aliases are case-insensitively unique.
 
 `WHERE` conditions are combined only with `AND`. Supported operators are `=`,
 `!=`, `<`, `<=`, `>`, `>=`, `IN`, `NOT IN`, `IS NULL`, `IS NOT NULL`,
-`CONTAINS`, `STARTS WITH`, and `ENDS WITH`. ADQL 2.5 does not support `OR`,
+`CONTAINS`, `STARTS WITH`, and `ENDS WITH`. ADQL 2.6 does not support `OR`,
 joins inside `SELECT`, subqueries, window functions, or arbitrary functions.
 
 `DISTINCT` is applied after projection and aggregation. Ordering is stable,
@@ -429,7 +431,7 @@ overwritten by `LET`.
 
 ## 10. Safety limits
 
-A conforming AutoDQ ADQL 2.5 validator enforces:
+A conforming AutoDQ ADQL 2.6 validator enforces:
 
 | Limit | Value |
 | --- | ---: |
@@ -473,13 +475,13 @@ language behavior.
 
 ## 12. Conformance and extensions
 
-An implementation claiming **ADQL 2.5 parser conformance** MUST implement all
-productions in `grammar.ebnf`. An implementation claiming **AutoDQ ADQL 2.5
+An implementation claiming **ADQL 2.6 parser conformance** MUST implement all
+productions in `grammar.ebnf`. An implementation claiming **AutoDQ ADQL 2.6
 runtime conformance** MUST additionally implement every command listed by the
 runtime command set and the state transitions in this specification.
 
 Implementations MAY provide extra renderers, editors, transport protocols, and
-CLI options. They MUST NOT silently reinterpret valid ADQL 2.5 syntax.
+CLI options. They MUST NOT silently reinterpret valid ADQL 2.6 syntax.
 Language extensions require a later ADQL language version and MUST be rejected
 as unknown syntax by implementations that do not support that version.
 

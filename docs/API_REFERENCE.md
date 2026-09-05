@@ -240,6 +240,7 @@ moderate or major drift, and `never` records the result without gating.
 | Correlation | `correlation()`, `show_correlation()` |
 | ML readiness | `ml_readiness(reference=None, reference_name=None)`, `show_ml_readiness()` |
 | Operational analytics | `operations()`, `operational_kpis()`, `process_analysis()`, `bottlenecks()`, `operational_root_causes()`, `show_operations()` |
+| Multi-echelon inventory | `inventory()`, `inventory_network()`, `inventory_rebalance()`, `show_inventory()` |
 | Features | `features()`, `create_feature()`, `apply_features()`, `export_engineered()` |
 | Modeling | `model()`, `save_model()`, `load_model()`, `show_model()` |
 | Prediction | `predict()`, `show_predictions()`, `export_predictions()` |
@@ -286,6 +287,40 @@ duration column exists. Root-cause signals are explicitly reported as
 statistical associations rather than causal conclusions. Existing dashboards
 and HTML/JSON reports include the latest operational report automatically.
 
+`inventory()` performs multi-echelon inventory management over the active
+dataset. Automatic inference can be replaced with explicit source roles:
+
+```python
+inventory = project.inventory(
+    item_column="SKU",
+    location_column="Location",
+    echelon_column="Echelon",
+    parent_location_column="Parent_Location",
+    time_column="Snapshot_Date",
+    on_hand_column="On_Hand",
+    on_order_column="On_Order",
+    backorder_column="Backorders",
+    demand_column="Daily_Demand",
+    lead_time_column="Lead_Time_Days",
+    safety_stock_column="Safety_Stock",
+    unit_cost_column="Unit_Cost",
+    capacity_column="Storage_Capacity",
+    service_level=0.95,
+    horizon_days=30,
+    top=20,
+)
+
+print(inventory.kpis)
+print(inventory.echelons)
+print(inventory.recommendations)
+```
+
+When dated snapshots are present, the latest row for each SKU-location-echelon
+node is used. Demand is units per day and lead time is days. Rebalancing is
+bounded by donor excess, preserves SKU identity, prioritizes parent-child and
+same-echelon transfers, and leaves any residual as a replenishment action.
+Dashboards and HTML/JSON reports include the latest inventory report.
+
 ## Visualization and reporting
 
 Use `visualize()` to create a reusable chart with `show()` and `save()`.
@@ -301,7 +336,7 @@ HTML or JSON analytical reports.
 ```python
 from autodq import ADQL_LANGUAGE_VERSION
 
-print(ADQL_LANGUAGE_VERSION)  # 2.5
+print(ADQL_LANGUAGE_VERSION)  # 2.6
 result = project.query("PROFILE; DIAGNOSE;", auto_display=False)
 file_result = project.run_adql("analysis.adql", through_cell=3)
 ```
@@ -312,7 +347,7 @@ current project. Registered datasets can be targeted directly with
 `SELECT * FROM customers`. `run_adql()` executes a cell-based standalone file
 while retaining state between selected cells. See the
 [ADQL user guide](ADQL_SPEC.md) and
-[formal ADQL 2.5 specification](adql/SPECIFICATION.md).
+[formal ADQL 2.6 specification](adql/SPECIFICATION.md).
 
 ## Pipeline execution
 

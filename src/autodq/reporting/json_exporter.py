@@ -88,6 +88,10 @@ class JSONExporter:
             "operations":
                 report.operations.to_dict()
                 if report.operations else None,
+
+            "inventory":
+                report.inventory.to_dict()
+                if report.inventory else None,
                 
             "visualizations":
                 report.visualizations.to_dict()

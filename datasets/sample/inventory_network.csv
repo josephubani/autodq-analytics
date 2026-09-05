@@ -1,0 +1,9 @@
+SKU,Location,Echelon,Parent_Location,Snapshot_Date,On_Hand,On_Order,Backorders,Daily_Demand,Lead_Time_Days,Safety_Stock,Unit_Cost,Storage_Capacity
+SKU-A,Central_DC,National_DC,,2026-09-01,500,40,0,5,7,30,12.50,1200
+SKU-A,East_DC,Regional_DC,Central_DC,2026-09-01,220,20,0,15,4,35,12.50,600
+SKU-A,Toronto_Store,Store,East_DC,2026-09-01,8,0,6,12,2,18,12.50,250
+SKU-A,Ottawa_Store,Store,East_DC,2026-09-01,110,0,0,3,2,10,12.50,250
+SKU-B,Central_DC,National_DC,,2026-09-01,45,0,0,4,8,20,28.00,800
+SKU-B,East_DC,Regional_DC,Central_DC,2026-09-01,12,10,5,8,5,25,28.00,400
+SKU-B,Toronto_Store,Store,East_DC,2026-09-01,2,0,10,7,3,15,28.00,180
+SKU-B,Ottawa_Store,Store,East_DC,2026-09-01,75,0,0,2,3,8,28.00,180

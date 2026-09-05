@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+## 0.3.17 - 2026-09-05
+
+- Added case-insensitive highlighting for ADQL 2.6 operational analytics:
+  `OPERATIONS`, `KPI`, `PROCESS`, `BOTTLENECKS`, and `ROOT CAUSE`.
+- Added highlighting for multi-echelon `INVENTORY`, `NETWORK`, `REBALANCE`,
+  inventory role mappings, service level, and planning horizon options.
+- Added inventory notebook examples and documented automatic role inference,
+  network rollups, bounded transfers, and replenishment planning.
+- Bundled AutoDQ 0.1.24.
+
 ## 0.3.16 - 2026-09-03
 
 - Added case-insensitive highlighting for ADQL 2.5 `CONTRACT`, `BASELINE`, and

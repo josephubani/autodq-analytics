@@ -1,6 +1,6 @@
-# ADQL 2.5 Execution Model
+# ADQL 2.6 Execution Model
 
-This document is normative for AutoDQ ADQL 2.5 runtimes.
+This document is normative for AutoDQ ADQL 2.6 runtimes.
 
 ## 1. Runtime unit
 
@@ -193,7 +193,7 @@ validation failure MUST leave project state unchanged.
 Statement execution is sequential. Successful prior statements are not rolled
 back when a later statement fails. A runtime SHOULD validate inputs before a
 mutation and SHOULD stage complex changes on a copy so a failed statement does
-not leave a partially modified table. ADQL 2.5 does not define multi-statement
+not leave a partially modified table. ADQL 2.6 does not define multi-statement
 transactions or rollback syntax.
 
 Without host continue-on-error, the first execution failure stops the run.
