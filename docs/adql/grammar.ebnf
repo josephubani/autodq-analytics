@@ -53,6 +53,11 @@ statement =
   | audit-statement
   | correlation-statement
   | readiness-statement
+  | operations-statement
+  | kpi-statement
+  | process-statement
+  | bottlenecks-statement
+  | root-statement
   | features-statement
   | feature-statement
   | blue-statement
@@ -515,6 +520,41 @@ correlation-statement = "CORRELATION", [ dataset-selector ],
 readiness-statement = "READINESS",
     [ short-dataset-target
     | [ dataset-selector ], "REFERENCE", identifier ] ;
+
+(* command: OPERATIONS *)
+operations-statement = "OPERATIONS", [ dataset-selector ],
+                       { operational-option } ;
+
+(* command: KPI *)
+kpi-statement = "KPI", [ dataset-selector ], { operational-option } ;
+
+(* command: PROCESS *)
+process-statement = "PROCESS", [ dataset-selector ], { operational-option } ;
+
+(* command: BOTTLENECKS *)
+bottlenecks-statement = "BOTTLENECKS", [ dataset-selector ],
+                        { operational-option } ;
+
+(* command: ROOT *)
+root-statement = "ROOT", "CAUSE", [ dataset-selector ],
+                 { operational-option } ;
+
+operational-option =
+    "ENTITY", identifier
+  | "TIME", identifier
+  | "START", identifier
+  | "END", identifier
+  | "STATUS", identifier
+  | "STAGE", identifier
+  | "DURATION", identifier
+  | "VALUE", identifier
+  | "COST", identifier
+  | "QUANTITY", identifier
+  | "CAPACITY", identifier
+  | ( "GROUP" | "GROUP_BY" ), identifier-list
+  | "SLA", number
+  | "PERIOD", ( "day" | "week" | "month" )
+  | "TOP", positive-integer ;
 
 (* command: FEATURES *)
 features-statement = "FEATURES", [ short-dataset-target ] ;

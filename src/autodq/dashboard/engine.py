@@ -126,6 +126,7 @@ class DashboardEngine:
             automation=self._automation_summary(state.auto_run_report),
             model=self._model_summary(state.model_report),
             prediction=self._prediction_summary(state.prediction_report),
+            operations=self._operations_summary(state.operations_report),
             columns=self._column_summary(frame, profile),
             preview=(
                 self._data_preview(frame, max_preview_rows)
@@ -351,6 +352,12 @@ class DashboardEngine:
                 outliers.outlier_count if outliers is not None else 0
             ),
         }
+
+    @staticmethod
+    def _operations_summary(report) -> dict[str, Any] | None:
+        if report is None:
+            return None
+        return serializable_value(report.to_dict())
 
     @staticmethod
     def _domain_summary(report) -> dict[str, Any] | None:

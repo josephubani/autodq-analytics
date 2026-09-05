@@ -20,6 +20,8 @@ Jupyter, the command line, or standalone `.adql` notebooks.
   manual row editing, domain validation, and outlier treatment
 - Descriptive statistics, distribution analysis, and correlations
 - Feature engineering and ML-readiness analysis
+- Operational dataset recognition, explainable KPIs, process trends,
+  bottleneck ranking, and root-cause signals
 - Regression and classification with prediction uncertainty
 - SHAP explanations and publication-ready SHAP plots
 - BLUE regression diagnostics, visual interpretation, and prescriptions

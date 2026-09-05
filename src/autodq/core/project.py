@@ -41,6 +41,8 @@ from autodq.correlation.engine import CorrelationEngine
 from autodq.renderers.console.correlation import ConsoleCorrelationRenderer
 from autodq.ml_readiness.engine import MLReadinessEngine
 from autodq.renderers.console.ml_readiness import ConsoleMLReadinessRenderer
+from autodq.operations.engine import OperationalAnalyticsEngine
+from autodq.renderers.console.operations import ConsoleOperationsRenderer
 from autodq.features.engine import FeatureEngineeringEngine
 from autodq.renderers.console.features import ConsoleFeatureRenderer
 from autodq.ml.engine import MLEngine
@@ -98,6 +100,7 @@ class AutoDQ:
         self.notebook_visualization_renderer = (NotebookVisualizationRenderer())
         self.correlation_engine = CorrelationEngine()
         self.ml_readiness_engine = MLReadinessEngine()
+        self.operational_analytics_engine = OperationalAnalyticsEngine()
         self.feature_engine = FeatureEngineeringEngine()
         self.ml_engine = MLEngine()
         self.prediction_engine = PredictionEngine()
@@ -2665,6 +2668,89 @@ class AutoDQ:
             self.ml_readiness()
 
         ConsoleMLReadinessRenderer.render(self.state.ml_readiness_report)
+
+    def operations(
+        self,
+        *,
+        entity_column: str | None = None,
+        time_column: str | None = None,
+        start_column: str | None = None,
+        end_column: str | None = None,
+        status_column: str | None = None,
+        stage_column: str | None = None,
+        duration_column: str | None = None,
+        value_column: str | None = None,
+        cost_column: str | None = None,
+        quantity_column: str | None = None,
+        capacity_column: str | None = None,
+        group_by: list[str] | tuple[str, ...] | str | None = None,
+        sla_target: float | None = None,
+        period: str = "month",
+        top: int = 10,
+    ):
+        """Recognize and analyze the active operational dataset."""
+        if self.state.data is None:
+            self.load()
+
+        active = self.dataset_manager.primary()
+        dataset_name = active.name if active is not None else "current"
+        self.state.operations_report = self.operational_analytics_engine.analyze(
+            self.state.data,
+            dataset_name=dataset_name,
+            entity_column=entity_column,
+            time_column=time_column,
+            start_column=start_column,
+            end_column=end_column,
+            status_column=status_column,
+            stage_column=stage_column,
+            duration_column=duration_column,
+            value_column=value_column,
+            cost_column=cost_column,
+            quantity_column=quantity_column,
+            capacity_column=capacity_column,
+            group_by=group_by,
+            sla_target=sla_target,
+            period=period,
+            top=top,
+        )
+        report = self.state.operations_report
+        self.session.log(
+            step="operations",
+            message="Operational analytics generated.",
+            metadata={
+                "dataset": report.dataset_name,
+                "dataset_type": report.detection.dataset_type,
+                "confidence": report.detection.confidence,
+                "rows": report.rows_analyzed,
+                "kpis": report.kpi_count,
+                "bottlenecks": report.bottleneck_count,
+                "drivers": report.driver_count,
+            },
+        )
+        return report
+
+    def operational_kpis(self, **options):
+        """Calculate explainable operational KPIs for the active dataset."""
+        return self.operations(**options).view("kpis")
+
+    def process_analysis(self, **options):
+        """Summarize stage/status flow and time trends."""
+        return self.operations(**options).view("process")
+
+    def bottlenecks(self, **options):
+        """Rank segments with delay, failure, concentration, or backlog evidence."""
+        return self.operations(**options).view("bottlenecks")
+
+    def operational_root_causes(self, **options):
+        """Rank statistical drivers of cycle time, adverse outcomes, or value."""
+        return self.operations(**options).view("root_causes")
+
+    def show_operations(self, section: str = "overview") -> None:
+        if self.state.operations_report is None:
+            self.operations()
+        ConsoleOperationsRenderer.render(
+            self.state.operations_report.view(section)
+        )
         
         
     def features(self):

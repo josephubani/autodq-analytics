@@ -96,6 +96,7 @@ class Dashboard:
     automation: dict[str, Any] | None = None
     model: dict[str, Any] | None = None
     prediction: dict[str, Any] | None = None
+    operations: dict[str, Any] | None = None
     columns: list[dict[str, Any]] = field(default_factory=list)
     preview: list[dict[str, Any]] = field(default_factory=list)
     charts: list[Any] = field(default_factory=list, repr=False)
@@ -168,6 +169,7 @@ class Dashboard:
             "automation": serializable_value(self.automation),
             "model": serializable_value(self.model),
             "prediction": serializable_value(self.prediction),
+            "operations": serializable_value(self.operations),
             "columns": serializable_value(self.columns),
             "preview": serializable_value(self.preview),
             "charts": [

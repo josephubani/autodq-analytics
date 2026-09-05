@@ -31,6 +31,9 @@ class DashboardHTMLRenderer:
         if dashboard.model or dashboard.prediction:
             nav_items.append(("modeling", "Model & predictions"))
 
+        if dashboard.operations:
+            nav_items.append(("operations", "Operations"))
+
         if dashboard.preview or dashboard.columns:
             nav_items.append(("data", "Data explorer"))
 
@@ -45,6 +48,7 @@ class DashboardHTMLRenderer:
                 self._charts(dashboard),
                 self._workflow(dashboard),
                 self._modeling(dashboard),
+                self._operations(dashboard),
                 self._data_explorer(dashboard),
             ]
         )
@@ -542,6 +546,39 @@ footer {{ margin: 30px 0 4px; padding-top: 16px; border-top: 1px solid var(--bor
         return f"""<section id="modeling">
   <div class="section-heading"><div><h2>Model & predictions</h2><p>Latest trained-model and uncertainty results.</p></div></div>
   <div class="panel-grid">{''.join(panels)}</div>
+</section>"""
+
+    def _operations(self, dashboard) -> str:
+        operations = dashboard.operations
+        if not operations:
+            return ""
+
+        detection = operations.get("detection", {})
+        kpi_cards = "".join(
+            f"""<article class="metric" data-status="{self._e('bad' if item.get('status') == 'critical' else item.get('status', 'neutral'))}">
+  <div class="metric-label">{self._e(item.get('name'))}</div>
+  <div class="metric-value">{self._e(self._display_value(item.get('value')))}</div>
+  <div class="metric-description">{self._e(item.get('unit', ''))} · {self._e(item.get('description', ''))}</div>
+</article>"""
+            for item in operations.get("kpis", [])[:8]
+        )
+        bottleneck_rows = "".join(
+            f"""<tr><td>{self._e(item.get('severity', '').title())}</td>
+<td>{self._e(item.get('dimension'))}</td><td>{self._e(item.get('segment'))}</td>
+<td>{self._e(item.get('score'))}</td><td>{self._e(item.get('evidence'))}</td></tr>"""
+            for item in operations.get("bottlenecks", [])
+        )
+        bottlenecks = (
+            f"""<div class="panel table-wrap" style="margin-top:14px"><h3>Bottlenecks</h3><table>
+<thead><tr><th>Severity</th><th>Dimension</th><th>Segment</th><th>Score</th><th>Evidence</th></tr></thead>
+<tbody>{bottleneck_rows}</tbody></table></div>"""
+            if bottleneck_rows
+            else '<div class="empty" style="margin-top:14px">No material bottlenecks were detected.</div>'
+        )
+        return f"""<section id="operations">
+  <div class="section-heading"><div><h2>Operational analytics</h2>
+  <p>{self._e(str(detection.get('dataset_type', 'operations')).replace('_', ' ').title())} · {self._e(self._format_percent(detection.get('confidence', 0)))} confidence</p></div></div>
+  <div class="metric-grid">{kpi_cards}</div>{bottlenecks}
 </section>"""
 
     def _data_explorer(self, dashboard) -> str:

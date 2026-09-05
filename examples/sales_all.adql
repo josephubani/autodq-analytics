@@ -1,38 +1,78 @@
 #!/usr/bin/env autodq
-# %% [markdown] AutoDQ + ADQL complete sales workflow
+# %% [markdown] AutoDQ + ADQL complete sales analysis
 
-This executable notebook exercises every ADQL top-level command family and the
-major AutoDQ capabilities exposed through ADQL 2.4. Run the cells from top to
-bottom. It uses only the bundled sample datasets and writes generated artifacts
-under `reports/sales_all`, `exports`, `models`, `contracts`, `baselines`, and
-`tests`.
+# Complete sales workflow
 
-The workflow deliberately uses separate registered copies for automatic,
-one-command cleaning, datatype, merge, and interactive-review demonstrations.
-That keeps the final analytical pipeline reproducible.
-# %% [Primary dataset]
+This executable ADQL 2.5 notebook demonstrates every top-level ADQL command
+and the major AutoDQ capabilities in a realistic order. Each code cell has a
+small, focused responsibility so its output is easy to read.
+
+Run the notebook from top to bottom. It uses the bundled sample datasets and
+writes generated artifacts under `reports/sales_all`, `exports`, `models`,
+`contracts`, `baselines`, and `tests`.
+
+# %% [markdown] 1. Start the project
+
+Load the sales dataset, identify the prediction target, and preserve an
+untouched snapshot for later comparisons.
+
+# %% [Load the primary sales dataset]
 DATASET "../datasets/sample/sales.csv" TARGET Revenue;
 LOAD;
+
+# %% [Preserve the raw sales snapshot]
 SET TARGET Revenue;
 LET raw_sales = CURRENT OVERWRITE;
-# %% [Language help]
+
+# %% [Show the command catalogue]
 HELP;
+
+# %% [Show focused model help]
 HELP MODEL;
-# %% [Datatype conversion and formatting]
-ADD DATASET type_demo FROM "../datasets/sample/sales.csv" OVERWRITE;
-SET DATASET type_demo TYPE Date datetime FORMAT AUTO;
-SET DATASET type_demo TYPE Revenue decimal DECIMALS 2;
-SET DATASET type_demo TYPE Customer_Age int DECIMALS 0;
-SET DATASET type_demo TYPE Region category;
-HEAD DATASET type_demo 5;
-# %% [Register related and reference datasets]
+
+# %% [markdown] 2. Register supporting datasets
+
+The customer table supports joins. The cleaned reference supports readiness
+and stability comparisons. Two extra sales copies isolate automatic workflow
+demonstrations from the main reviewed-cleaning workflow.
+
+# %% [Register customers and a reference]
 ADD DATASET customers FROM "../datasets/sample/customers.csv" OVERWRITE;
 ADD DATASET cleaned_reference FROM "../datasets/sample/sales_cleaned11.csv" OVERWRITE;
+
+# %% [Register automatic workflow copies]
 ADD DATASET auto_sales FROM "../datasets/sample/sales.csv" OVERWRITE;
 ADD DATASET clean_command_sales FROM "../datasets/sample/sales.csv" OVERWRITE;
+
+# %% [Inspect registered datasets]
 LIST DATASETS;
 SESSION DATASETS;
-# %% [Automatic workflow orchestration]
+
+# %% [markdown] 3. Datatype conversion
+
+Use a dedicated copy so datatype demonstrations do not change the main
+analysis dataset.
+
+# %% [Register the datatype demonstration]
+ADD DATASET type_demo FROM "../datasets/sample/sales.csv" OVERWRITE;
+
+# %% [Convert date and decimal columns]
+SET DATASET type_demo TYPE Date datetime FORMAT AUTO;
+SET DATASET type_demo TYPE Revenue decimal DECIMALS 2;
+
+# %% [Convert integer and categorical columns]
+SET DATASET type_demo TYPE Returned integer;
+SET DATASET type_demo TYPE Region category;
+
+# %% [Inspect converted data]
+HEAD DATASET type_demo 5;
+
+# %% [markdown] 4. Automatic workflows
+
+First inspect what `AUTO` would do. Then demonstrate the direct `CLEAN`
+command on a separate dataset.
+
+# %% [Run automatic review mode]
 AUTO DATASET auto_sales MODE review
     VISUALIZE false
     APPLY_CLEANING false
@@ -42,11 +82,19 @@ AUTO DATASET auto_sales MODE review
     EXPLAIN false
     REFRESH true
     CONTINUE_ON_ERROR true;
-# %% [One-command automatic cleaning]
+
+# %% [Run direct automatic cleaning]
 CLEAN DATASET clean_command_sales;
+
+# %% [Validate and retain automatic cleaning]
 VALIDATE;
 LET clean_command_result = CLEANED OVERWRITE;
-# %% [Multiple-dataset merge and concatenation]
+
+# %% [markdown] 5. Combine datasets
+
+`MERGE` joins columns by a key. `CONCAT` stacks compatible rows.
+
+# %% [Join sales with customer attributes]
 MERGE raw_sales WITH customers AS sales_with_customers
     ON Customer_ID
     HOW left
@@ -54,173 +102,386 @@ MERGE raw_sales WITH customers AS sales_with_customers
     SUFFIXES "_sales,_customer"
     MAKE_ACTIVE false;
 
+# %% [Stack raw and reference sales]
 CONCAT raw_sales,cleaned_reference AS combined_sales
     AXIS 0
     IGNORE_INDEX true
     JOIN outer
     MAKE_ACTIVE false;
 
-LIST DATASETS;
+# %% [Inspect the merged dataset]
 HEAD DATASET sales_with_customers 5;
+
+# %% [Sample the concatenated dataset]
 SAMPLE DATASET combined_sales 5 RANDOM_STATE 42;
-# %% [Activate the main workflow]
+
+# %% [Confirm the expanded dataset registry]
+LIST DATASETS;
+
+# %% [markdown] 6. Prepare the main workflow
+
+Return to the primary dataset and normalize the important analytical types.
+
+# %% [Activate the primary dataset]
 USE DATASET main;
+
+# %% [Normalize date and revenue]
 SET TYPE Date datetime FORMAT AUTO;
 SET TYPE Revenue float DECIMALS 2;
+
+# %% [Normalize cost and profit]
 SET TYPE Cost float DECIMALS 2;
 SET TYPE Profit float DECIMALS 2;
+
+# %% [Preview first rows]
 HEAD 10;
+
+# %% [Preview last rows]
 TAIL 10;
+
+# %% [Preview a reproducible sample]
 SAMPLE 10 RANDOM_STATE 42;
-# %% [Profiling, statistics, interpretation, and knowledge]
-KNOWLEDGE;
+
+# %% [markdown] 7. Understand data quality
+
+Run each discovery stage separately so its rich output has its own cell.
+
+# %% [Profile structure and completeness]
 PROFILE;
+
+# %% [Calculate descriptive statistics]
 STATISTICS;
+
+# %% [Interpret statistical patterns]
 INTERPRET;
+
+# %% [Apply domain knowledge]
+KNOWLEDGE;
+
+# %% [Diagnose data-quality issues]
 DIAGNOSE;
+
+# %% [Generate cleaning recommendations]
 RECOMMEND;
+
+# %% [Create cleaning decisions]
 DECIDE;
+
+# %% [Preview proposed cleaning]
 PREVIEW;
-# %% [Interactive cleaning and partial decisions]
+
+# %% [Open interactive review]
 REVIEW;
+
+# %% [Demonstrate partial review decisions]
 REJECT 1 REASON "Demonstration of a manually rejected recommendation";
 APPROVE 2;
+
+# %% [Preview selected actions]
 CLEANING PREVIEW ACTIONS 1,2 MAX_ROWS 5;
+
+# %% [Approve and preview the complete plan]
 APPROVE ALL;
 CLEANING PREVIEW MAX_ROWS 5;
-# %% [Audited manual row editing]
+
+# %% [markdown] 8. Make audited manual corrections
+
+Every manual edit and explicit treatment is recorded in the cleaning audit.
+
+# %% [Edit a verified row]
 EDIT ROW 0
     CHANGES '{"Region": "South", "Customer_Age": 40}'
     REASON "Verified against the source record";
-# %% [Explicit missing-value review and treatment]
+
+# %% [Inspect missing values]
 MISSING SUMMARY;
+
+# %% [Fill descriptive missing values]
 MISSING FILL City VALUE "Not provided"
     REASON "Preserve rows with an explicit unknown city";
 MISSING FILL Customer_Age STRATEGY median;
+
+# %% [Fill operational missing values]
 MISSING FILL Region STRATEGY mode;
 MISSING FILL Revenue STRATEGY interpolate;
+
+# %% [Complete remaining imputations]
 MISSING FILL Customer_Satisfaction STRATEGY median;
 MISSING FILL ALL STRATEGY auto;
+
+# %% [Remove unresolved incomplete records]
 MISSING DROP ROWS COLUMNS City,Region HOW any
     REASON "Remove only rows still incomplete after filling";
+
+# %% [Remove fully empty optional columns]
 MISSING DROP COLUMNS MIN_PERCENT 100
     REASON "Remove only completely empty non-target columns";
+
+# %% [Verify missing-value treatment]
 MISSING SUMMARY;
-# %% [Exact duplicate inspection and treatment]
+
+# %% [Inspect exact duplicates]
 DUPLICATES SUMMARY;
+
+# %% [Remove reviewed duplicates]
 DUPLICATES DROP KEEP first REASON "Repeated source-system import";
+
+# %% [Verify duplicate treatment]
 DUPLICATES SUMMARY;
-# %% [Domain validation and outlier review]
+
+# %% [Define revenue and age domains]
 DOMAIN ADD Revenue MIN 0 NULLABLE false
     DESCRIPTION "Revenue must be present and non-negative";
 DOMAIN ADD Customer_Age MIN 18 MAX 100 NULLABLE false
     DESCRIPTION "Expected adult customer age range";
+
+# %% [Define identifier and region domains]
 DOMAIN ADD Customer_ID PATTERN "^CUST-[0-9]+$" NULLABLE false;
 DOMAIN ADD Region ALLOWED "North,South,East,West,Central" NULLABLE false;
+
+# %% [Validate domain rules]
 DOMAIN VALIDATE;
 
+# %% [Review possible outliers]
 OUTLIERS REVIEW COLUMNS Revenue,Profit,Quantity,Customer_Age IQR 1.5;
+
+# %% [Treat reviewed revenue outliers]
 OUTLIERS TREAT COLUMN Revenue STRATEGY clip IQR 1.5
     REASON "Reviewed IQR clipping for extreme revenue values";
-# %% [Apply, validate, audit, and retain cleaned data]
+
+# %% [markdown] 9. Finalize cleaning
+
+Apply the reviewed changes, validate the result, preserve `CLEANED`, and
+export the audit trail.
+
+# %% [Apply reviewed cleaning]
 CLEANING APPLY;
+
+# %% [Validate cleaning impact]
 VALIDATE;
+
+# %% [Verify final missing values]
 MISSING SUMMARY;
+
+# %% [Verify final duplicates]
 DUPLICATES SUMMARY;
+
+# %% [Export the cleaning audit]
 AUDIT EXPORT TO "../reports/sales_all/cleaning-audit.json";
+
+# %% [Retain the cleaned dataset]
 LET cleaned_sales = CLEANED OVERWRITE;
+
+# %% [Export cleaned CSV]
 EXPORT cleaned_sales TO "../exports/sales_all-cleaned.csv" OVERWRITE;
+
+# %% [Export cleaned Excel]
 EXPORT CLEANED TO "../exports/sales_all-cleaned.xlsx" OVERWRITE;
-# %% [Use the cleaned snapshot as the analytical dataset]
+
+# %% [markdown] 10. Analyze the cleaned dataset
+
+The named cleaned snapshot becomes the active analytical dataset.
+
+# %% [Activate cleaned sales]
 USE DATASET cleaned_sales;
 SET TARGET Revenue;
+
+# %% [Profile cleaned sales]
 PROFILE;
+
+# %% [Summarize cleaned sales]
 STATISTICS;
+
+# %% [Interpret cleaned sales]
 INTERPRET;
+
+# %% [Diagnose cleaned sales]
 DIAGNOSE;
-# %% [Direct data-quality assertions]
+
+# %% [markdown] 11. Run direct data-quality assertions
+
+Assertions are read-only gates. Related checks share a cell, but each result
+remains independently visible.
+
+# %% [Check revenue presence]
 ASSERT Revenue EXISTS NAME "Revenue column exists";
 ASSERT Revenue NOT NULL NAME "Revenue is complete";
+
+# %% [Check revenue type and minimum]
 ASSERT Revenue TYPE numeric NAME "Revenue is numeric";
 ASSERT Revenue MIN 0 NAME "Revenue is non-negative";
-ASSERT Revenue MAX 1000000 NAME "Revenue is within a plausible ceiling";
-ASSERT Revenue BETWEEN 0 AND 1000000 NAME "Revenue range";
+
+# %% [Check revenue limits]
+ASSERT Revenue MAX 1000000 NAME "Revenue has a plausible ceiling";
+ASSERT Revenue BETWEEN 0 AND 1000000 NAME "Revenue range is governed";
+
+# %% [Check governed text values]
 ASSERT Region ALLOWED North,South,East,West,Central
     NAME "Regions use approved values";
 ASSERT Customer_ID MATCHES "^CUST-[0-9]+$"
     NAME "Customer ID format";
+
+# %% [Check identifiers and row count]
 ASSERT Transaction_ID UNIQUE SEVERITY warning FAIL_ON never
     NAME "Transaction identifiers should be unique";
 ASSERT ROW_COUNT > 0;
+
+# %% [Check shape and missing counts]
 ASSERT COLUMN_COUNT >= 20;
 ASSERT MISSING_COUNT Region = 0;
+
+# %% [Check completeness and duplicates]
 ASSERT MISSING_PERCENT <= 1;
 ASSERT DUPLICATE_ROWS = 0;
+
+# %% [Check duplicate rate and diversity]
 ASSERT DUPLICATE_PERCENT = 0;
 ASSERT DISTINCT_COUNT Region >= 5;
+
+# %% [Check the overall quality score]
 ASSERT QUALITY_SCORE >= 90 FAIL_ON never;
-# %% [Reusable data-quality test suite]
+
+# %% [Document built-in email format validation]
+ASSERT Customer_ID FORMAT email SEVERITY info FAIL_ON never
+    NAME "Demonstration: Customer_ID is intentionally not an email";
+
+# %% [markdown] 12. Build a reusable quality suite
+
+The suite combines multiple assertions into one repeatable release gate.
+
+# %% [Add completeness suite tests]
 ASSERT SUITE ADD sales_release_gate Revenue NOT NULL
     NAME "Revenue is complete";
 ASSERT SUITE ADD sales_release_gate Revenue MIN 0
     NAME "Revenue is non-negative";
+
+# %% [Add governance suite tests]
 ASSERT SUITE ADD sales_release_gate Region ALLOWED North,South,East,West,Central
     SEVERITY warning NAME "Region values are governed";
 ASSERT SUITE ADD sales_release_gate DUPLICATE_ROWS = 0
     NAME "No exact duplicate rows";
+
+# %% [Inspect the quality suite]
 ASSERT SUITE SHOW sales_release_gate;
+
+# %% [Run the quality suite]
 ASSERT SUITE RUN sales_release_gate FAIL_ON never;
+
+# %% [List quality suites]
 ASSERT SUITE LIST;
+
+# %% [Export the quality suite]
 ASSERT SUITE EXPORT sales_release_gate
     TO "../tests/sales_all-quality-suite.json" OVERWRITE;
+
+# %% [Load a quality suite copy]
 ASSERT SUITE LOAD restored_sales_gate
     FROM "../tests/sales_all-quality-suite.json" OVERWRITE;
+
+# %% [Remove the suite copy]
 ASSERT SUITE DROP restored_sales_gate;
-# %% [Schema contract]
+
+# %% [markdown] 13. Create and check a schema contract
+
+The concise ADQL 2.5 contract syntax defines an understandable structural
+agreement for future sales batches.
+
+# %% [Infer the sales contract]
 CONTRACT sales_contract FROM cleaned_sales
     VERSION 1.0.0
     EXTRA_COLUMNS warning
     INFER_RANGES false
     INFER_CATEGORIES true
     OVERWRITE;
+
+# %% [Require transaction identifiers]
 CONTRACT sales_contract REQUIRE Transaction_ID
     TYPE integer NOT NULL UNIQUE SEVERITY error;
+
+# %% [Require customer identifiers]
 CONTRACT sales_contract REQUIRE Customer_ID
     TYPE string NOT NULL
     MATCHES "^CUST-[0-9]+$" SEVERITY error;
+
+# %% [Require valid revenue]
 CONTRACT sales_contract REQUIRE Revenue
     TYPE numeric NOT NULL MIN 0 MAX 1000000
     SEVERITY error;
+
+# %% [Require governed regions]
 CONTRACT sales_contract REQUIRE Region
     TYPE string NOT NULL UNIQUE false
     ALLOWED "North,South,East,West,Central" SEVERITY warning;
+
+# %% [Check the schema contract]
 CHECK CONTRACT sales_contract ON cleaned_sales FAIL ON never;
+
+# %% [Show the schema contract]
 CONTRACT SHOW sales_contract;
+
+# %% [List schema contracts]
 CONTRACT LIST;
+
+# %% [Save the schema contract]
 CONTRACT SAVE sales_contract
     TO "../contracts/sales_all-contract.json" OVERWRITE;
+
+# %% [Load a schema contract copy]
 CONTRACT LOAD restored_sales_contract
     FROM "../contracts/sales_all-contract.json" OVERWRITE;
+
+# %% [Remove the schema contract copy]
 CONTRACT DROP restored_sales_contract;
-# %% [Schema and distribution drift]
+
+# %% [Verify legacy schema compatibility]
+SCHEMA CONTRACT SHOW sales_contract;
+
+# %% [markdown] 14. Establish and check a drift baseline
+
+The baseline stores compact distributions. `SENSITIVITY normal` uses the
+standard PSI and missingness thresholds without exposing four numbers.
+
+# %% [Create the sales baseline]
 BASELINE sales_baseline FROM cleaned_sales OVERWRITE;
-BASELINE SHOW sales_baseline;
-BASELINE LIST;
-BASELINE SAVE sales_baseline
-    TO "../baselines/sales_all-baseline.json" OVERWRITE;
-BASELINE LOAD restored_sales_baseline
-    FROM "../baselines/sales_all-baseline.json" OVERWRITE;
+
+# %% [Check for drift]
 CHECK DRIFT sales_baseline ON cleaned_sales
     CONTRACT sales_contract
     SENSITIVITY normal
     FAIL ON never;
+
+# %% [Show the drift baseline]
+BASELINE SHOW sales_baseline;
+
+# %% [List drift baselines]
+BASELINE LIST;
+
+# %% [Save the drift baseline]
+BASELINE SAVE sales_baseline
+    TO "../baselines/sales_all-baseline.json" OVERWRITE;
+
+# %% [Load a drift baseline copy]
+BASELINE LOAD restored_sales_baseline
+    FROM "../baselines/sales_all-baseline.json" OVERWRITE;
+
+# %% [Verify legacy drift compatibility]
+DRIFT BASELINE SHOW sales_baseline;
+
+# %% [Remove the drift baseline copy]
 BASELINE DROP restored_sales_baseline;
-# %% [SQL-like analytical queries]
+
+# %% [markdown] 15. Query the cleaned data
+
+These queries demonstrate projection, filtering, ordering, grouping,
+aggregates, aliases, and reusable query results.
+
+# %% [List active regions]
 SELECT DISTINCT Region
 FROM CURRENT
 WHERE Region IS NOT NULL
 ORDER BY Region ASC;
 
+# %% [Inspect high-value regional transactions]
 SELECT Transaction_ID,Region,Product,Revenue,Profit
 FROM CURRENT
 WHERE Region IN ("North","South")
@@ -229,6 +490,7 @@ WHERE Region IN ("North","South")
 ORDER BY Revenue DESC
 LIMIT 25;
 
+# %% [Inspect customer locations]
 SELECT Customer_ID,Region,City
 FROM CURRENT
 WHERE Customer_ID STARTS WITH "CUST-"
@@ -237,6 +499,7 @@ WHERE Customer_ID STARTS WITH "CUST-"
 ORDER BY Customer_ID ASC
 LIMIT 25;
 
+# %% [Create the regional summary]
 LET regional_sales = SELECT Region,
                             COUNT(*) AS transactions,
                             SUM(Revenue) AS total_revenue,
@@ -253,38 +516,103 @@ LET regional_sales = SELECT Region,
                      LIMIT 10
                      OVERWRITE;
 
-SELECT * FROM regional_sales ORDER BY total_revenue DESC LIMIT 10;
+# %% [Display the regional summary]
+SELECT * FROM regional_sales
+ORDER BY total_revenue DESC
+LIMIT 10;
+
+# %% [Create reusable dataset snapshots]
 LET cleaned_snapshot = DATASET cleaned_sales OVERWRITE;
 LET current_snapshot = CURRENT OVERWRITE;
-# %% [Correlation and transparent ML readiness]
+
+# %% [markdown] 16. Measure analytical readiness
+
+Correlation and readiness expose leakage, multicollinearity, quality, target,
+sample, feature, and stability evidence before modeling.
+
+# %% [Analyze correlations]
 CORRELATION MIN_ABS 0.25;
+
+# %% [Score ML readiness]
 READINESS REFERENCE cleaned_reference;
-# %% [Automatic and manual feature engineering]
+
+# %% [markdown] 17. Analyze operations
+
+Recognize operational structure, calculate explainable KPIs, analyze process
+flow, rank bottlenecks, and inspect statistical root-cause signals.
+
+# %% [Recognize the operational dataset]
+OPERATIONS SLA 5 PERIOD month TOP 10;
+
+# %% [Calculate operational KPIs]
+KPI SLA 5;
+
+# %% [Analyze process channels and time trends]
+PROCESS STAGE Sales_Channel DURATION Delivery_Days TIME Date PERIOD month;
+
+# %% [Rank operational bottlenecks]
+BOTTLENECKS GROUP_BY Region,Sales_Channel
+    DURATION Delivery_Days STATUS Returned SLA 5 TOP 10;
+
+# %% [Inspect root-cause signals]
+ROOT CAUSE DURATION Delivery_Days
+    GROUP_BY Region,Sales_Channel TOP 10;
+
+# %% [markdown] 18. Engineer features
+
+Start with AutoDQ recommendations, apply them, and then create representative
+manual numeric, categorical, flag, date, and expression features.
+
+# %% [Recommend features]
 FEATURES;
+
+# %% [Apply recommended features]
 FEATURE APPLY;
+
+# %% [Create transformed revenue features]
 FEATURE CREATE Revenue_Log METHOD log COLUMN Revenue;
 FEATURE CREATE Revenue_Square_Root METHOD sqrt COLUMN Revenue;
 FEATURE CREATE Customer_Age_Squared METHOD square COLUMN Customer_Age;
+
+# %% [Create arithmetic features]
 FEATURE CREATE Profit_to_Revenue METHOD ratio COLUMNS Profit,Revenue;
 FEATURE CREATE Gross_Margin_Check METHOD difference COLUMNS Revenue,Cost;
 FEATURE CREATE Revenue_Cost_Total METHOD sum COLUMNS Revenue,Cost;
+
+# %% [Create product and binned features]
 FEATURE CREATE Price_Quantity_Product METHOD product COLUMNS Unit_Price,Quantity;
 FEATURE CREATE Revenue_Band METHOD bin COLUMN Revenue
     BINS "0,100,500,1000,1000000"
     LABELS "Micro,Small,Medium,Large";
+
+# %% [Create operational flags]
 FEATURE CREATE Delivery_Is_Slow METHOD flag_greater_equal
     COLUMN Delivery_Days EXPRESSION "5";
 FEATURE CREATE Was_Returned METHOD flag_equal
     COLUMN Returned EXPRESSION "1";
+
+# %% [Create date features]
 FEATURE CREATE Order_Year METHOD date_year COLUMN Date;
 FEATURE CREATE Order_Month METHOD date_month COLUMN Date;
 FEATURE CREATE Order_Weekday METHOD date_weekday COLUMN Date;
+
+# %% [Create weekend and expression features]
 FEATURE CREATE Order_Is_Weekend METHOD date_weekend COLUMN Date;
 FEATURE CREATE Custom_Profit_Ratio METHOD expression
-    EXPRESSION "Profit / Revenue";
+    EXPRESSION "Profit / (Revenue + 1)";
+
+# %% [Retain engineered sales]
 LET engineered_sales = ENGINEERED OVERWRITE;
+
+# %% [Export engineered sales]
 EXPORT ENGINEERED TO "../exports/sales_all-engineered.csv" OVERWRITE;
-# %% [Visual analytics: every supported explicit chart type]
+
+# %% [markdown] 19. Build visual analysis
+
+Each visualization has its own cell so the chart and its metadata remain easy
+to understand in the notebook.
+
+# %% [Regional revenue bar chart]
 VISUALIZE bar X Region Y Revenue STAGE engineered
     TITLE "Revenue by Region"
     SUBTITLE "Cleaned and engineered sales"
@@ -298,6 +626,7 @@ VISUALIZE bar X Region Y Revenue STAGE engineered
     LEGEND false
     APPEND true;
 
+# %% [Revenue and profit scatter plot]
 VISUALIZE scatter X Revenue Y Profit STAGE engineered
     TITLE "Revenue and Profit"
     X_LABEL "Revenue"
@@ -308,6 +637,7 @@ VISUALIZE scatter X Revenue Y Profit STAGE engineered
     DPI 160
     GRID true;
 
+# %% [Revenue histogram]
 VISUALIZE histogram COLUMN Revenue STAGE engineered
     TITLE "Revenue Distribution"
     X_LABEL "Revenue"
@@ -318,6 +648,7 @@ VISUALIZE histogram COLUMN Revenue STAGE engineered
     DPI 160
     GRID true;
 
+# %% [Profit boxplot]
 VISUALIZE boxplot COLUMN Profit STAGE engineered
     TITLE "Profit Boxplot"
     Y_LABEL "Profit"
@@ -327,6 +658,7 @@ VISUALIZE boxplot COLUMN Profit STAGE engineered
     DPI 160
     GRID true;
 
+# %% [Correlation heatmap]
 VISUALIZE correlation_heatmap STAGE engineered
     TITLE "Engineered Feature Correlations"
     THEME journal
@@ -335,20 +667,41 @@ VISUALIZE correlation_heatmap STAGE engineered
     DPI 180
     GRID false;
 
+# %% [Customer age distribution]
 VISUALIZE distribution COLUMN Customer_Age STAGE engineered
     TITLE "Customer Age Distribution"
     THEME light
     COLOR "#ea580c";
 
+# %% [Quality score chart]
 VISUALIZE quality_score STAGE current;
+
+# %% [Missing-value chart]
 VISUALIZE missing_values STAGE current;
+
+# %% [Issue breakdown chart]
 VISUALIZE issue_breakdown STAGE current;
+
+# %% [Cleaning status chart]
 VISUALIZE cleaning_status STAGE current;
+
+# %% [Before and after comparison chart]
 VISUALIZE comparison STAGE current;
-# %% [Visualization gallery management]
+
+# %% [markdown] 20. Manage the visualization gallery
+
+Inspect, customize, save, and list reusable chart objects.
+
+# %% [List all gallery charts]
 GALLERY LIST;
+
+# %% [Filter the gallery]
 GALLERY LIST TYPE bar STAGE engineered;
+
+# %% [Retrieve the regional chart]
 GALLERY GET bar_Region_by_Revenue_engineered;
+
+# %% [Customize the regional chart]
 GALLERY CUSTOMIZE bar_Region_by_Revenue_engineered
     TITLE "Regional Revenue Performance"
     SUBTITLE "Average revenue after quality review"
@@ -363,22 +716,45 @@ GALLERY CUSTOMIZE bar_Region_by_Revenue_engineered
     LEGEND_POSITION best
     TEMPLATE publication
     TRANSPARENT false;
+
+# %% [Save the visualization gallery]
 GALLERY SAVE TO "../reports/sales_all/charts" FORMAT png;
+
+# %% [List registered visualizations]
 LIST VISUALIZATIONS;
-# %% [Model training and persistence]
+
+# %% [markdown] 21. Train and persist a model
+
+Train on engineered features while excluding likely identifiers and leakage.
+
+# %% [Train the revenue model]
 MODEL TARGET Revenue USING random_forest_regressor
     TEST_SIZE 0.20
     RANDOM_STATE 42
     USE_ENGINEERED true
     EXCLUDE_LEAKAGE true
     EXCLUDE Transaction_ID,Customer_ID;
+
+# %% [Save the revenue model]
 MODEL SAVE TO "../models/sales_all-revenue-model" OVERWRITE;
+
+# %% [Reload the revenue model]
 MODEL LOAD FROM "../models/sales_all-revenue-model";
-# %% [Prediction and uncertainty]
+
+# %% [markdown] 22. Predict with uncertainty
+
+Generate point predictions, intervals, confidence metadata, and a reusable
+prediction dataset.
+
+# %% [Generate predictions]
 PREDICT CONFIDENCE 0.90
     UNCERTAINTY true
     LOW_CONFIDENCE 0.60;
+
+# %% [Retain predictions]
 LET sales_predictions = PREDICTIONS OVERWRITE;
+
+# %% [Inspect prediction intervals]
 SELECT Transaction_ID,Region,Revenue,
        AutoDQ_Prediction,
        AutoDQ_Prediction_Lower,
@@ -388,16 +764,37 @@ SELECT Transaction_ID,Region,Revenue,
 FROM PREDICTIONS
 ORDER BY AutoDQ_Prediction DESC
 LIMIT 25;
-# %% [Model explainability and all SHAP chart types]
+
+# %% [markdown] 23. Explain the model with SHAP
+
+Generate the structured explanation followed by each supported SHAP chart.
+
+# %% [Explain representative predictions]
 EXPLAIN MAX_ROWS 20 USE_ENGINEERED true;
+
+# %% [SHAP summary plot]
 SHAP CHART summary SAVE "../reports/sales_all/shap-summary.png";
+
+# %% [SHAP importance bar plot]
 SHAP CHART bar SAVE "../reports/sales_all/shap-bar.png";
+
+# %% [SHAP beeswarm plot]
 SHAP CHART beeswarm SAVE "../reports/sales_all/shap-beeswarm.png";
+
+# %% [SHAP local waterfall plot]
 SHAP CHART waterfall ROW 0
     SAVE "../reports/sales_all/shap-waterfall.png";
+
+# %% [SHAP dependence plot]
 SHAP CHART dependence FEATURE Customer_Age
     SAVE "../reports/sales_all/shap-customer-age.png";
-# %% [BLUE assumptions, diagnostics, visual interpretation, and prescriptions]
+
+# %% [markdown] 24. Run BLUE diagnostics
+
+Evaluate linear-model assumptions, visualize diagnostics, explain their
+meaning, and produce prescriptive recommendations.
+
+# %% [Run BLUE diagnostics]
 BLUE SOURCE data
     USE_ENGINEERED true
     EXCLUDE_LEAKAGE true
@@ -405,10 +802,22 @@ BLUE SOURCE data
     SIGNIFICANCE 0.05
     LEAKAGE_THRESHOLD 0.95
     EXCLUDE Transaction_ID,Customer_ID;
+
+# %% [Visualize BLUE diagnostics]
 BLUE VISUALIZE APPEND true ALLOW_DUPLICATES false;
+
+# %% [Interpret BLUE diagnostics]
 BLUE INTERPRET;
+
+# %% [Prescribe BLUE improvements]
 BLUE PRESCRIBE;
-# %% [Dashboard and project reports]
+
+# %% [markdown] 25. Publish dashboards and reports
+
+Build the presentation layer after quality, feature, model, SHAP, and BLUE
+artifacts are available.
+
+# %% [Generate the sales dashboard]
 DASHBOARD
     TITLE "AutoDQ Complete Sales Analytics"
     SUBTITLE "Quality, cleaning, contracts, drift, features, modeling, SHAP, uncertainty, and BLUE diagnostics"
@@ -423,32 +832,65 @@ DASHBOARD
     SAVE "../reports/sales_all/dashboard.html"
     OVERWRITE;
 
+# %% [Generate the HTML report]
 REPORT TO "../reports/sales_all/report.html"
     STYLE executive
     OVERWRITE;
+
+# %% [Generate the JSON report]
 REPORT TO "../reports/sales_all/report.json"
     STYLE executive
     OVERWRITE;
-# %% [All export sources]
+
+# %% [markdown] 26. Export reusable analysis artifacts
+
+Export current, cleaned, engineered, prediction, summary, merged, and
+concatenated datasets explicitly.
+
+# %% [Export current and cleaned snapshots]
 EXPORT CURRENT TO "../exports/sales_all-current.csv" OVERWRITE;
 EXPORT cleaned_sales TO "../exports/sales_all-cleaned-snapshot.csv" OVERWRITE;
+
+# %% [Export features and predictions]
 EXPORT ENGINEERED TO "../exports/sales_all-features.xlsx" OVERWRITE;
 EXPORT PREDICTIONS TO "../exports/sales_all-predictions.csv" OVERWRITE;
+
+# %% [Export analytical summaries]
 EXPORT regional_sales TO "../exports/sales_all-regional-summary.csv" OVERWRITE;
 EXPORT sales_with_customers TO "../exports/sales_all-merged.csv" OVERWRITE;
-EXPORT combined_sales TO "../exports/sales_all-concatenated.csv" OVERWRITE;
-# %% [Workspace and session inspection]
-WORKSPACE LIST ROOT "../workspaces";
-LIST WORKSPACES;
-SESSION;
-SESSION EVENTS LIMIT 30;
-SESSION DATASETS;
-HISTORY LIMIT 20;
-# %% [markdown] Optional state-changing administration commands
 
-The following supported commands are intentionally documented rather than run
-automatically because they are destructive or non-idempotent. Convert this
-markdown cell to an ADQL code cell when you specifically want the operation.
+# %% [Export concatenated sales]
+EXPORT combined_sales TO "../exports/sales_all-concatenated.csv" OVERWRITE;
+
+# %% [markdown] 27. Inspect workspaces and session history
+
+These final read-only commands show persistent workspace inventory and the
+state accumulated during this notebook run.
+
+# %% [List persistent workspaces]
+WORKSPACE LIST ROOT "../workspaces";
+
+# %% [List workspaces through the common command]
+LIST WORKSPACES;
+
+# %% [Show the session summary]
+SESSION;
+
+# %% [Show recent session events]
+SESSION EVENTS LIMIT 30;
+
+# %% [Show session datasets]
+SESSION DATASETS;
+
+# %% [Show ADQL execution history]
+HISTORY LIMIT 20;
+
+# %% [markdown] Optional administrative and alternate strategies
+
+The commands below are valid ADQL but are intentionally not executed during
+the standard workflow because they create persistent workspaces, remove
+gallery objects, or demonstrate mutually exclusive cleaning treatments.
+Convert this Markdown cell to a code cell when you specifically need one.
 
 ```adql
 WORKSPACE CREATE sales_all_workspace ROOT "../workspaces" TARGET Revenue;
@@ -463,16 +905,16 @@ MISSING FILL Revenue STRATEGY mean;
 MISSING FILL Quantity STRATEGY zero;
 MISSING FILL Region STRATEGY ffill;
 MISSING FILL City STRATEGY bfill;
+
 DUPLICATES DROP KEEP last;
 DUPLICATES DROP KEEP none;
+
 OUTLIERS TREAT COLUMN Profit STRATEGY winsorize;
 OUTLIERS TREAT COLUMN Profit STRATEGY median;
 OUTLIERS TREAT COLUMN Profit STRATEGY set_null;
 OUTLIERS TREAT COLUMN Profit STRATEGY remove;
 OUTLIERS TREAT COLUMN Profit STRATEGY keep;
-
-ASSERT Email FORMAT email SEVERITY warning FAIL_ON never;
 ```
-# %% [Completed]
-SESSION;
 
+# %% [Completed workflow]
+SESSION;

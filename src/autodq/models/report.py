@@ -29,6 +29,7 @@ class AutoDQReport:
     schema_validation: object | None = None
     drift: object | None = None
     ml_readiness: object | None = None
+    operations: object | None = None
 
     visualizations: object | None = None
     rendered_visualizations: list | None = None

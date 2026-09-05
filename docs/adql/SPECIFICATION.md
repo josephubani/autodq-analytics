@@ -190,12 +190,13 @@ PROFILE DATASET customers;
 MODEL DATASET customers TARGET Churn USING random_forest_classifier;
 ```
 
-The simple workflow commands plus `READINESS` and `FEATURES` also accept the
-short positional form:
+The simple workflow commands plus `READINESS`, `FEATURES`, `OPERATIONS`, `KPI`,
+`PROCESS`, and `BOTTLENECKS` also accept the short positional form:
 
 ```adql
 PROFILE customers;
 READINESS customers;
+OPERATIONS customers;
 ```
 
 `READINESS` MAY compare the active analysis dataset with a registered baseline:
@@ -250,6 +251,7 @@ defines its purpose and primary state effect.
 | `VALIDATE` | Compare `CURRENT` with the finalized `CLEANED` stage. |
 | `SET` | Change the target or directly convert a column in `CURRENT`. |
 | `CORRELATION`, `READINESS`, `FEATURES`, `FEATURE` | Produce analytical and feature-engineering artifacts. |
+| `OPERATIONS`, `KPI`, `PROCESS`, `BOTTLENECKS`, `ROOT CAUSE` | Recognize operational structure, calculate process KPIs, analyze flow and trends, rank bottlenecks, and surface non-causal driver evidence. |
 | `MODEL`, `PREDICT`, `EXPLAIN`, `SHAP`, `BLUE` | Train, persist, predict, explain, visualize, and diagnose models. |
 | `VISUALIZE`, `GALLERY`, `DASHBOARD`, `REPORT` | Create reusable charts and publication artifacts. |
 | `MERGE`, `CONCAT` | Register combined datasets and optionally make the result active. |
@@ -273,6 +275,7 @@ appear at most once. The following semantic constraints supplement the EBNF:
 | `PREDICT` | Confidence is strictly between 0 and 1; low-confidence threshold is between 0 and 1 inclusive. |
 | `EXPLAIN` | `MAX_ROWS` MUST be positive. |
 | `READINESS` | `REFERENCE` MUST name a registered dataset. PSI stability requires at least 50 rows in both the current and reference datasets. |
+| `OPERATIONS`, `KPI`, `PROCESS`, `BOTTLENECKS`, `ROOT CAUSE` | `PERIOD` is `day`, `week`, or `month`; `TOP` is from 1 through 100; `SLA` is positive; `START` and `END` are supplied together; explicit column roles MUST exist in the selected dataset. |
 | `SHAP` | `ROW` cannot be negative; chart is `summary`, `bar`, `beeswarm`, `waterfall`, or `dependence`. |
 | `MERGE` | `WITH` is REQUIRED; `SUFFIXES` contains exactly two values. |
 | `CONCAT` | The initial dataset list contains at least two names. |

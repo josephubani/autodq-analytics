@@ -726,6 +726,69 @@ coverage shows how much of the 100-point model was actually measured. PSI is
 interpreted as stable at `<= 0.10`, moderate shift at `<= 0.25`, and unstable
 above `0.25`.
 
+### Operational analytics
+
+AutoDQ can recognize operational transactions, orders, service cases,
+shipments, production records, healthcare workflows, and other process data.
+Start with automatic inference:
+
+```adql
+OPERATIONS;
+KPI;
+PROCESS;
+BOTTLENECKS;
+ROOT CAUSE;
+```
+
+`OPERATIONS` explains the detected operational dataset type, confidence,
+evidence, recognized column roles, and any limitations. The other commands
+return focused outputs so each notebook cell remains easy to understand:
+
+- `KPI` calculates throughput, cycle-time, outcome, value, cost, volume,
+  utilization, SLA, and completeness metrics when their required columns are
+  available.
+- `PROCESS` summarizes stage/status segments and day, week, or month trends.
+- `BOTTLENECKS` ranks segments using cycle-time delay, adverse outcomes,
+  workload concentration, SLA breach, and backlog evidence.
+- `ROOT CAUSE` ranks numeric correlations and categorical segment differences.
+  These are diagnostic associations and are never presented as proof of
+  causation.
+
+For unusual column names, provide readable role overrides. Options may be used
+with any operational command:
+
+```adql
+OPERATIONS DATASET orders
+    ENTITY Order_ID
+    TIME Order_Date
+    STATUS Order_Status
+    STAGE Fulfilment_Step
+    DURATION Cycle_Time_Hours
+    VALUE Order_Value
+    COST Fulfilment_Cost
+    QUANTITY Units
+    CAPACITY Daily_Capacity
+    GROUP_BY Region,Warehouse
+    SLA 24
+    PERIOD week
+    TOP 10;
+```
+
+If elapsed time is not stored directly, use `START` and `END` together. AutoDQ
+derives non-negative duration in hours:
+
+```adql
+PROCESS DATASET tickets
+    START Opened_At END Resolved_At
+    STATUS Status STAGE Queue
+    GROUP Team
+    SLA 8 PERIOD day;
+```
+
+All five commands support `DATASET name`. `OPERATIONS`, `KPI`, `PROCESS`, and
+`BOTTLENECKS` additionally support the short positional form, such as
+`KPI cleaned_orders;`.
+
 ### BLUE diagnostics and visualization gallery
 
 ```adql

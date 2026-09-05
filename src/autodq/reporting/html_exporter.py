@@ -28,6 +28,7 @@ class HTMLExporter:
         schema_validation = getattr(report, "schema_validation", None)
         drift = getattr(report, "drift", None)
         ml_readiness = getattr(report, "ml_readiness", None)
+        operations = getattr(report, "operations", None)
         diagnosis = report.diagnosis
         recommendations = report.recommendations or []
 
@@ -70,6 +71,7 @@ class HTMLExporter:
         schema_section = self._build_schema_validation_section(schema_validation)
         drift_section = self._build_drift_section(drift)
         ml_readiness_section = self._build_ml_readiness_section(ml_readiness)
+        operations_section = self._build_operations_section(operations)
 
         visualization_cards = self._build_visualization_cards(
             getattr(report, "visualizations", None)
@@ -730,6 +732,8 @@ th {{
 
     {ml_readiness_section}
 
+    {operations_section}
+
     <div class="section card">
         <h2 class="section-title">Rendered Visualization Assets</h2>
         <div class="rendered-viz-grid">
@@ -1185,6 +1189,27 @@ th {{
             </table>
         </div>
         """
+
+    def _build_operations_section(self, operations):
+        if operations is None:
+            return ""
+
+        sections = [
+            operations.view(section).to_notebook_html()
+            for section in (
+                "overview",
+                "kpis",
+                "process",
+                "bottlenecks",
+                "root_causes",
+            )
+        ]
+        return (
+            '<div class="section card">'
+            '<h2 class="section-title">Operational Analytics</h2>'
+            + "".join(sections)
+            + "</div>"
+        )
 
     def _build_model_section(self, model):
         if model is None:

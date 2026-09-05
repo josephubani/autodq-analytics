@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 
 from autodq import (
+    ADQLCellParser,
     ADQL_LANGUAGE_VERSION,
     ADQLParser,
     ADQLSyntaxError,
@@ -48,6 +49,33 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
 
         self.assertSetEqual(specified_commands, SUPPORTED_COMMANDS)
 
+    def test_complete_sales_workflow_covers_commands_with_small_cells(self):
+        document = ADQLCellParser().read(
+            ROOT / "examples" / "sales_all.adql"
+        )
+        parser = ADQLParser()
+        scripts = [
+            parser.parse(cell.source)
+            for cell in document.cells
+            if cell.kind == "code"
+            and ADQLCellParser._has_executable_source(cell.source)
+        ]
+        commands = {
+            statement.kind
+            for script in scripts
+            for statement in script.statements
+        }
+
+        self.assertSetEqual(commands, SUPPORTED_COMMANDS)
+        self.assertLessEqual(
+            max(script.statement_count for script in scripts),
+            3,
+        )
+        self.assertNotIn(
+            ADQLCellParser.OUTPUT_CACHE_START,
+            document.source,
+        )
+
     def test_every_public_command_accepts_mixed_case(self):
         examples = {
             "ADD": 'ADD DATASET CustomerData FROM "customers.csv"',
@@ -57,6 +85,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
             "AUTO": "AUTO MODE review VISUALIZE false",
             "BASELINE": "BASELINE LIST",
             "BLUE": "BLUE MAX_FEATURES 4",
+            "BOTTLENECKS": "BOTTLENECKS GROUP Region TOP 5",
             "CHECK": "CHECK DRIFT sales_baseline SENSITIVITY normal FAIL_ON never",
             "CLEAN": "CLEAN",
             "CLEANING": "CLEANING PREVIEW MAX_ROWS 5",
@@ -84,6 +113,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
             "HISTORY": "HISTORY LIMIT 5",
             "INTERPRET": "INTERPRET",
             "KNOWLEDGE": "KNOWLEDGE",
+            "KPI": "KPI SLA 5 PERIOD month",
             "LET": "LET CleanSnapshot = CLEANED",
             "LIST": "LIST DATASETS",
             "LOAD": "LOAD",
@@ -93,15 +123,18 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
             ),
             "MISSING": "MISSING FILL Revenue STRATEGY median",
             "MODEL": "MODEL TARGET Revenue USING decision_tree_regressor",
+            "OPERATIONS": "OPERATIONS TIME Date DURATION Delivery_Days",
             "OUTLIERS": "OUTLIERS REVIEW COLUMNS Revenue IQR 1.5",
             "PREDICT": "PREDICT CONFIDENCE 0.9 UNCERTAINTY true",
             "PREVIEW": "PREVIEW",
+            "PROCESS": "PROCESS STAGE Sales_Channel PERIOD month",
             "PROFILE": "PROFILE",
             "READINESS": "READINESS",
             "RECOMMEND": "RECOMMEND",
             "REJECT": 'REJECT 1 REASON "Domain decision"',
             "REPORT": 'REPORT TO "report.html" STYLE executive OVERWRITE',
             "REVIEW": "REVIEW",
+            "ROOT": "ROOT CAUSE TOP 5",
             "SAMPLE": "SAMPLE 5 RANDOM_STATE 7",
             "SCHEMA": "SCHEMA CONTRACT LIST",
             "SELECT": "SELECT Revenue FROM CURRENT LIMIT 1",

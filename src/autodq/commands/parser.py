@@ -18,6 +18,7 @@ from autodq.commands.grammar import (
     EXPLAIN_OPTIONS,
     GALLERY_STYLE_OPTIONS,
     MODEL_OPTIONS,
+    OPERATIONS_OPTIONS,
     PREDICT_OPTIONS,
     POSITIONAL_DATASET_COMMANDS,
     SHAP_OPTIONS,
@@ -47,6 +48,7 @@ class ADQLParser:
         "legend_position",
         "method",
         "mode",
+        "period",
         "report_style",
         "save_format",
         "source",
@@ -374,6 +376,9 @@ class ADQLParser:
                 arguments,
                 {"REFERENCE": "reference_dataset"},
             )
+
+        if kind in {"OPERATIONS", "KPI", "PROCESS", "BOTTLENECKS", "ROOT"}:
+            return self._parse_operations(kind, arguments)
 
         if kind == "FEATURES":
             if arguments:
@@ -1808,6 +1813,23 @@ class ADQLParser:
             **self._coerce_options(self._parse_options(arguments, BLUE_OPTIONS)),
         }
 
+    def _parse_operations(
+        self,
+        kind: str,
+        arguments: list[str],
+    ) -> dict[str, Any]:
+        if kind == "ROOT":
+            if not arguments or arguments[0].upper() != "CAUSE":
+                raise ADQLSyntaxError("ROOT syntax is ROOT CAUSE [options].")
+            arguments = arguments[1:]
+
+        options = self._parse_options(arguments, OPERATIONS_OPTIONS)
+        if "group_by" in options:
+            options["group_by"] = self._string_list(
+                options["group_by"], option="GROUP_BY"
+            )
+        return self._coerce_options(options)
+
     def _parse_gallery(self, arguments: list[str]) -> dict[str, Any]:
         if not arguments:
             raise ADQLSyntaxError(
@@ -2215,6 +2237,7 @@ class ADQLParser:
             "axis",
             "max_features",
             "decimals",
+            "top",
         }
         float_options = {
             "test_size",
@@ -2231,6 +2254,7 @@ class ADQLParser:
             "psi_error",
             "missing_warning",
             "missing_error",
+            "sla_target",
         }
         list_options = {"exclude_features", "chart_ids"}
         coerced = {}

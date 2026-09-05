@@ -279,6 +279,29 @@ class ADQLValidator:
                     "BLUE SIGNIFICANCE must be between 0 and 1."
                 )
 
+        elif statement.kind in {
+            "OPERATIONS", "KPI", "PROCESS", "BOTTLENECKS", "ROOT"
+        }:
+            period = str(parameters.get("period", "month")).lower()
+            if period not in {"day", "week", "month"}:
+                raise ADQLValidationError(
+                    "Operational PERIOD must be day, week, or month."
+                )
+            top = parameters.get("top", 10)
+            if not isinstance(top, int) or isinstance(top, bool) or top < 1 or top > 100:
+                raise ADQLValidationError(
+                    "Operational TOP must be an integer between 1 and 100."
+                )
+            sla_target = parameters.get("sla_target")
+            if sla_target is not None and sla_target <= 0:
+                raise ADQLValidationError("Operational SLA must be positive.")
+            start = parameters.get("start_column")
+            end = parameters.get("end_column")
+            if bool(start) != bool(end):
+                raise ADQLValidationError(
+                    "Operational START and END must be supplied together."
+                )
+
         elif statement.kind == "AUDIT":
             if Path(parameters["output"]).suffix.lower() not in {".json", ".csv"}:
                 raise ADQLValidationError(

@@ -43,6 +43,8 @@ workflow.
 - Rich `AUTO MODE review|clean|full` workflow summaries
 - Transparent `READINESS` scorecards with component points, deductions,
   assessment coverage, and optional `REFERENCE`-dataset PSI stability
+- Operational recognition, KPI calculation, process trends, bottleneck
+  ranking, and root-cause signals through focused notebook commands
 
 ## Requirements
 
@@ -144,6 +146,20 @@ The output separates sample sufficiency, data quality, feature readiness,
 target readiness, leakage safety, multicollinearity, and feature stability.
 Unassessed components receive no assumed credit and reduce the visible
 assessment coverage.
+
+Analyze operational behavior with automatic column-role inference:
+
+```adql
+OPERATIONS;
+KPI SLA 5;
+PROCESS PERIOD month;
+BOTTLENECKS GROUP_BY Region,Sales_Channel TOP 10;
+ROOT CAUSE TOP 10;
+```
+
+Use role options such as `TIME`, `START`, `END`, `STATUS`, `STAGE`,
+`DURATION`, `VALUE`, `COST`, `QUANTITY`, and `CAPACITY` when unusual column
+names need explicit guidance.
 
 Protect future batches with a structural contract and a distribution
 baseline:

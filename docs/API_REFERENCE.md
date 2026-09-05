@@ -239,6 +239,7 @@ moderate or major drift, and `never` records the result without gating.
 | --- | --- |
 | Correlation | `correlation()`, `show_correlation()` |
 | ML readiness | `ml_readiness(reference=None, reference_name=None)`, `show_ml_readiness()` |
+| Operational analytics | `operations()`, `operational_kpis()`, `process_analysis()`, `bottlenecks()`, `operational_root_causes()`, `show_operations()` |
 | Features | `features()`, `create_feature()`, `apply_features()`, `export_engineered()` |
 | Modeling | `model()`, `save_model()`, `load_model()`, `show_model()` |
 | Prediction | `predict()`, `show_predictions()`, `export_predictions()` |
@@ -256,6 +257,34 @@ print(readiness.score, readiness.assessment_coverage)
 for component in readiness.components:
     print(component.name, component.score, component.max_score, component.status)
 ```
+
+`operations()` infers operational roles from column names and data types, then
+calculates process evidence in one reusable report. Explicit mappings override
+inference when a source system uses unusual names:
+
+```python
+operations = project.operations(
+    entity_column="Order_ID",
+    time_column="Order_Date",
+    status_column="Status",
+    duration_column="Cycle_Time_Hours",
+    value_column="Revenue",
+    cost_column="Cost",
+    group_by=["Region", "Team"],
+    sla_target=24,
+    period="week",
+)
+
+print(operations.detection.dataset_type, operations.detection.confidence)
+print(operations.kpis)
+print(operations.bottlenecks)
+print(operations.root_causes)
+```
+
+Use `start_column` and `end_column` together to derive elapsed hours when no
+duration column exists. Root-cause signals are explicitly reported as
+statistical associations rather than causal conclusions. Existing dashboards
+and HTML/JSON reports include the latest operational report automatically.
 
 ## Visualization and reporting
 

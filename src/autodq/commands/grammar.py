@@ -66,6 +66,11 @@ SUPPORTED_COMMANDS = {
     "AUDIT",
     "CORRELATION",
     "READINESS",
+    "OPERATIONS",
+    "KPI",
+    "PROCESS",
+    "BOTTLENECKS",
+    "ROOT",
     "FEATURES",
     "FEATURE",
     "BLUE",
@@ -109,6 +114,10 @@ SIMPLE_COMMANDS = {
 POSITIONAL_DATASET_COMMANDS = SIMPLE_COMMANDS | {
     "FEATURES",
     "READINESS",
+    "OPERATIONS",
+    "KPI",
+    "PROCESS",
+    "BOTTLENECKS",
 }
 
 # Dataset-scoped commands operate on project state.  The parser accepts a
@@ -144,6 +153,11 @@ DATASET_SCOPED_COMMANDS = {
     "PREVIEW",
     "PROFILE",
     "READINESS",
+    "OPERATIONS",
+    "KPI",
+    "PROCESS",
+    "BOTTLENECKS",
+    "ROOT",
     "RECOMMEND",
     "REJECT",
     "REPORT",
@@ -277,6 +291,26 @@ BLUE_OPTIONS = {
     "SIGNIFICANCE": "significance_level",
     "LEAKAGE_THRESHOLD": "leakage_threshold",
     "EXCLUDE": "exclude_features",
+}
+
+OPERATIONS_OPTIONS = {
+    "ENTITY": "entity_column",
+    "TIME": "time_column",
+    "START": "start_column",
+    "END": "end_column",
+    "STATUS": "status_column",
+    "STAGE": "stage_column",
+    "DURATION": "duration_column",
+    "VALUE": "value_column",
+    "COST": "cost_column",
+    "QUANTITY": "quantity_column",
+    "CAPACITY": "capacity_column",
+    "GROUP": "group_by",
+    "GROUP_BY": "group_by",
+    "SLA": "sla_target",
+    "PERIOD": "period",
+    "TOP": "top",
+    "DATASET": "dataset_name",
 }
 
 GALLERY_STYLE_OPTIONS = {
@@ -532,6 +566,18 @@ COMMAND_HELP = [
         "description": (
             "Run analytical intelligence, transparent weighted ML readiness "
             "with optional PSI stability, and feature engineering."
+        ),
+    },
+    {
+        "command": "OPERATIONS / KPI / PROCESS / BOTTLENECKS / ROOT",
+        "syntax": (
+            "OPERATIONS [DATASET name] [TIME column] [DURATION column] "
+            "[STATUS column] [SLA number]; KPI; PROCESS; BOTTLENECKS; "
+            "ROOT CAUSE"
+        ),
+        "description": (
+            "Recognize operational data, calculate KPIs, analyze process flow, "
+            "rank bottlenecks, and surface evidence-based root-cause signals."
         ),
     },
     {

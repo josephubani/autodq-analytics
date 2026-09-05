@@ -84,6 +84,10 @@ class JSONExporter:
             "ml_readiness":
                 report.ml_readiness.to_dict()
                 if report.ml_readiness else None,
+
+            "operations":
+                report.operations.to_dict()
+                if report.operations else None,
                 
             "visualizations":
                 report.visualizations.to_dict()

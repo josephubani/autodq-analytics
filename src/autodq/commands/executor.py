@@ -540,6 +540,35 @@ class ADQLExecutor:
                 ),
             }
 
+        if kind in {"OPERATIONS", "KPI", "PROCESS", "BOTTLENECKS", "ROOT"}:
+            operations = {
+                "OPERATIONS": (project.operations, "overview"),
+                "KPI": (project.operational_kpis, "kpis"),
+                "PROCESS": (project.process_analysis, "process"),
+                "BOTTLENECKS": (project.bottlenecks, "bottlenecks"),
+                "ROOT": (project.operational_root_causes, "root_causes"),
+            }
+            operation, section = operations[kind]
+            value = operation(**parameters)
+            report = getattr(value, "report", value)
+            display_value = report.view(section) if kind == "OPERATIONS" else value
+            messages = {
+                "OPERATIONS": (
+                    f"Recognized {report.detection.dataset_type.replace('_', ' ')} "
+                    f"with {report.detection.confidence * 100:.1f}% confidence."
+                ),
+                "KPI": f"Calculated {report.kpi_count} operational KPI(s).",
+                "PROCESS": (
+                    f"Analyzed {len(report.process_segments)} process segment(s) "
+                    f"across {len(report.trends)} time period(s)."
+                ),
+                "BOTTLENECKS": (
+                    f"Flagged {report.bottleneck_count} operational bottleneck(s)."
+                ),
+                "ROOT": f"Identified {report.driver_count} root-cause signal(s).",
+            }
+            return {"value": display_value, "message": messages[kind]}
+
         if kind == "FEATURES":
             value = project.features()
             return {

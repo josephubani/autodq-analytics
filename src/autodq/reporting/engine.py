@@ -49,6 +49,7 @@ class ReportingEngine:
             schema_validation=state.schema_validation_report,
             drift=state.drift_report,
             ml_readiness=state.ml_readiness_report,
+            operations=state.operations_report,
             visualizations=state.visualization_report,
             rendered_visualizations=rendered_visualizations,
             model=state.model_report,
