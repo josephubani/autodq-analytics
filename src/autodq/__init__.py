@@ -77,6 +77,16 @@ from autodq.operations import (
     OperationalTrend,
     ProcessSegment,
 )
+from autodq.prescriptive import (
+    OptimizationSummary,
+    PrescriptionAuditEntry,
+    PrescriptiveAction,
+    PrescriptiveAnalysisView,
+    PrescriptiveAnalyticsEngine,
+    PrescriptiveConstraint,
+    PrescriptivePlan,
+    WhatIfScenario,
+)
 from autodq.schema_drift import (
     DriftBaseline,
     DriftColumnBaseline,
@@ -160,6 +170,14 @@ __all__ = [
     "OperationalReport",
     "OperationalTrend",
     "ProcessSegment",
+    "OptimizationSummary",
+    "PrescriptionAuditEntry",
+    "PrescriptiveAction",
+    "PrescriptiveAnalysisView",
+    "PrescriptiveAnalyticsEngine",
+    "PrescriptiveConstraint",
+    "PrescriptivePlan",
+    "WhatIfScenario",
     "OutlierReviewReport",
     "PIPELINE_SCHEMA_VERSION",
     "LocalArtifactStore",

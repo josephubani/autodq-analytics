@@ -31,6 +31,7 @@ class AutoDQReport:
     ml_readiness: object | None = None
     operations: object | None = None
     inventory: object | None = None
+    prescriptive: object | None = None
 
     visualizations: object | None = None
     rendered_visualizations: list | None = None

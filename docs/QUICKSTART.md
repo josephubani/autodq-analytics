@@ -252,6 +252,34 @@ CONTRACT SAVE sales_v1 TO "contracts/sales-v1.json" OVERWRITE;
 BASELINE SAVE sales_baseline TO "baselines/sales.json" OVERWRITE;
 ```
 
+## Turn operational evidence into governed actions
+
+After running `OPERATIONS` or `INVENTORY`, create a prescriptive plan and
+compare a non-mutating scenario:
+
+```adql
+OPERATIONS DURATION Delivery_Days STATUS Returned
+    GROUP_BY Region,Sales_Channel SLA 5;
+
+PRESCRIBE OBJECTIVE reduce_delay SOURCE operations
+    MAX_ACTIONS 5 MIN_CONFIDENCE 0.60 MAX_RISK medium;
+
+SCENARIO NAME "Faster delivery"
+    DURATION_CHANGE -20 FAILURE_CHANGE -10 COST_CHANGE 5;
+
+OPTIMIZE OBJECTIVE reduce_delay MAX_ACTIONS 3;
+ACTION LIST STATUS selected;
+```
+
+Approve, reject, and record implementation explicitly. Recorded execution is
+audit-only and does not call an external system:
+
+```adql
+ACTION APPROVE A001 ACTOR "operations lead";
+ACTION EXECUTE A001 ACTOR "operations lead";
+ACTION AUDIT TO "reports/action-audit.json" OVERWRITE;
+```
+
 ## Continue from here
 
 - [Python API reference](API_REFERENCE.md)

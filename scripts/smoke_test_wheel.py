@@ -318,7 +318,7 @@ def main() -> int:
             "import sys; from autodq import (ADQL_LANGUAGE_VERSION, AutoDQ, "
             "PIPELINE_SCHEMA_VERSION, PipelineRunSpec, PipelineRunner, "
             "QualityAssertion, MultiEchelonInventoryEngine); "
-            "assert ADQL_LANGUAGE_VERSION == '2.6'; "
+            "assert ADQL_LANGUAGE_VERSION == '2.7'; "
             "assert PIPELINE_SCHEMA_VERSION == '1.0'; "
             "assert PipelineRunSpec and PipelineRunner; "
             "assert MultiEchelonInventoryEngine; "

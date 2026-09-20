@@ -1,10 +1,10 @@
-(* AutoDQ Analytics Domain Query Language 2.6 concrete grammar.
+(* AutoDQ Analytics Domain Query Language 2.7 concrete grammar.
    Keywords and enum terminals are case-insensitive.
    Command options may appear in any order unless a production fixes an order.
    Repeated options are syntactically expressible below but are rejected by
    semantic validation. *)
 
-language-version = "2.6" ;
+language-version = "2.7" ;
 
 script = statement, { ";", statement }, [ ";" ] ;
 
@@ -59,6 +59,10 @@ statement =
   | bottlenecks-statement
   | root-statement
   | inventory-statement
+  | prescribe-statement
+  | scenario-statement
+  | optimize-statement
+  | action-statement
   | features-statement
   | feature-statement
   | blue-statement
@@ -579,6 +583,60 @@ inventory-option =
   | "HORIZON", positive-integer
   | "TOP", positive-integer ;
 
+(* command: PRESCRIBE *)
+prescribe-statement = "PRESCRIBE", [ dataset-selector ],
+                     { prescribe-option } ;
+prescribe-option =
+    "OBJECTIVE", prescriptive-objective
+  | "SOURCE", prescriptive-source
+  | "BUDGET", number
+  | "MAX_ACTIONS", positive-integer
+  | "MIN_CONFIDENCE", number
+  | "MAX_RISK", risk-level
+  | "TOP", positive-integer ;
+
+(* command: SCENARIO *)
+scenario-statement = "SCENARIO", "NAME", value-token,
+                     scenario-change, { scenario-change } ;
+scenario-change =
+    "DURATION_CHANGE", number
+  | "FAILURE_CHANGE", number
+  | "COST_CHANGE", number
+  | "CAPACITY_CHANGE", number
+  | "VALUE_CHANGE", number
+  | "DEMAND_CHANGE", number
+  | "LEAD_TIME_CHANGE", number ;
+
+(* command: OPTIMIZE *)
+optimize-statement = "OPTIMIZE", { optimize-option } ;
+optimize-option =
+    "OBJECTIVE", prescriptive-objective
+  | "BUDGET", number
+  | "MAX_ACTIONS", positive-integer
+  | "MIN_CONFIDENCE", number
+  | "MAX_RISK", risk-level ;
+
+(* command: ACTION *)
+action-statement = "ACTION",
+    ( "LIST", [ "STATUS", prescription-status ]
+    | "APPROVE", ( "ALL" | bare-token ), { action-decision-option }
+    | "REJECT", bare-token, { action-decision-option }
+    | "EXECUTE", bare-token, { action-decision-option }
+    | "AUDIT", [ "TO", path, [ overwrite-flag ] ] ) ;
+action-decision-option = "ACTOR", value-token | "REASON", value-token ;
+prescriptive-objective =
+    "balanced"
+  | "reduce_delay" | "minimize_delay"
+  | "reduce_failures" | "minimize_failures"
+  | "minimize_cost" | "reduce_cost"
+  | "maximize_value" | "increase_value"
+  | "balance_capacity" | "maximize_capacity"
+  | "minimize_shortage" | "reduce_shortage" ;
+prescriptive-source = "auto" | "operations" | "inventory" | "all" ;
+risk-level = "low" | "medium" | "high" ;
+prescription-status = "proposed" | "selected" | "approved"
+                    | "rejected" | "executed" ;
+
 (* command: FEATURES *)
 features-statement = "FEATURES", [ short-dataset-target ] ;
 
@@ -707,6 +765,9 @@ command-name = "SELECT" | "DATASET" | "LOAD" | "KNOWLEDGE" | "LET"
              | "MERGE" | "CONCAT" | "EDIT" | "MISSING" | "DUPLICATES"
              | "DOMAIN" | "OUTLIERS" | "AUDIT" | "CORRELATION"
              | "READINESS" | "FEATURES" | "FEATURE" | "BLUE" | "GALLERY"
+             | "OPERATIONS" | "KPI" | "PROCESS" | "BOTTLENECKS" | "ROOT"
+             | "INVENTORY" | "PRESCRIBE" | "SCENARIO" | "OPTIMIZE"
+             | "ACTION"
              | "REPORT" | "EXPORT" | "SET" | "USE" | "HEAD" | "TAIL"
              | "SAMPLE" | "HELP" | "HISTORY" | "SESSION" ;
 

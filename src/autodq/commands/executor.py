@@ -597,6 +597,94 @@ class ADQLExecutor:
             }
             return {"value": display_value, "message": messages[action]}
 
+        if kind == "PRESCRIBE":
+            plan = project.prescribe(**parameters)
+            return {
+                "value": plan.view("overview"),
+                "message": (
+                    f"Generated {len(plan.actions)} prescriptive action(s); "
+                    f"selected {len(plan.selected_actions)} for objective "
+                    f"{plan.objective}."
+                ),
+            }
+
+        if kind == "SCENARIO":
+            scenario = project.what_if(**parameters)
+            plan = project.state.prescriptive_report
+            return {
+                "value": plan.view("scenarios"),
+                "message": (
+                    f"Evaluated what-if scenario {scenario.scenario_id}: "
+                    f"{scenario.name}."
+                ),
+            }
+
+        if kind == "OPTIMIZE":
+            plan = project.optimize_prescriptions(**parameters)
+            optimization = plan.optimization
+            return {
+                "value": plan.view("actions"),
+                "message": (
+                    f"Optimized {optimization.eligible_count} eligible action(s) "
+                    f"and selected {len(optimization.selected_action_ids)} "
+                    f"using {optimization.method}."
+                ),
+            }
+
+        if kind == "ACTION":
+            action = parameters.pop("action")
+            plan = project._require_prescriptive_plan()
+            if action == "list":
+                status = parameters.get("status")
+                actions = plan.actions
+                if status is not None:
+                    actions = [
+                        item for item in actions
+                        if item.status == str(status).lower()
+                    ]
+                data = pd.DataFrame([item.to_dict() for item in actions])
+                return {
+                    "data": data,
+                    "total_rows": len(data),
+                    "value": plan.view("actions"),
+                    "message": f"Listed {len(actions)} prescriptive action(s).",
+                }
+            if action == "approve":
+                value = project.approve_prescription(**parameters)
+                message = f"Approved prescription {value.action_id}."
+            elif action == "approve_all":
+                values = project.approve_all_prescriptions(**parameters)
+                message = f"Approved {len(values)} prescription action(s)."
+            elif action == "reject":
+                value = project.reject_prescription(**parameters)
+                message = f"Rejected prescription {value.action_id}."
+            elif action == "execute":
+                value = project.execute_prescription(**parameters)
+                message = (
+                    f"Recorded prescription {value.action_id} as executed; "
+                    "no external system was modified."
+                )
+            else:
+                output = parameters.pop("output", None)
+                overwrite = parameters.pop("overwrite", False)
+                if output is not None:
+                    path = project.export_prescription_audit(
+                        output, overwrite=overwrite
+                    )
+                    message = f"Exported prescription audit to {path}."
+                else:
+                    message = (
+                        f"Listed {len(plan.audit_trail)} prescription audit event(s)."
+                    )
+                data = project.prescription_audit()
+                return {
+                    "data": data,
+                    "total_rows": len(data),
+                    "value": plan.view("audit"),
+                    "message": message,
+                }
+            return {"value": plan.view("actions"), "message": message}
+
         if kind == "FEATURES":
             value = project.features()
             return {
@@ -1711,6 +1799,7 @@ class ADQLExecutor:
             "BASELINE": ("path",),
             "WORKSPACE": ("workspace_root",),
             "GALLERY": ("output_dir",),
+            "ACTION": ("output",),
         }
 
         for option in path_options.get(kind, ()):

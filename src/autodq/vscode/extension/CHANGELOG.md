@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+## 0.3.18 - 2026-09-20
+
+- Added case-insensitive highlighting for ADQL 2.7 `PRESCRIBE`, `SCENARIO`,
+  `OPTIMIZE`, and `ACTION` commands.
+- Added highlighting for objectives, budgets, confidence and risk limits,
+  scenario changes, governance actions, statuses, actors, and reasons.
+- Added a complete prescriptive-operations notebook example and command help.
+- Bundled AutoDQ 0.1.25.
+
 ## 0.3.17 - 2026-09-05
 
 - Added case-insensitive highlighting for ADQL 2.6 operational analytics:

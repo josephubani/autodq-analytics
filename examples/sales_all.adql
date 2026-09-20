@@ -3,7 +3,7 @@
 
 # Complete sales workflow
 
-This executable ADQL 2.6 notebook demonstrates every top-level ADQL command
+This executable ADQL 2.7 notebook demonstrates every top-level ADQL command
 and the major AutoDQ capabilities in a realistic order. Each code cell has a
 small, focused responsibility so its output is easy to read.
 
@@ -383,7 +383,7 @@ ASSERT SUITE DROP restored_sales_gate;
 
 # %% [markdown] 13. Create and check a schema contract
 
-The concise ADQL 2.6 contract syntax defines an understandable structural
+The concise ADQL 2.7 contract syntax defines an understandable structural
 agreement for future sales batches.
 
 # %% [Infer the sales contract]
@@ -557,6 +557,21 @@ BOTTLENECKS GROUP_BY Region,Sales_Channel
 # %% [Inspect root-cause signals]
 ROOT CAUSE DURATION Delivery_Days
     GROUP_BY Region,Sales_Channel TOP 10;
+
+# %% [Generate a prescriptive action plan]
+PRESCRIBE OBJECTIVE reduce_delay SOURCE operations
+    MAX_ACTIONS 5 MIN_CONFIDENCE 0.50 MAX_RISK medium TOP 20;
+
+# %% [Compare an operational what-if scenario]
+SCENARIO NAME "Faster delivery"
+    DURATION_CHANGE -20 FAILURE_CHANGE -10 COST_CHANGE 5;
+
+# %% [Re-optimize the action portfolio]
+OPTIMIZE OBJECTIVE reduce_delay
+    MAX_ACTIONS 3 MIN_CONFIDENCE 0.60 MAX_RISK medium;
+
+# %% [Inspect selected prescriptive actions]
+ACTION LIST STATUS selected;
 
 # %% [markdown] 18. Manage a multi-echelon inventory network
 

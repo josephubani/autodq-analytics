@@ -5,13 +5,13 @@ extension, notebook protocol, and persisted artifact versions are independent.
 
 ## 1. Current version
 
-The current language version is **ADQL 2.6**. A conforming AutoDQ installation
+The current language version is **ADQL 2.7**. A conforming AutoDQ installation
 exposes it as:
 
 ```python
 from autodq import ADQL_LANGUAGE_VERSION
 
-assert ADQL_LANGUAGE_VERSION == "2.6"
+assert ADQL_LANGUAGE_VERSION == "2.7"
 ```
 
 The language version does not equal the AutoDQ package or ADQL VS Code
@@ -107,9 +107,9 @@ A tool claiming ADQL compatibility SHOULD state both its supported language
 version and conformance level:
 
 ```text
-ADQL 2.6 parser
-ADQL 2.6 AutoDQ runtime
-ADQL 2.6 notebook host
+ADQL 2.7 parser
+ADQL 2.7 AutoDQ runtime
+ADQL 2.7 notebook host
 ```
 
 A parser-only tool such as a formatter or syntax highlighter need not execute

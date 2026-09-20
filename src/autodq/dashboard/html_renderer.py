@@ -37,6 +37,9 @@ class DashboardHTMLRenderer:
         if dashboard.inventory:
             nav_items.append(("inventory", "Inventory"))
 
+        if dashboard.prescriptive:
+            nav_items.append(("prescriptive", "Prescriptive plan"))
+
         if dashboard.preview or dashboard.columns:
             nav_items.append(("data", "Data explorer"))
 
@@ -53,6 +56,7 @@ class DashboardHTMLRenderer:
                 self._modeling(dashboard),
                 self._operations(dashboard),
                 self._inventory(dashboard),
+                self._prescriptive(dashboard),
                 self._data_explorer(dashboard),
             ]
         )
@@ -617,6 +621,56 @@ footer {{ margin: 30px 0 4px; padding-top: 16px; border-top: 1px solid var(--bor
   <div class="section-heading"><div><h2>Multi-echelon inventory</h2>
   <p>{self._e(str(detection.get('dataset_type', 'inventory')).replace('_', ' ').title())} · {self._e(self._format_percent(detection.get('confidence', 0)))} confidence</p></div></div>
   <div class="metric-grid">{kpi_cards}</div>{actions}
+</section>"""
+
+    def _prescriptive(self, dashboard) -> str:
+        plan = dashboard.prescriptive
+        if not plan:
+            return ""
+
+        optimization = plan.get("optimization") or {}
+        action_rows = "".join(
+            f"""<tr><td>{self._e(item.get('action_id'))}</td>
+<td>{self._e(str(item.get('status', '')).title())}</td>
+<td>{self._e(item.get('title'))}</td><td>{self._e(item.get('source'))}</td>
+<td>{self._e(self._display_value(item.get('expected_impact')))} {self._e(item.get('impact_unit', ''))}</td>
+<td>{self._e(self._display_value(item.get('estimated_cost')))} {self._e(item.get('cost_unit', ''))}</td>
+<td>{self._e(self._format_percent(item.get('confidence', 0)))}</td></tr>"""
+            for item in plan.get("actions", [])
+            if item.get("status") in {"selected", "approved", "executed"}
+        )
+        actions = (
+            f"""<div class="panel table-wrap"><h3>Selected actions</h3><table>
+<thead><tr><th>ID</th><th>Status</th><th>Action</th><th>Evidence</th><th>Expected impact</th><th>Estimated cost</th><th>Confidence</th></tr></thead>
+<tbody>{action_rows}</tbody></table></div>"""
+            if action_rows
+            else '<div class="empty">No actions satisfy the current constraints.</div>'
+        )
+        scenario_rows = ""
+        for item in plan.get("scenarios", []):
+            changes = ", ".join(
+                f"{key.replace('_change', '')}: {value:+g}%"
+                for key, value in item.get("changes", {}).items()
+            )
+            scenario_rows += (
+                f"<tr><td>{self._e(item.get('scenario_id'))}</td>"
+                f"<td>{self._e(item.get('name'))}</td>"
+                f"<td>{self._e(changes)}</td></tr>"
+            )
+        scenarios = (
+            f"""<div class="panel table-wrap" style="margin-top:14px"><h3>What-if scenarios</h3><table>
+<thead><tr><th>ID</th><th>Name</th><th>Assumptions changed</th></tr></thead><tbody>{scenario_rows}</tbody></table></div>"""
+            if scenario_rows else ""
+        )
+        return f"""<section id="prescriptive">
+  <div class="section-heading"><div><h2>Prescriptive analytics</h2>
+  <p>Objective: {self._e(str(plan.get('objective', 'balanced')).replace('_', ' ').title())} · {self._e(optimization.get('method', 'not optimized'))}</p></div></div>
+  <div class="metric-grid">
+    <article class="metric"><div class="metric-label">Candidate actions</div><div class="metric-value">{self._e(plan.get('action_count', 0))}</div></article>
+    <article class="metric"><div class="metric-label">Selected actions</div><div class="metric-value">{self._e(plan.get('selected_count', 0))}</div></article>
+    <article class="metric"><div class="metric-label">Approved actions</div><div class="metric-value">{self._e(plan.get('approved_count', 0))}</div></article>
+    <article class="metric"><div class="metric-label">Scenarios</div><div class="metric-value">{self._e(plan.get('scenario_count', 0))}</div></article>
+  </div>{actions}{scenarios}
 </section>"""
 
     def _data_explorer(self, dashboard) -> str:

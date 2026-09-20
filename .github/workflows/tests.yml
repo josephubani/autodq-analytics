@@ -30,6 +30,7 @@ jobs:
           autodq validate examples/sales_auto.adql
           autodq validate examples/schema_drift_monitoring.adql
           autodq validate examples/inventory_network.adql
+          autodq validate examples/prescriptive_operations.adql
 
   distribution:
     runs-on: ubuntu-latest

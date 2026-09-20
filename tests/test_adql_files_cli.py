@@ -34,8 +34,11 @@ from autodq.commands.grammar import (
     GALLERY_STYLE_OPTIONS,
     INVENTORY_OPTIONS,
     MODEL_OPTIONS,
+    OPTIMIZE_OPTIONS,
     OPERATIONS_OPTIONS,
     PREDICT_OPTIONS,
+    PRESCRIPTIVE_OPTIONS,
+    SCENARIO_OPTIONS,
     SHAP_OPTIONS,
     SET_TYPE_OPTIONS,
     SUPPORTED_COMMANDS,
@@ -893,7 +896,7 @@ body { background: white; color: black; }
         self.assertNotIn("transientOutputs: true", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.3.17")
+        self.assertEqual(package["version"], "0.3.18")
         renderer = package["contributes"]["notebookRenderer"][0]
         self.assertEqual(renderer["id"], "autodq-adql-review-renderer")
         self.assertEqual(renderer["requiresMessaging"], "always")
@@ -1001,6 +1004,9 @@ body { background: white; color: black; }
             MODEL_OPTIONS,
             OPERATIONS_OPTIONS,
             INVENTORY_OPTIONS,
+            PRESCRIPTIVE_OPTIONS,
+            SCENARIO_OPTIONS,
+            OPTIMIZE_OPTIONS,
             PREDICT_OPTIONS,
             EXPLAIN_OPTIONS,
             SHAP_OPTIONS,
@@ -1011,6 +1017,7 @@ body { background: white; color: black; }
         )
         parser_options = {
             "ACTIONS",
+            "ACTOR",
             "ALLOWED",
             "ALLOW_DUPLICATES",
             "AXIS",

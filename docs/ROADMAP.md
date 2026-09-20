@@ -56,6 +56,17 @@
 14. Built-in quality formats
     - ADQL 2.4 `ASSERT column FORMAT email`
     - Direct, suite, named-dataset, persistence, notebook, and Python support
+15. Operational analytics
+    - Operational dataset recognition and explainable KPIs
+    - Process trends, bottleneck ranking, and non-causal root-cause signals
+    - Multi-echelon inventory position, risk, transfer, and replenishment plans
+    - Python, ADQL, notebook, report, dashboard, and release integration
+16. Prescriptive analytics
+    - Evidence-linked, prioritized actions with impact, cost, risk, and confidence
+    - Non-mutating what-if KPI scenarios
+    - Budget, action-count, confidence, and risk-constrained optimization
+    - Human approvals, rejections, recorded execution, and exportable audit trails
+    - Python, ADQL 2.7, notebook, report, dashboard, and release integration
 
 ## 0.1.0 release status
 
@@ -69,12 +80,9 @@ All items in the original AutoDQ development roadmap are complete.
 
 ## Next product phases
 
-1. Operational analytics
-   - KPI, process, bottleneck, SLA, anomaly, trend, and forecasting workflows
-2. Prescriptive analytics
-   - Objectives, constraints, what-if scenarios, optimization, prioritized
-     actions, expected impact, risk, confidence, approvals, and execution audit
-3. Native platform adapters
+1. Operational forecasting and anomaly extensions
+   - Forecasting, anomaly monitoring, and advanced process-mining workflows
+2. Native platform adapters
    - Microsoft Fabric and OneLake
    - Databricks jobs, wheels, and asset bundles
    - Azure Data Factory orchestration templates

@@ -30,6 +30,7 @@ class HTMLExporter:
         ml_readiness = getattr(report, "ml_readiness", None)
         operations = getattr(report, "operations", None)
         inventory = getattr(report, "inventory", None)
+        prescriptive = getattr(report, "prescriptive", None)
         diagnosis = report.diagnosis
         recommendations = report.recommendations or []
 
@@ -74,6 +75,7 @@ class HTMLExporter:
         ml_readiness_section = self._build_ml_readiness_section(ml_readiness)
         operations_section = self._build_operations_section(operations)
         inventory_section = self._build_inventory_section(inventory)
+        prescriptive_section = self._build_prescriptive_section(prescriptive)
 
         visualization_cards = self._build_visualization_cards(
             getattr(report, "visualizations", None)
@@ -738,6 +740,8 @@ th {{
 
     {inventory_section}
 
+    {prescriptive_section}
+
     <div class="section card">
         <h2 class="section-title">Rendered Visualization Assets</h2>
         <div class="rendered-viz-grid">
@@ -1226,6 +1230,21 @@ th {{
         return (
             '<div class="section card">'
             '<h2 class="section-title">Multi-Echelon Inventory</h2>'
+            + "".join(sections)
+            + "</div>"
+        )
+
+    def _build_prescriptive_section(self, prescriptive):
+        if prescriptive is None:
+            return ""
+
+        sections = [
+            prescriptive.view(section).to_notebook_html()
+            for section in ("overview", "actions", "scenarios", "audit")
+        ]
+        return (
+            '<div class="section card">'
+            '<h2 class="section-title">Prescriptive Analytics</h2>'
             + "".join(sections)
             + "</div>"
         )

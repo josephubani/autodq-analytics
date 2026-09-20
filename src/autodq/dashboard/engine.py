@@ -128,6 +128,7 @@ class DashboardEngine:
             prediction=self._prediction_summary(state.prediction_report),
             operations=self._operations_summary(state.operations_report),
             inventory=self._inventory_summary(state.inventory_report),
+            prescriptive=self._prescriptive_summary(state.prescriptive_report),
             columns=self._column_summary(frame, profile),
             preview=(
                 self._data_preview(frame, max_preview_rows)
@@ -362,6 +363,12 @@ class DashboardEngine:
 
     @staticmethod
     def _inventory_summary(report) -> dict[str, Any] | None:
+        if report is None:
+            return None
+        return serializable_value(report.to_dict())
+
+    @staticmethod
+    def _prescriptive_summary(report) -> dict[str, Any] | None:
         if report is None:
             return None
         return serializable_value(report.to_dict())

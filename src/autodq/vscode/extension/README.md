@@ -47,6 +47,8 @@ workflow.
   ranking, and root-cause signals through focused notebook commands
 - Multi-echelon inventory network rollups, coverage and service risk, bounded
   same-SKU rebalancing, and replenishment planning
+- Governed prescriptive action plans, what-if scenarios, constrained
+  optimization, approvals, and execution audit trails
 
 ## Requirements
 
@@ -174,6 +176,23 @@ INVENTORY REBALANCE SERVICE_LEVEL 95 HORIZON 30 TOP 20;
 Map unusual schemas with `ITEM`, `LOCATION`, `ECHELON`, `PARENT`, `TIME`,
 `ON_HAND`, `ON_ORDER`, `BACKORDER`, `DEMAND`, `LEAD_TIME`, `SAFETY_STOCK`,
 `UNIT_COST`, and `CAPACITY`.
+
+Turn that evidence into a governed action portfolio:
+
+```adql
+PRESCRIBE OBJECTIVE reduce_delay SOURCE operations
+    MAX_ACTIONS 5 MIN_CONFIDENCE 0.60 MAX_RISK medium;
+SCENARIO NAME "Faster service"
+    DURATION_CHANGE -20 FAILURE_CHANGE -10 COST_CHANGE 5;
+OPTIMIZE OBJECTIVE reduce_delay MAX_ACTIONS 3;
+ACTION LIST STATUS selected;
+ACTION APPROVE A001 ACTOR "operations lead";
+ACTION EXECUTE A001 ACTOR "operations lead";
+ACTION AUDIT TO "action-audit.json" OVERWRITE;
+```
+
+Recorded execution updates only the plan and audit trail; it does not mutate
+source data or call an external system.
 
 Protect future batches with a structural contract and a distribution
 baseline:

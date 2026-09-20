@@ -43,6 +43,7 @@ from autodq.ml_readiness.engine import MLReadinessEngine
 from autodq.renderers.console.ml_readiness import ConsoleMLReadinessRenderer
 from autodq.operations.engine import OperationalAnalyticsEngine
 from autodq.operations.inventory import MultiEchelonInventoryEngine
+from autodq.prescriptive.engine import PrescriptiveAnalyticsEngine
 from autodq.renderers.console.operations import ConsoleOperationsRenderer
 from autodq.renderers.console.inventory import ConsoleInventoryRenderer
 from autodq.features.engine import FeatureEngineeringEngine
@@ -104,6 +105,7 @@ class AutoDQ:
         self.ml_readiness_engine = MLReadinessEngine()
         self.operational_analytics_engine = OperationalAnalyticsEngine()
         self.multi_echelon_inventory_engine = MultiEchelonInventoryEngine()
+        self.prescriptive_analytics_engine = PrescriptiveAnalyticsEngine()
         self.feature_engine = FeatureEngineeringEngine()
         self.ml_engine = MLEngine()
         self.prediction_engine = PredictionEngine()
@@ -2831,6 +2833,236 @@ class AutoDQ:
         ConsoleInventoryRenderer.render(
             self.state.inventory_report.view(section)
         )
+
+    def prescribe(
+        self,
+        *,
+        objective: str = "balanced",
+        source: str = "auto",
+        budget: float | None = None,
+        max_actions: int = 5,
+        min_confidence: float = 0.5,
+        max_risk: str = "high",
+        top: int = 20,
+    ):
+        """Create and optimize a governed action plan from current evidence."""
+        if self.state.data is None:
+            self.load()
+
+        normalized_source = str(source).strip().lower()
+        if normalized_source not in {"auto", "operations", "inventory", "all"}:
+            raise ValueError(
+                "Prescriptive source must be auto, operations, inventory, or all."
+            )
+
+        active = self.dataset_manager.primary()
+        dataset_name = active.name if active is not None else "current"
+        include_operations = normalized_source in {"auto", "operations", "all"}
+        include_inventory = normalized_source in {"auto", "inventory", "all"}
+
+        operations_report = None
+        if include_operations:
+            operations_report = self.state.operations_report
+            if (
+                operations_report is None
+                or operations_report.dataset_name != dataset_name
+            ):
+                operations_report = self.operations()
+
+        inventory_report = None
+        if include_inventory:
+            inventory_report = self.state.inventory_report
+            if (
+                inventory_report is None
+                or inventory_report.dataset_name != dataset_name
+            ):
+                inventory_report = self.inventory(top=max(top, 10))
+
+        self.state.prescriptive_report = (
+            self.prescriptive_analytics_engine.generate(
+                dataset_name=dataset_name,
+                operations_report=operations_report,
+                inventory_report=inventory_report,
+                objective=objective,
+                budget=budget,
+                max_actions=max_actions,
+                min_confidence=min_confidence,
+                max_risk=max_risk,
+                top=top,
+            )
+        )
+        plan = self.state.prescriptive_report
+        self.session.log(
+            step="prescriptive",
+            message="Prescriptive action plan generated.",
+            metadata={
+                "dataset": plan.dataset_name,
+                "objective": plan.objective,
+                "sources": plan.source_reports,
+                "actions": len(plan.actions),
+                "selected": len(plan.selected_actions),
+                "budget": budget,
+            },
+        )
+        return plan
+
+    def optimize_prescriptions(
+        self,
+        *,
+        objective: str | None = None,
+        budget: float | None = None,
+        max_actions: int = 5,
+        min_confidence: float = 0.5,
+        max_risk: str = "high",
+    ):
+        """Re-optimize the current action plan under revised constraints."""
+        if self.state.prescriptive_report is None:
+            return self.prescribe(
+                objective=objective or "balanced",
+                budget=budget,
+                max_actions=max_actions,
+                min_confidence=min_confidence,
+                max_risk=max_risk,
+            )
+
+        self.prescriptive_analytics_engine.optimize(
+            self.state.prescriptive_report,
+            objective=objective,
+            budget=budget,
+            max_actions=max_actions,
+            min_confidence=min_confidence,
+            max_risk=max_risk,
+        )
+        return self.state.prescriptive_report
+
+    def what_if(
+        self,
+        name: str,
+        *,
+        duration_change: float = 0.0,
+        failure_change: float = 0.0,
+        cost_change: float = 0.0,
+        capacity_change: float = 0.0,
+        value_change: float = 0.0,
+        demand_change: float = 0.0,
+        lead_time_change: float = 0.0,
+    ):
+        """Evaluate directional KPI changes without mutating project data."""
+        if self.state.prescriptive_report is None:
+            self.prescribe()
+        scenario = self.prescriptive_analytics_engine.scenario(
+            self.state.prescriptive_report,
+            name=name,
+            operations_report=self.state.operations_report,
+            inventory_report=self.state.inventory_report,
+            duration_change=duration_change,
+            failure_change=failure_change,
+            cost_change=cost_change,
+            capacity_change=capacity_change,
+            value_change=value_change,
+            demand_change=demand_change,
+            lead_time_change=lead_time_change,
+        )
+        self.session.log(
+            step="prescriptive_scenario",
+            message=f"What-if scenario evaluated: {scenario.name}.",
+            metadata={
+                "scenario_id": scenario.scenario_id,
+                "changes": scenario.changes,
+            },
+        )
+        return scenario
+
+    def approve_prescription(
+        self,
+        action_id: str,
+        *,
+        actor: str = "user",
+        reason: str | None = None,
+    ):
+        plan = self._require_prescriptive_plan()
+        return self.prescriptive_analytics_engine.approve(
+            plan, action_id, actor=actor, reason=reason
+        )
+
+    def approve_all_prescriptions(
+        self,
+        *,
+        actor: str = "user",
+        reason: str | None = None,
+    ):
+        plan = self._require_prescriptive_plan()
+        return self.prescriptive_analytics_engine.approve_all(
+            plan, actor=actor, reason=reason
+        )
+
+    def reject_prescription(
+        self,
+        action_id: str,
+        *,
+        actor: str = "user",
+        reason: str | None = None,
+    ):
+        plan = self._require_prescriptive_plan()
+        return self.prescriptive_analytics_engine.reject(
+            plan, action_id, actor=actor, reason=reason
+        )
+
+    def execute_prescription(
+        self,
+        action_id: str,
+        *,
+        actor: str = "user",
+        reason: str | None = None,
+    ):
+        """Record execution approval without touching an external system."""
+        plan = self._require_prescriptive_plan()
+        return self.prescriptive_analytics_engine.execute(
+            plan, action_id, actor=actor, reason=reason
+        )
+
+    def prescription_audit(self):
+        """Return the complete prescriptive decision audit as a DataFrame."""
+        plan = self._require_prescriptive_plan()
+        return pd.DataFrame([item.to_dict() for item in plan.audit_trail])
+
+    def export_prescription_audit(
+        self,
+        output: str | Path,
+        *,
+        overwrite: bool = False,
+    ) -> Path:
+        """Export approval, rejection, scenario, and execution decisions."""
+        output = Path(output).expanduser()
+        if output.suffix.lower() not in {".json", ".csv"}:
+            raise ValueError("Prescription audit output must end with .json or .csv.")
+        if output.exists() and not overwrite:
+            raise FileExistsError(
+                f"Output already exists: {output}. Use overwrite=True to replace it."
+            )
+        output.parent.mkdir(parents=True, exist_ok=True)
+        frame = self.prescription_audit()
+        if output.suffix.lower() == ".csv":
+            frame.to_csv(output, index=False)
+        else:
+            output.write_text(
+                json.dumps(frame.to_dict(orient="records"), indent=2),
+                encoding="utf-8",
+            )
+        return output
+
+    def show_prescriptions(self, section: str = "overview") -> None:
+        plan = self._require_prescriptive_plan()
+        try:
+            from IPython.display import HTML, display
+            display(HTML(plan.view(section).to_notebook_html()))
+        except ImportError:
+            print(plan.view(section).to_dict())
+
+    def _require_prescriptive_plan(self):
+        if self.state.prescriptive_report is None:
+            raise ValueError("No prescriptive plan exists. Run prescribe() first.")
+        return self.state.prescriptive_report
 
     def features(self):
         if self.state.data is None:

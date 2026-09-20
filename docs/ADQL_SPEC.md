@@ -6,7 +6,7 @@ repeatable analytics while retaining named, executable cells. ADQL does not
 evaluate Python expressions or expose arbitrary object methods.
 
 This file is the practical command guide. The normative definition of ADQL
-2.6 is the [formal language specification](adql/SPECIFICATION.md), accompanied
+2.7 is the [formal language specification](adql/SPECIFICATION.md), accompanied
 by its [EBNF grammar](adql/grammar.ebnf),
 [execution model](adql/execution-model.md),
 [data-type rules](adql/data-types.md), [error model](adql/errors.md), and
@@ -839,6 +839,66 @@ Use the `DATASET name` selector before `NETWORK` or `REBALANCE`, as shown by
 `INVENTORY DATASET stock_snapshot NETWORK;`. Recommendations are analytical
 decision support: transport cost, shelf life, lot size, supplier, and routing
 constraints must be validated before execution.
+
+### Prescriptive analytics and optimization
+
+Prescriptive analytics turns the latest operational and inventory evidence
+into an explicit action portfolio. Every action includes its source signal,
+target, rationale, expected impact, planning-cost estimate, confidence, risk,
+priority, and governance status.
+
+```adql
+PRESCRIBE OBJECTIVE reduce_delay
+    SOURCE operations
+    MAX_ACTIONS 5
+    MIN_CONFIDENCE 0.60
+    MAX_RISK medium;
+```
+
+Supported objectives are `balanced`, `reduce_delay`, `reduce_failures`,
+`minimize_cost`, `maximize_value`, `balance_capacity`, and
+`minimize_shortage`. `SOURCE` may be `auto`, `operations`, `inventory`, or
+`all`. With `auto`, AutoDQ analyzes both available evidence types and only
+uses reports that pass their detection requirements.
+
+Use a budget when the cost units are meaningful for the candidate set. For
+inventory replenishment, estimated cost uses quantity times inferred unit
+cost. Operational interventions use clearly labeled planning-effort units;
+they are not presented as currency.
+
+```adql
+OPTIMIZE OBJECTIVE minimize_shortage
+    BUDGET 25000
+    MAX_ACTIONS 8
+    MIN_CONFIDENCE 0.70
+    MAX_RISK medium;
+```
+
+What-if scenarios compare the current KPI baseline with transparent
+percentage-change assumptions. They never mutate the dataset:
+
+```adql
+SCENARIO NAME "Faster fulfilment"
+    DURATION_CHANGE -20
+    FAILURE_CHANGE -10
+    COST_CHANGE 5
+    CAPACITY_CHANGE 15;
+```
+
+Govern selected recommendations explicitly:
+
+```adql
+ACTION LIST STATUS selected;
+ACTION APPROVE A001 ACTOR "operations lead";
+ACTION REJECT A002 REASON "Supplier constraint";
+ACTION EXECUTE A001 ACTOR "operations lead";
+ACTION AUDIT TO "reports/prescription-audit.json" OVERWRITE;
+```
+
+`ACTION EXECUTE` records that an approved recommendation was implemented. It
+does not modify an external system, place an order, transfer inventory, or
+change source data. Approval, rejection, scenario evaluation, optimization,
+and recorded execution remain in the plan audit trail.
 
 ### BLUE diagnostics and visualization gallery
 

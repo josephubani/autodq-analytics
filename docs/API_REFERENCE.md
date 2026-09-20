@@ -241,6 +241,7 @@ moderate or major drift, and `never` records the result without gating.
 | ML readiness | `ml_readiness(reference=None, reference_name=None)`, `show_ml_readiness()` |
 | Operational analytics | `operations()`, `operational_kpis()`, `process_analysis()`, `bottlenecks()`, `operational_root_causes()`, `show_operations()` |
 | Multi-echelon inventory | `inventory()`, `inventory_network()`, `inventory_rebalance()`, `show_inventory()` |
+| Prescriptive analytics | `prescribe()`, `optimize_prescriptions()`, `what_if()`, `approve_prescription()`, `approve_all_prescriptions()`, `reject_prescription()`, `execute_prescription()`, `prescription_audit()`, `export_prescription_audit()`, `show_prescriptions()` |
 | Features | `features()`, `create_feature()`, `apply_features()`, `export_engineered()` |
 | Modeling | `model()`, `save_model()`, `load_model()`, `show_model()` |
 | Prediction | `predict()`, `show_predictions()`, `export_predictions()` |
@@ -321,6 +322,35 @@ bounded by donor excess, preserves SKU identity, prioritizes parent-child and
 same-echelon transfers, and leaves any residual as a replenishment action.
 Dashboards and HTML/JSON reports include the latest inventory report.
 
+`prescribe()` converts the current operational and inventory evidence into a
+traceable, risk-rated action portfolio. The engine selects actions under
+explicit limits and preserves every human decision in an audit trail:
+
+```python
+plan = project.prescribe(
+    objective="reduce_delay",
+    source="operations",
+    budget=None,
+    max_actions=5,
+    min_confidence=0.60,
+    max_risk="medium",
+)
+
+scenario = project.what_if(
+    "Faster service",
+    duration_change=-20,
+    failure_change=-10,
+    cost_change=5,
+)
+
+project.approve_prescription(plan.selected_actions[0].action_id)
+project.execute_prescription(plan.selected_actions[0].action_id)
+project.export_prescription_audit("reports/action-audit.json")
+```
+
+Execution is record-only: the method updates the governed action status and
+audit trail but does not alter source data or call an external system.
+
 ## Visualization and reporting
 
 Use `visualize()` to create a reusable chart with `show()` and `save()`.
@@ -336,7 +366,7 @@ HTML or JSON analytical reports.
 ```python
 from autodq import ADQL_LANGUAGE_VERSION
 
-print(ADQL_LANGUAGE_VERSION)  # 2.6
+print(ADQL_LANGUAGE_VERSION)  # 2.7
 result = project.query("PROFILE; DIAGNOSE;", auto_display=False)
 file_result = project.run_adql("analysis.adql", through_cell=3)
 ```
@@ -347,7 +377,7 @@ current project. Registered datasets can be targeted directly with
 `SELECT * FROM customers`. `run_adql()` executes a cell-based standalone file
 while retaining state between selected cells. See the
 [ADQL user guide](ADQL_SPEC.md) and
-[formal ADQL 2.6 specification](adql/SPECIFICATION.md).
+[formal ADQL 2.7 specification](adql/SPECIFICATION.md).
 
 ## Pipeline execution
 

@@ -31,7 +31,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
         )
         grammar = (SPEC_ROOT / "grammar.ebnf").read_text(encoding="utf-8")
 
-        self.assertEqual(ADQL_LANGUAGE_VERSION, "2.6")
+        self.assertEqual(ADQL_LANGUAGE_VERSION, "2.7")
         self.assertIn(
             f"| Language version | {ADQL_LANGUAGE_VERSION} |",
             specification,
@@ -78,6 +78,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
 
     def test_every_public_command_accepts_mixed_case(self):
         examples = {
+            "ACTION": "ACTION LIST STATUS selected",
             "ADD": 'ADD DATASET CustomerData FROM "customers.csv"',
             "APPROVE": "APPROVE ALL",
             "ASSERT": "ASSERT Email FORMAT email",
@@ -125,8 +126,13 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
             "MISSING": "MISSING FILL Revenue STRATEGY median",
             "MODEL": "MODEL TARGET Revenue USING decision_tree_regressor",
             "OPERATIONS": "OPERATIONS TIME Date DURATION Delivery_Days",
+            "OPTIMIZE": "OPTIMIZE OBJECTIVE reduce_delay MAX_ACTIONS 3",
             "OUTLIERS": "OUTLIERS REVIEW COLUMNS Revenue IQR 1.5",
             "PREDICT": "PREDICT CONFIDENCE 0.9 UNCERTAINTY true",
+            "PRESCRIBE": (
+                "PRESCRIBE OBJECTIVE reduce_delay SOURCE operations "
+                "MAX_ACTIONS 3"
+            ),
             "PREVIEW": "PREVIEW",
             "PROCESS": "PROCESS STAGE Sales_Channel PERIOD month",
             "PROFILE": "PROFILE",
@@ -137,6 +143,9 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
             "REVIEW": "REVIEW",
             "ROOT": "ROOT CAUSE TOP 5",
             "SAMPLE": "SAMPLE 5 RANDOM_STATE 7",
+            "SCENARIO": (
+                'SCENARIO NAME "Faster service" DURATION_CHANGE -20'
+            ),
             "SCHEMA": "SCHEMA CONTRACT LIST",
             "SELECT": "SELECT Revenue FROM CURRENT LIMIT 1",
             "SESSION": "SESSION EVENTS LIMIT 5",

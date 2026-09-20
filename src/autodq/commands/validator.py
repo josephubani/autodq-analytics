@@ -330,6 +330,122 @@ class ADQLValidator:
                     "Inventory TOP must be an integer between 1 and 100."
                 )
 
+        elif statement.kind in {"PRESCRIBE", "OPTIMIZE"}:
+            objective = str(parameters.get("objective", "balanced")).lower()
+            objectives = {
+                "balanced",
+                "reduce_delay",
+                "minimize_delay",
+                "reduce_failures",
+                "minimize_failures",
+                "minimize_cost",
+                "reduce_cost",
+                "maximize_value",
+                "increase_value",
+                "balance_capacity",
+                "maximize_capacity",
+                "minimize_shortage",
+                "reduce_shortage",
+            }
+            if objective not in objectives:
+                raise ADQLValidationError(
+                    "Prescriptive OBJECTIVE must be balanced, reduce_delay, "
+                    "reduce_failures, minimize_cost, maximize_value, "
+                    "balance_capacity, or minimize_shortage."
+                )
+            budget = parameters.get("budget")
+            if budget is not None and budget < 0:
+                raise ADQLValidationError(
+                    "Prescriptive BUDGET cannot be negative."
+                )
+            max_actions = parameters.get("max_actions", 5)
+            if (
+                not isinstance(max_actions, int)
+                or isinstance(max_actions, bool)
+                or not 1 <= max_actions <= 100
+            ):
+                raise ADQLValidationError(
+                    "Prescriptive MAX_ACTIONS must be an integer between 1 and 100."
+                )
+            confidence = parameters.get("min_confidence", 0.5)
+            if not 0 <= confidence <= 1:
+                raise ADQLValidationError(
+                    "Prescriptive MIN_CONFIDENCE must be between 0 and 1."
+                )
+            if str(parameters.get("max_risk", "high")).lower() not in {
+                "low", "medium", "high"
+            }:
+                raise ADQLValidationError(
+                    "Prescriptive MAX_RISK must be low, medium, or high."
+                )
+            if statement.kind == "PRESCRIBE":
+                if str(parameters.get("source", "auto")).lower() not in {
+                    "auto", "operations", "inventory", "all"
+                }:
+                    raise ADQLValidationError(
+                        "PRESCRIBE SOURCE must be auto, operations, inventory, or all."
+                    )
+                top = parameters.get("top", 20)
+                if (
+                    not isinstance(top, int)
+                    or isinstance(top, bool)
+                    or not 1 <= top <= 100
+                ):
+                    raise ADQLValidationError(
+                        "PRESCRIBE TOP must be an integer between 1 and 100."
+                    )
+
+        elif statement.kind == "SCENARIO":
+            name = str(parameters.get("name", "")).strip()
+            if not name or len(name) > 200:
+                raise ADQLValidationError(
+                    "SCENARIO NAME must contain 1 to 200 characters."
+                )
+            changes = [
+                parameters.get(key, 0.0)
+                for key in (
+                    "duration_change",
+                    "failure_change",
+                    "cost_change",
+                    "capacity_change",
+                    "value_change",
+                    "demand_change",
+                    "lead_time_change",
+                )
+            ]
+            if not any(value != 0 for value in changes):
+                raise ADQLValidationError(
+                    "SCENARIO requires at least one non-zero *_CHANGE option."
+                )
+            if any(value <= -100 or value > 1000 for value in changes):
+                raise ADQLValidationError(
+                    "SCENARIO changes must be greater than -100 and no more than 1000 percent."
+                )
+
+        elif statement.kind == "ACTION":
+            action = parameters.get("action")
+            if action not in {
+                "list", "approve", "approve_all", "reject", "execute", "audit"
+            }:
+                raise ADQLValidationError(
+                    "ACTION must be LIST, APPROVE, REJECT, EXECUTE, or AUDIT."
+                )
+            if action == "list" and parameters.get("status") is not None:
+                status = str(parameters["status"]).lower()
+                if status not in {
+                    "proposed", "selected", "approved", "rejected", "executed"
+                }:
+                    raise ADQLValidationError(
+                        "ACTION LIST STATUS must be proposed, selected, approved, rejected, or executed."
+                    )
+            output = parameters.get("output")
+            if output is not None and Path(output).suffix.lower() not in {
+                ".json", ".csv"
+            }:
+                raise ADQLValidationError(
+                    "ACTION AUDIT TO output must end with .json or .csv."
+                )
+
         elif statement.kind == "AUDIT":
             if Path(parameters["output"]).suffix.lower() not in {".json", ".csv"}:
                 raise ADQLValidationError(

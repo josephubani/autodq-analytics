@@ -51,6 +51,7 @@ class ReportingEngine:
             ml_readiness=state.ml_readiness_report,
             operations=state.operations_report,
             inventory=state.inventory_report,
+            prescriptive=state.prescriptive_report,
             visualizations=state.visualization_report,
             rendered_visualizations=rendered_visualizations,
             model=state.model_report,

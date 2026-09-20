@@ -2,7 +2,7 @@
 
 # Public language version. This is intentionally independent from the AutoDQ
 # package and VS Code extension versions.
-ADQL_LANGUAGE_VERSION = "2.6"
+ADQL_LANGUAGE_VERSION = "2.7"
 
 # Human-readable drift sensitivity presets. Explicit threshold options on a
 # CHECK DRIFT statement override the selected preset.
@@ -72,6 +72,10 @@ SUPPORTED_COMMANDS = {
     "BOTTLENECKS",
     "ROOT",
     "INVENTORY",
+    "PRESCRIBE",
+    "SCENARIO",
+    "OPTIMIZE",
+    "ACTION",
     "FEATURES",
     "FEATURE",
     "BLUE",
@@ -160,6 +164,7 @@ DATASET_SCOPED_COMMANDS = {
     "BOTTLENECKS",
     "ROOT",
     "INVENTORY",
+    "PRESCRIBE",
     "RECOMMEND",
     "REJECT",
     "REPORT",
@@ -333,6 +338,36 @@ INVENTORY_OPTIONS = {
     "HORIZON": "horizon_days",
     "TOP": "top",
     "DATASET": "dataset_name",
+}
+
+PRESCRIPTIVE_OPTIONS = {
+    "OBJECTIVE": "objective",
+    "SOURCE": "source",
+    "BUDGET": "budget",
+    "MAX_ACTIONS": "max_actions",
+    "MIN_CONFIDENCE": "min_confidence",
+    "MAX_RISK": "max_risk",
+    "TOP": "top",
+    "DATASET": "dataset_name",
+}
+
+SCENARIO_OPTIONS = {
+    "NAME": "name",
+    "DURATION_CHANGE": "duration_change",
+    "FAILURE_CHANGE": "failure_change",
+    "COST_CHANGE": "cost_change",
+    "CAPACITY_CHANGE": "capacity_change",
+    "VALUE_CHANGE": "value_change",
+    "DEMAND_CHANGE": "demand_change",
+    "LEAD_TIME_CHANGE": "lead_time_change",
+}
+
+OPTIMIZE_OPTIONS = {
+    "OBJECTIVE": "objective",
+    "BUDGET": "budget",
+    "MAX_ACTIONS": "max_actions",
+    "MIN_CONFIDENCE": "min_confidence",
+    "MAX_RISK": "max_risk",
 }
 
 GALLERY_STYLE_OPTIONS = {
@@ -612,6 +647,24 @@ COMMAND_HELP = [
         "description": (
             "Manage multi-echelon inventory position, coverage, shortage, "
             "excess, internal transfers, and replenishment requirements."
+        ),
+    },
+    {
+        "command": "PRESCRIBE / SCENARIO / OPTIMIZE / ACTION",
+        "syntax": (
+            "PRESCRIBE [DATASET name] OBJECTIVE reduce_delay "
+            "[SOURCE auto|operations|inventory|all] [BUDGET number] "
+            "[MAX_ACTIONS n] [MIN_CONFIDENCE 0..1] [MAX_RISK level]; "
+            "SCENARIO NAME \"Faster service\" DURATION_CHANGE -20; "
+            "OPTIMIZE OBJECTIVE reduce_delay MAX_ACTIONS 3; "
+            "ACTION LIST; ACTION APPROVE A001; ACTION REJECT A002 "
+            "REASON \"Not feasible\"; ACTION EXECUTE A001; "
+            "ACTION AUDIT [TO audit.json]"
+        ),
+        "description": (
+            "Generate traceable recommendations, compare what-if KPI scenarios, "
+            "optimize a constrained action portfolio, and govern decisions with "
+            "an approval and execution audit trail."
         ),
     },
     {

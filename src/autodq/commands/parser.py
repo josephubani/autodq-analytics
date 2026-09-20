@@ -19,9 +19,12 @@ from autodq.commands.grammar import (
     GALLERY_STYLE_OPTIONS,
     INVENTORY_OPTIONS,
     MODEL_OPTIONS,
+    OPTIMIZE_OPTIONS,
     OPERATIONS_OPTIONS,
     PREDICT_OPTIONS,
     POSITIONAL_DATASET_COMMANDS,
+    PRESCRIPTIVE_OPTIONS,
+    SCENARIO_OPTIONS,
     SHAP_OPTIONS,
     SIMPLE_COMMANDS,
     SET_TYPE_OPTIONS,
@@ -49,10 +52,13 @@ class ADQLParser:
         "legend_position",
         "method",
         "mode",
+        "objective",
+        "max_risk",
         "period",
         "report_style",
         "save_format",
         "source",
+        "status",
         "sensitivity",
         "severity",
         "stage",
@@ -383,6 +389,27 @@ class ADQLParser:
 
         if kind == "INVENTORY":
             return self._parse_inventory(arguments)
+
+        if kind == "PRESCRIBE":
+            return self._coerce_options(
+                self._parse_options(arguments, PRESCRIPTIVE_OPTIONS)
+            )
+
+        if kind == "SCENARIO":
+            options = self._parse_options(arguments, SCENARIO_OPTIONS)
+            if "name" not in options:
+                raise ADQLSyntaxError(
+                    'SCENARIO requires NAME, for example SCENARIO NAME "Faster service" DURATION_CHANGE -20.'
+                )
+            return self._coerce_options(options)
+
+        if kind == "OPTIMIZE":
+            return self._coerce_options(
+                self._parse_options(arguments, OPTIMIZE_OPTIONS)
+            )
+
+        if kind == "ACTION":
+            return self._parse_prescriptive_action(arguments)
 
         if kind == "FEATURES":
             if arguments:
@@ -1842,6 +1869,50 @@ class ADQLParser:
         options = self._parse_options(arguments, INVENTORY_OPTIONS)
         return {"action": action, **self._coerce_options(options)}
 
+    def _parse_prescriptive_action(
+        self,
+        arguments: list[str],
+    ) -> dict[str, Any]:
+        if not arguments:
+            raise ADQLSyntaxError(
+                "ACTION requires LIST, APPROVE, REJECT, EXECUTE, or AUDIT."
+            )
+        action = arguments[0].lower()
+        rest = arguments[1:]
+
+        if action == "list":
+            options = self._parse_options(rest, {"STATUS": "status"})
+            return {"action": action, **self._coerce_options(options)}
+
+        if action in {"approve", "reject", "execute"}:
+            if not rest:
+                raise ADQLSyntaxError(
+                    f"ACTION {action.upper()} requires an action ID."
+                )
+            action_id = rest[0]
+            approve_all = action == "approve" and action_id.upper() == "ALL"
+            options = self._parse_options(
+                rest[1:],
+                {"ACTOR": "actor", "REASON": "reason"},
+            )
+            return {
+                "action": "approve_all" if approve_all else action,
+                **({} if approve_all else {"action_id": action_id}),
+                **options,
+            }
+
+        if action == "audit":
+            options = self._parse_options(
+                rest,
+                {"TO": "output", "OVERWRITE": "overwrite"},
+                flags={"OVERWRITE"},
+            )
+            return {"action": action, **self._coerce_options(options)}
+
+        raise ADQLSyntaxError(
+            "ACTION requires LIST, APPROVE, REJECT, EXECUTE, or AUDIT."
+        )
+
     def _parse_gallery(self, arguments: list[str]) -> dict[str, Any]:
         if not arguments:
             raise ADQLSyntaxError(
@@ -2251,6 +2322,7 @@ class ADQLParser:
             "decimals",
             "top",
             "horizon_days",
+            "max_actions",
         }
         float_options = {
             "test_size",
@@ -2269,6 +2341,15 @@ class ADQLParser:
             "missing_error",
             "sla_target",
             "service_level",
+            "budget",
+            "min_confidence",
+            "duration_change",
+            "failure_change",
+            "cost_change",
+            "capacity_change",
+            "value_change",
+            "demand_change",
+            "lead_time_change",
         }
         list_options = {"exclude_features", "chart_ids"}
         coerced = {}

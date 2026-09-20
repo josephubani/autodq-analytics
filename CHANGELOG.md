@@ -5,6 +5,33 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.25 - 2026-09-20
+
+### Added
+
+- Added evidence-linked prescriptive actions generated from operational
+  bottlenecks, root-cause signals, and inventory recommendations.
+- Added constrained action-portfolio optimization with budget, action-count,
+  confidence, and risk limits, using SciPy MILP with a deterministic fallback.
+- Added non-mutating what-if scenarios for duration, failure, cost, capacity,
+  value, demand, and lead-time changes.
+- Added approval, rejection, recorded execution, and exportable decision-audit
+  workflows through Python and ADQL.
+- Added rich notebook, dashboard, HTML, and JSON prescriptive output plus a
+  runnable `prescriptive_operations.adql` example.
+
+### Changed
+
+- Advanced the language to ADQL 2.7 with `PRESCRIBE`, `SCENARIO`, `OPTIMIZE`,
+  and `ACTION` while retaining valid ADQL 2.x syntax.
+- Advanced the bundled AutoDQ ADQL VS Code extension to 0.3.18 with complete
+  case-insensitive prescriptive syntax highlighting.
+
+### Validation
+
+- Added engine, optimization, scenario, governance, audit, mixed-case ADQL,
+  named-state, report, dashboard, syntax, packaging, and release coverage.
+
 ## 0.1.24 - 2026-09-05
 
 ### Added

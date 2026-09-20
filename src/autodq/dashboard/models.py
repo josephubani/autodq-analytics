@@ -98,6 +98,7 @@ class Dashboard:
     prediction: dict[str, Any] | None = None
     operations: dict[str, Any] | None = None
     inventory: dict[str, Any] | None = None
+    prescriptive: dict[str, Any] | None = None
     columns: list[dict[str, Any]] = field(default_factory=list)
     preview: list[dict[str, Any]] = field(default_factory=list)
     charts: list[Any] = field(default_factory=list, repr=False)
@@ -172,6 +173,7 @@ class Dashboard:
             "prediction": serializable_value(self.prediction),
             "operations": serializable_value(self.operations),
             "inventory": serializable_value(self.inventory),
+            "prescriptive": serializable_value(self.prescriptive),
             "columns": serializable_value(self.columns),
             "preview": serializable_value(self.preview),
             "charts": [

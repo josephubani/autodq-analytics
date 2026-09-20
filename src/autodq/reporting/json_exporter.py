@@ -92,6 +92,10 @@ class JSONExporter:
             "inventory":
                 report.inventory.to_dict()
                 if report.inventory else None,
+
+            "prescriptive":
+                report.prescriptive.to_dict()
+                if report.prescriptive else None,
                 
             "visualizations":
                 report.visualizations.to_dict()
