@@ -7,6 +7,7 @@
     {"include": "#comments"},
     {"include": "#quotedIdentifiers"},
     {"include": "#strings"},
+    {"include": "#naturalOptions"},
     {"include": "#booleanOptions"},
     {"include": "#numbers"},
     {"include": "#commands"},
@@ -43,32 +44,33 @@
       ]
     },
     "quotedIdentifiers": {
-      "begin": "`",
-      "beginCaptures": {
-        "0": {"name": "punctuation.definition.identifier.begin.adql"}
-      },
-      "end": "`",
-      "endCaptures": {
-        "0": {"name": "punctuation.definition.identifier.end.adql"}
-      },
-      "name": "variable.other.quoted.adql"
-    },
-    "strings": {
       "patterns": [
         {
           "begin": "\"",
           "beginCaptures": {
-            "0": {"name": "punctuation.definition.string.begin.adql"}
+            "0": {"name": "punctuation.definition.identifier.begin.adql"}
           },
           "end": "\"",
           "endCaptures": {
-            "0": {"name": "punctuation.definition.string.end.adql"}
+            "0": {"name": "punctuation.definition.identifier.end.adql"}
           },
-          "name": "string.quoted.double.adql",
-          "patterns": [
-            {"match": "\\\\.", "name": "constant.character.escape.adql"}
-          ]
+          "name": "variable.other.quoted.adql"
         },
+        {
+          "begin": "`",
+          "beginCaptures": {
+            "0": {"name": "punctuation.definition.identifier.begin.adql"}
+          },
+          "end": "`",
+          "endCaptures": {
+            "0": {"name": "punctuation.definition.identifier.end.adql"}
+          },
+          "name": "variable.other.quoted.adql"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
         {
           "begin": "'",
           "beginCaptures": {
@@ -89,6 +91,10 @@
       "match": "(?<![A-Za-z0-9_.])-?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?\\b",
       "name": "constant.numeric.adql"
     },
+    "naturalOptions": {
+      "match": "(?i)\\b(ALLOW(?:_|-|\\s+)DUPLICATES|APPLY(?:_|-|\\s+)CLEANING|APPLY(?:_|-|\\s+)FEATURES|APPROVE(?:_|-|\\s+)ALL|CAPACITY(?:_|-|\\s+)CHANGE|CHART(?:_|-|\\s+)IDS|CONFIDENCE(?:_|-|\\s+)LEVEL|CONTINUE(?:_|-|\\s+)ON(?:_|-|\\s+)ERROR|COST(?:_|-|\\s+)CHANGE|DEMAND(?:_|-|\\s+)CHANGE|DURATION(?:_|-|\\s+)CHANGE|EXCLUDE(?:_|-|\\s+)LEAKAGE|EXTRA(?:_|-|\\s+)COLUMNS|FAILURE(?:_|-|\\s+)CHANGE|FAIL(?:_|-|\\s+)ON|GROUP(?:_|-|\\s+)BY|IGNORE(?:_|-|\\s+)INDEX|INCLUDE(?:_|-|\\s+)MODEL|INFER(?:_|-|\\s+)CATEGORIES|INFER(?:_|-|\\s+)RANGES|LEAD(?:_|-|\\s+)TIME(?:_|-|\\s+)CHANGE|LEAD(?:_|-|\\s+)TIME|LEAKAGE(?:_|-|\\s+)THRESHOLD|LEFT(?:_|-|\\s+)ON|LEGEND(?:_|-|\\s+)POSITION|LOAD(?:_|-|\\s+)MODEL|LOW(?:_|-|\\s+)CONFIDENCE(?:_|-|\\s+)THRESHOLD|LOW(?:_|-|\\s+)CONFIDENCE|MAKE(?:_|-|\\s+)ACTIVE|MAX(?:_|-|\\s+)ACTIONS|MAX(?:_|-|\\s+)CHARTS|MAX(?:_|-|\\s+)FEATURES|MAX(?:_|-|\\s+)RISK|MAX(?:_|-|\\s+)ROWS|MIN(?:_|-|\\s+)ABS|MIN(?:_|-|\\s+)CONFIDENCE|MIN(?:_|-|\\s+)PERCENT|MISSING(?:_|-|\\s+)ERROR|MISSING(?:_|-|\\s+)WARNING|MODEL(?:_|-|\\s+)NAME|ON(?:_|-|\\s+)HAND|ON(?:_|-|\\s+)ORDER|PSI(?:_|-|\\s+)ERROR|PSI(?:_|-|\\s+)WARNING|RANDOM(?:_|-|\\s+)STATE|RAISE(?:_|-|\\s+)ON(?:_|-|\\s+)ERROR|REPORT(?:_|-|\\s+)OUTPUT|REPORT(?:_|-|\\s+)STYLE|RIGHT(?:_|-|\\s+)ON|SAFETY(?:_|-|\\s+)STOCK|SAVE(?:_|-|\\s+)WORKSPACE|SERVICE(?:_|-|\\s+)LEVEL|TEST(?:_|-|\\s+)SIZE|TRAIN(?:_|-|\\s+)MODEL|UNIT(?:_|-|\\s+)COST|USE(?:_|-|\\s+)ENGINEERED|VALUE(?:_|-|\\s+)CHANGE|X(?:_|-|\\s+)LABEL|Y(?:_|-|\\s+)LABEL)\\b",
+      "name": "storage.modifier.option.adql"
+    },
     "booleanOptions": {
       "match": "(?i)\\b(ALLOW_DUPLICATES|APPEND|APPLY_CLEANING|APPLY_FEATURES|APPROVE_ALL|CHARTS|CONTINUE_ON_ERROR|DAYFIRST|DISPLAY|EXCLUDE_LEAKAGE|EXPLAIN|GRID|IGNORE_INDEX|INCLUDE_MODEL|INFER_CATEGORIES|INFER_RANGES|LEGEND|LOAD_MODEL|MAKE_ACTIVE|NULLABLE|OVERWRITE|PREDICT|PREVIEW|RAISE_ON_ERROR|RECOMMENDED|REFRESH|REQUIRED|SAVE_WORKSPACE|TRAIN_MODEL|TRANSPARENT|UNCERTAINTY|UNIQUE|USE_ENGINEERED|UTC|VISUALIZE|YEARFIRST)\\b(\\s+)(FALSE|NO|OFF|ON|TRUE|YES|0|1)\\b",
       "captures": {
@@ -105,7 +111,7 @@
       "name": "support.function.aggregate.adql"
     },
     "qualityMetrics": {
-      "match": "(?i)\\b(COLUMN_COUNT|DISTINCT_COUNT|DUPLICATE_PERCENT|DUPLICATE_ROWS|MISSING_COUNT|MISSING_PERCENT|QUALITY_SCORE|ROW_COUNT)\\b",
+      "match": "(?i)\\b(COLUMN(?:_|-|\\s+)COUNT|DISTINCT(?:_|-|\\s+)COUNT|DUPLICATE(?:_|-|\\s+)PERCENT|DUPLICATE(?:_|-|\\s+)ROWS|MISSING(?:_|-|\\s+)COUNT|MISSING(?:_|-|\\s+)PERCENT|QUALITY(?:_|-|\\s+)SCORE|ROW(?:_|-|\\s+)COUNT)\\b",
       "name": "support.function.quality-metric.adql"
     },
     "qualityPredicates": {

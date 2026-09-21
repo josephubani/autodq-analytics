@@ -6,11 +6,36 @@ repeatable analytics while retaining named, executable cells. ADQL does not
 evaluate Python expressions or expose arbitrary object methods.
 
 This file is the practical command guide. The normative definition of ADQL
-2.7 is the [formal language specification](adql/SPECIFICATION.md), accompanied
+2.8 is the [formal language specification](adql/SPECIFICATION.md), accompanied
 by its [EBNF grammar](adql/grammar.ebnf),
 [execution model](adql/execution-model.md),
 [data-type rules](adql/data-types.md), [error model](adql/errors.md), and
 [compatibility policy](adql/compatibility.md).
+
+## Readable ADQL style
+
+ADQL 2.8 uses familiar SQL-style quoting:
+
+- use double quotes for column, feature, alias, and named-dataset identifiers;
+- use single quotes for paths, titles, descriptions, patterns, and text values;
+- write multiword options with spaces, such as `TEST SIZE`, `GROUP BY`,
+  `FAIL ON`, and `MAX ROWS`.
+
+```adql
+DATASET '../datasets/sample/sales.csv';
+LET "Clean Sales" = CLEANED;
+
+SELECT "Customer Age", SUM("Gross Sales") AS "Total Sales"
+FROM "Clean Sales"
+GROUP BY "Customer Age"
+ORDER BY "Total Sales" DESC;
+```
+
+Readable identifiers can address stored snake-case columns. For example,
+`"Customer Age"` resolves to `Customer_Age` when that match is unique. AutoDQ
+does not rename the source data or export headers; only notebook result labels
+replace underscores with spaces. Existing underscore and hyphen option forms
+remain compatible.
 
 ## Standalone `.adql` files
 
@@ -21,17 +46,17 @@ directory.
 ```adql
 #!/usr/bin/env autodq
 # %% [Dataset]
-DATASET "../datasets/sample/sales.csv" TARGET Revenue;
+DATASET '../datasets/sample/sales.csv' TARGET Revenue;
 
 # %% [Quality]
 PROFILE;
 DIAGNOSE;
 
 # %% [Analysis]
-SELECT Region, SUM(Revenue) AS total_revenue
+SELECT Region, SUM(Revenue) AS "Total Revenue"
 FROM CURRENT
 GROUP BY Region
-ORDER BY total_revenue DESC;
+ORDER BY "Total Revenue" DESC;
 ```
 
 Run the complete file from any terminal:
@@ -193,7 +218,7 @@ Use quoted strings, numeric values, booleans, or `NULL` literals.
 ```adql
 SELECT Region, Revenue
 FROM CURRENT
-WHERE Region IN ("North", "South")
+WHERE Region IN ('North', 'South')
   AND Revenue >= 500
 ORDER BY Revenue DESC
 LIMIT 25;
@@ -229,7 +254,7 @@ PREVIEW;
 REVIEW;
 APPROVE ALL;
 APPROVE 1,2;
-REJECT 3 REASON "Requires domain review";
+REJECT 3 REASON 'Requires domain review';
 CLEAN;
 VALIDATE;
 ```
@@ -240,10 +265,10 @@ VALIDATE;
 AUTO MODE review VISUALIZE false;
 AUTO MODE clean;
 AUTO MODE full
-    APPLY_FEATURES true
+    APPLY FEATURES true
     ALGORITHM decision_tree_regressor
-    REPORT "reports/automatic.html"
-    CONTINUE_ON_ERROR true;
+    REPORT 'reports/automatic.html'
+    CONTINUE ON ERROR true;
 ```
 
 `AUTO` calls `project.auto()` through the same allowlisted execution layer as
@@ -255,34 +280,34 @@ failures, and next actions.
 | --- | --- | --- |
 | `MODE` | `review`, `clean`, `full` | Select the safe workflow preset. |
 | `VISUALIZE` | Boolean | Generate recommended visualizations. |
-| `APPROVE_ALL` | Boolean | Override automatic approval behavior. |
-| `APPLY_CLEANING` | Boolean | Apply approved cleaning actions. |
-| `APPLY_FEATURES` | Boolean | Apply recommended feature engineering. |
-| `TRAIN_MODEL` | Boolean | Train a model when a target is available. |
+| `APPROVE ALL` | Boolean | Override automatic approval behavior. |
+| `APPLY CLEANING` | Boolean | Apply approved cleaning actions. |
+| `APPLY FEATURES` | Boolean | Apply recommended feature engineering. |
+| `TRAIN MODEL` | Boolean | Train a model when a target is available. |
 | `PREDICT` | Boolean | Generate model predictions. |
 | `EXPLAIN` | Boolean | Generate model explanations. |
 | `ALGORITHM` | Name | Choose `auto` or a supported model algorithm. |
-| `TEST_SIZE` | Number | Set the evaluation fraction between 0 and 1. |
-| `RANDOM_STATE` | Integer | Make supported operations reproducible. |
-| `REPORT` / `REPORT_OUTPUT` | `.html` or `.json` path | Export the automatic report relative to the `.adql` file. |
-| `REPORT_STYLE` | Name | Select the report presentation style. |
-| `SAVE_WORKSPACE` | Boolean | Persist an attached workspace after the run. |
+| `TEST SIZE` | Number | Set the evaluation fraction between 0 and 1. |
+| `RANDOM STATE` | Integer | Make supported operations reproducible. |
+| `REPORT` / `REPORT OUTPUT` | `.html` or `.json` path | Export the automatic report relative to the `.adql` file. |
+| `REPORT STYLE` | Name | Select the report presentation style. |
+| `SAVE WORKSPACE` | Boolean | Persist an attached workspace after the run. |
 | `REFRESH` | Boolean | Recompute stages instead of reusing project state. |
-| `CONTINUE_ON_ERROR` | Boolean | Continue after a failed automatic stage. |
-| `RAISE_ON_ERROR` | Boolean | Raise immediately with the partial automatic result. |
+| `CONTINUE ON ERROR` | Boolean | Continue after a failed automatic stage. |
+| `RAISE ON ERROR` | Boolean | Raise immediately with the partial automatic result. |
 
 `review` is the default and does not alter the dataset. `clean` approves and
 applies executable cleaning actions. `full` also enables modeling, prediction,
-and explainability. Use `CONTINUE_ON_ERROR true` for exploratory notebooks
+and explainability. Use `CONTINUE ON ERROR true` for exploratory notebooks
 where later independent stages should still run.
 
 ### Visualization
 
 ```adql
 VISUALIZE bar X Region Y Revenue
-    TITLE "Revenue by Region"
-    X_LABEL "Sales region"
-    Y_LABEL "Revenue (CAD)"
+    TITLE 'Revenue by Region'
+    X LABEL 'Sales region'
+    Y LABEL 'Revenue (CAD)'
     THEME dark;
 ```
 
@@ -294,34 +319,34 @@ The `VISUALIZE` options map to `project.visualize()`, including `COLUMN`,
 
 ```adql
 MODEL TARGET Revenue USING decision_tree_regressor
-    USE_ENGINEERED false TEST_SIZE 0.2;
+    USE ENGINEERED false TEST SIZE 0.2;
 
 PREDICT CONFIDENCE 0.95 UNCERTAINTY true;
 
-EXPLAIN MAX_ROWS 20 USE_ENGINEERED true;
+EXPLAIN MAX ROWS 20 USE ENGINEERED true;
 SHAP CHART summary;
-SHAP CHART waterfall ROW 0 SAVE "charts/row-0-shap.png";
+SHAP CHART waterfall ROW 0 SAVE 'charts/row-0-shap.png';
 
-MODEL SAVE TO "models/revenue-model" OVERWRITE;
-MODEL LOAD FROM "models/revenue-model";
+MODEL SAVE TO 'models/revenue-model' OVERWRITE;
+MODEL LOAD FROM 'models/revenue-model';
 ```
 
 ### Workspaces and multiple datasets
 
 ```adql
-WORKSPACE CREATE sales_review ROOT ".autodq/workspaces";
-WORKSPACE SAVE INCLUDE_MODEL true;
+WORKSPACE CREATE sales_review ROOT '.autodq/workspaces';
+WORKSPACE SAVE INCLUDE MODEL true;
 WORKSPACE INFO;
-WORKSPACE LIST ROOT ".autodq/workspaces";
+WORKSPACE LIST ROOT '.autodq/workspaces';
 
-ADD DATASET costs FROM "costs.csv";
+ADD DATASET costs FROM 'costs.csv';
 LIST DATASETS;
 PROFILE costs;
 DIAGNOSE costs;
 AUTO DATASET costs MODE review VISUALIZE false;
 VISUALIZE DATASET costs bar X Category Y Amount;
-SELECT Category, SUM(Amount) AS total_amount FROM costs GROUP BY Category;
-EXPORT costs TO "exports/costs.csv" OVERWRITE;
+SELECT Category, SUM(Amount) AS "Total Amount" FROM costs GROUP BY Category;
+EXPORT costs TO 'exports/costs.csv' OVERWRITE;
 USE DATASET costs;
 MERGE main WITH costs AS sales_with_costs ON Product HOW left;
 CONCAT january,february AS q1_sales AXIS 0;
@@ -336,17 +361,19 @@ Named dataset targeting is available across stateful workflow commands:
   `COMMAND DATASET name ...`. For example,
   `AUTO DATASET costs MODE review`, `HEAD DATASET costs 10`,
   `DOMAIN DATASET costs ADD Amount MIN 0`, and
-  `REPORT DATASET costs TO "costs-report.html"`.
+  `REPORT DATASET costs TO 'costs-report.html'`.
 - Targeting a dataset activates it before the command runs. Later commands
   without a selector continue using that dataset. Repeating the same dataset
   selector preserves profile, diagnosis, cleaning, feature, and model state.
 - `SELECT ... FROM name` and `EXPORT name TO ...` access a registered dataset
   directly without changing the active workflow dataset.
 
-Dataset names are user-defined identifiers and are matched exactly. An unknown
-name reports all currently registered datasets. `USE DATASET name` remains
-available when you only want to change the active dataset without running
-another operation.
+Dataset names are user-defined identifiers. Exact spelling wins; otherwise a
+quoted readable name may resolve one unique case-insensitive or
+space/underscore/hyphen-equivalent registered name. Ambiguous names fail and
+list the exact alternatives. An unknown name reports all currently registered
+datasets. `USE DATASET name` remains available when you only want to change
+the active dataset without running another operation.
 
 ### Reusable dataset assignments with LET
 
@@ -364,45 +391,46 @@ Assign the active project stage:
 
 ```adql
 CLEAN customers;
-LET cleaned_customers = CLEANED;
-EXPORT cleaned_customers TO "exports/cleaned-customers.csv" OVERWRITE;
+LET "Cleaned Customers" = CLEANED;
+EXPORT "Cleaned Customers" TO 'exports/cleaned-customers.csv' OVERWRITE;
 ```
 
 Copy a registered dataset without activating it:
 
 ```adql
-LET customer_snapshot = DATASET customers;
-SELECT * FROM customer_snapshot LIMIT 25;
+LET "Customer Snapshot" = DATASET customers;
+SELECT * FROM "Customer Snapshot" LIMIT 25;
 ```
 
 Assign a safe SQL-like query result:
 
 ```adql
-LET regional_sales = SELECT Region,
-                            SUM(Revenue) AS total_revenue,
-                            COUNT(*) AS transactions
-                     FROM CURRENT
-                     WHERE Region IS NOT NULL
-                     GROUP BY Region;
+LET "Regional Sales" = SELECT Region,
+                              SUM(Revenue) AS "Total Revenue",
+                              COUNT(*) AS Transactions
+                       FROM CURRENT
+                       WHERE Region IS NOT NULL
+                       GROUP BY Region;
 
-EXPORT regional_sales TO "exports/regional-sales.xlsx";
-PROFILE regional_sales;
+EXPORT "Regional Sales" TO 'exports/regional-sales.xlsx';
+PROFILE "Regional Sales";
 ```
 
 Use `OVERWRITE` to replace an existing non-active assignment:
 
 ```adql
-LET regional_sales = SELECT Region, SUM(Revenue) AS total_revenue
-                     FROM CURRENT GROUP BY Region OVERWRITE;
+LET "Regional Sales" = SELECT Region, SUM(Revenue) AS "Total Revenue"
+                       FROM CURRENT GROUP BY Region OVERWRITE;
 ```
 
-Assignment names use identifier syntax: letters or `_` first, followed by
-letters, numbers, or `_`. Built-in stage names are reserved. `LET` never
-silently replaces an existing name and does not allow overwriting the active
-dataset. It stores a snapshot, so later changes to the source do not mutate the
-assigned data. A `SELECT` assignment uses the same default 1,000-row safety
-limit as an ordinary query; add an explicit `LIMIT` when a different bounded
-size is required. Stage assignments retain the complete available stage.
+Simple assignment names use letters, numbers, and underscores. Double-quoted
+assignment names may contain spaces. Built-in stage names are reserved. `LET`
+never silently replaces an existing name and does not allow overwriting the
+active dataset. It stores a snapshot, so later changes to the source do not
+mutate the assigned data. A `SELECT` assignment uses the same default
+1,000-row safety limit as an ordinary query; add an explicit `LIMIT` when a
+different bounded size is required. Stage assignments retain the complete
+available stage.
 
 `LET` assigns tabular data only. It does not evaluate Python, create scalar
 variables, or interpolate arbitrary values into later statements.
@@ -422,8 +450,8 @@ count, and a datatype-aware recommended strategy.
 Fill one or more columns:
 
 ```adql
-MISSING FILL City VALUE "Not provided";
-MISSING FILL Customer_Age STRATEGY median;
+MISSING FILL City VALUE 'Not provided';
+MISSING FILL "Customer Age" STRATEGY median;
 MISSING FILL COLUMNS Revenue,Profit STRATEGY mean;
 MISSING FILL Revenue STRATEGY interpolate;
 MISSING FILL Region STRATEGY ffill;
@@ -453,12 +481,12 @@ MISSING DROP ROWS;
 MISSING DROP ROWS COLUMNS City,Region HOW any;
 MISSING DROP ROWS COLUMNS Phone,Email HOW all;
 MISSING DROP COLUMNS Notes,Unused;
-MISSING DROP COLUMNS COLUMNS Legacy_Code,Import_Comment;
-MISSING DROP COLUMNS MIN_PERCENT 50;
+MISSING DROP COLUMNS COLUMNS "Legacy Code","Import Comment";
+MISSING DROP COLUMNS MIN PERCENT 50;
 ```
 
 `HOW any` removes a row when any selected column is missing; `HOW all` requires
-all selected columns to be missing. `MIN_PERCENT` is inclusive and accepts a
+all selected columns to be missing. `MIN PERCENT` is inclusive and accepts a
 value from 0 through 100. AutoDQ refuses to remove every column or the active
 model target.
 
@@ -469,16 +497,16 @@ review and export the complete audit with:
 ```adql
 CLEANING APPLY;
 MISSING SUMMARY;
-LET complete_sales = CLEANED;
-EXPORT complete_sales TO "exports/complete-sales.csv" OVERWRITE;
-AUDIT EXPORT TO "reports/missing-value-audit.json";
+LET "Complete Sales" = CLEANED;
+EXPORT "Complete Sales" TO 'exports/complete-sales.csv' OVERWRITE;
+AUDIT EXPORT TO 'reports/missing-value-audit.json';
 ```
 
 Like other stateful commands, `MISSING` accepts a named dataset selector:
 
 ```adql
 MISSING DATASET customers SUMMARY;
-MISSING DATASET customers FILL City VALUE "Not provided";
+MISSING DATASET customers FILL City VALUE 'Not provided';
 CLEANING DATASET customers APPLY;
 ```
 
@@ -492,14 +520,15 @@ member of each group, including the occurrence that would normally be kept:
 DUPLICATES SUMMARY;
 ```
 
-The output adds `duplicate_group`, `occurrences`, and `source_index` metadata
-before the original dataset columns. Large results use the notebook's bounded
-preview and **View full output** control.
+The output displays `duplicate group`, `occurrences`, and `source index`
+metadata before the original dataset columns. Their stored DataFrame names
+remain `duplicate_group`, `occurrences`, and `source_index`. Large results use
+the notebook's bounded preview and **View full output** control.
 
 Stage an audited removal with an explicit retention policy:
 
 ```adql
-DUPLICATES DROP KEEP first REASON "Repeated import";
+DUPLICATES DROP KEEP first REASON 'Repeated import';
 DUPLICATES DROP KEEP last;
 DUPLICATES DROP KEEP none;
 ```
@@ -514,8 +543,8 @@ DUPLICATES SUMMARY;
 DUPLICATES DROP KEEP first;
 DUPLICATES SUMMARY;
 CLEANING APPLY;
-LET unique_sales = CLEANED;
-EXPORT unique_sales TO "exports/unique-sales.csv" OVERWRITE;
+LET "Unique Sales" = CLEANED;
+EXPORT "Unique Sales" TO 'exports/unique-sales.csv' OVERWRITE;
 ```
 
 Named-dataset targeting is supported:
@@ -524,7 +553,7 @@ Named-dataset targeting is supported:
 DUPLICATES DATASET customers SUMMARY;
 DUPLICATES DATASET customers DROP KEEP first;
 CLEANING DATASET customers APPLY;
-LET unique_customers = CLEANED;
+LET "Unique Customers" = CLEANED;
 ```
 
 ### Data-quality assertions and test suites
@@ -538,18 +567,18 @@ ASSERT Revenue EXISTS;
 ASSERT Revenue NOT NULL;
 ASSERT Revenue TYPE numeric;
 ASSERT Revenue BETWEEN 0 AND 1000000;
-ASSERT Transaction_ID UNIQUE;
+ASSERT "Transaction ID" UNIQUE;
 ASSERT Region ALLOWED North,South,East,West,Central;
-ASSERT Email MATCHES "[^@]+@[^@]+" SEVERITY warning;
+ASSERT Email MATCHES '[^@]+@[^@]+' SEVERITY warning;
 ASSERT Email FORMAT email SEVERITY warning;
 
-ASSERT ROW_COUNT > 0;
-ASSERT COLUMN_COUNT >= 10;
-ASSERT MISSING_PERCENT <= 5;
-ASSERT MISSING_COUNT Region = 0;
-ASSERT DUPLICATE_ROWS = 0;
-ASSERT DISTINCT_COUNT Region >= 4;
-ASSERT QUALITY_SCORE >= 90;
+ASSERT ROW COUNT > 0;
+ASSERT COLUMN COUNT >= 10;
+ASSERT MISSING PERCENT <= 5;
+ASSERT MISSING COUNT Region = 0;
+ASSERT DUPLICATE ROWS = 0;
+ASSERT DISTINCT COUNT Region >= 4;
+ASSERT QUALITY SCORE >= 90;
 ```
 
 `FORMAT email` is the preferred built-in structural check for email columns.
@@ -558,8 +587,8 @@ its own severity. `MATCHES` remains available when a project needs a custom
 regular expression. Neither form verifies DNS records or mailbox existence.
 
 Severity is `error`, `warning`, or `info`. By default only failed `error`
-checks fail the ADQL statement. Use `FAIL_ON warning`, `FAIL_ON info`, or
-`FAIL_ON never` to choose the gate threshold. A blocking failure stops normal
+checks fail the ADQL statement. Use `FAIL ON warning`, `FAIL ON info`, or
+`FAIL ON never` to choose the gate threshold. A blocking failure stops normal
 execution, returns a structured failed result, and works with the host's
 continue-on-error mode.
 
@@ -567,18 +596,18 @@ Group checks into a reusable suite when the same contract should run before
 cleaning, modeling, export, or release:
 
 ```adql
-ASSERT SUITE ADD sales_gate Transaction_ID UNIQUE
-    NAME "Transaction IDs are unique";
+ASSERT SUITE ADD sales_gate "Transaction ID" UNIQUE
+    NAME 'Transaction IDs are unique';
 ASSERT SUITE ADD sales_gate Revenue MIN 0
-    NAME "Revenue is non-negative";
-ASSERT SUITE ADD sales_gate MISSING_PERCENT Region <= 2
-    SEVERITY warning NAME "Region completeness";
+    NAME 'Revenue is non-negative';
+ASSERT SUITE ADD sales_gate MISSING PERCENT Region <= 2
+    SEVERITY warning NAME 'Region completeness';
 
 ASSERT SUITE SHOW sales_gate;
-ASSERT SUITE RUN sales_gate FAIL_ON warning;
+ASSERT SUITE RUN sales_gate FAIL ON warning;
 ASSERT SUITE LIST;
-ASSERT SUITE EXPORT sales_gate TO "tests/sales-gate.json" OVERWRITE;
-ASSERT SUITE LOAD restored_gate FROM "tests/sales-gate.json" OVERWRITE;
+ASSERT SUITE EXPORT sales_gate TO 'tests/sales-gate.json' OVERWRITE;
+ASSERT SUITE LOAD restored_gate FROM 'tests/sales-gate.json' OVERWRITE;
 ASSERT SUITE DROP restored_gate;
 ```
 
@@ -596,47 +625,47 @@ compares a new batch with a compact approved baseline to detect changes that
 may still satisfy the schema.
 
 ```adql
-CONTRACT sales_v1 FROM cleaned_sales
+CONTRACT sales_v1 FROM "Cleaned Sales"
     VERSION 1.0.0
-    EXTRA_COLUMNS warning
-    INFER_RANGES false
-    INFER_CATEGORIES true
+    EXTRA COLUMNS warning
+    INFER RANGES false
+    INFER CATEGORIES true
     OVERWRITE;
 
-CONTRACT sales_v1 REQUIRE Transaction_ID
+CONTRACT sales_v1 REQUIRE "Transaction ID"
     TYPE integer NOT NULL UNIQUE
     SEVERITY error;
 CONTRACT sales_v1 REQUIRE Revenue
     TYPE numeric NOT NULL MIN 0
     SEVERITY error;
 CONTRACT sales_v1 REQUIRE Region
-    TYPE string ALLOWED "North,South,East,West,Central"
+    TYPE string ALLOWED 'North,South,East,West,Central'
     SEVERITY warning;
 
-CHECK CONTRACT sales_v1 ON august_sales FAIL ON error;
+CHECK CONTRACT sales_v1 ON "August Sales" FAIL ON error;
 CONTRACT SHOW sales_v1;
 CONTRACT LIST;
-CONTRACT SAVE sales_v1 TO "contracts/sales-v1.json" OVERWRITE;
-CONTRACT LOAD restored_sales FROM "contracts/sales-v1.json" OVERWRITE;
+CONTRACT SAVE sales_v1 TO 'contracts/sales-v1.json' OVERWRITE;
+CONTRACT LOAD restored_sales FROM 'contracts/sales-v1.json' OVERWRITE;
 CONTRACT DROP restored_sales;
 ```
 
-`EXTRA_COLUMNS` accepts `ignore`, `info`, `warning`, or `error`. Contract
-validation is read-only. `FAIL_ON error` blocks failed error rules;
-`FAIL_ON warning` also blocks warning rules; `FAIL_ON never` only records the
+`EXTRA COLUMNS` accepts `ignore`, `info`, `warning`, or `error`. Contract
+validation is read-only. `FAIL ON error` blocks failed error rules;
+`FAIL ON warning` also blocks warning rules; `FAIL ON never` only records the
 report.
 
 Create the drift baseline from a representative, approved dataset—not from a
 known-bad batch:
 
 ```adql
-BASELINE sales_baseline FROM july_sales OVERWRITE;
+BASELINE sales_baseline FROM "July Sales" OVERWRITE;
 BASELINE SHOW sales_baseline;
 BASELINE LIST;
-BASELINE SAVE sales_baseline TO "baselines/sales.json" OVERWRITE;
-BASELINE LOAD restored_base FROM "baselines/sales.json" OVERWRITE;
+BASELINE SAVE sales_baseline TO 'baselines/sales.json' OVERWRITE;
+BASELINE LOAD restored_base FROM 'baselines/sales.json' OVERWRITE;
 
-CHECK DRIFT sales_baseline ON august_sales
+CHECK DRIFT sales_baseline ON "August Sales"
     CONTRACT sales_v1
     SENSITIVITY normal
     FAIL ON warning;
@@ -647,8 +676,8 @@ BASELINE DROP restored_base;
 Sensitivity presets make the common choice readable: `strict` uses PSI
 warning/error thresholds 0.05/0.15 and missingness deltas 1/2 points;
 `normal` uses 0.10/0.25 and 2/5; `relaxed` uses 0.20/0.35 and 5/10. Advanced
-users can still add `PSI_WARNING`, `PSI_ERROR`, `MISSING_WARNING`, and
-`MISSING_ERROR`; explicit values override the preset.
+users can still add `PSI WARNING`, `PSI ERROR`, `MISSING WARNING`, and
+`MISSING ERROR`; explicit values override the preset.
 
 The baseline contains schema metadata, quantile buckets, bounded category
 frequencies, missingness, distinct ratios, duplicate rate, and row count; it
@@ -676,31 +705,31 @@ the language semantics do not depend on the UI.
 KNOWLEDGE;
 REVIEW;
 APPROVE 1,2;
-REJECT 3 REASON "Business owner rejected this action";
-CLEANING PREVIEW ACTIONS 1,2 MAX_ROWS 5;
+REJECT 3 REASON 'Business owner rejected this action';
+CLEANING PREVIEW ACTIONS 1,2 MAX ROWS 5;
 
 EDIT ROW 17 CHANGES '{"Region": "East", "Revenue": 1250}'
-    REASON "Corrected from source system";
+    REASON 'Corrected from source system';
 DOMAIN ADD Revenue MIN 0 NULLABLE false;
-DOMAIN ADD Region ALLOWED "North,South,East,West";
+DOMAIN ADD Region ALLOWED 'North,South,East,West';
 DOMAIN VALIDATE;
 OUTLIERS REVIEW COLUMNS Revenue,Profit IQR 1.5;
-OUTLIERS TREAT COLUMN Revenue STRATEGY clip REASON "Reviewed IQR cap";
+OUTLIERS TREAT COLUMN Revenue STRATEGY clip REASON 'Reviewed IQR cap';
 CLEANING APPLY;
-AUDIT EXPORT TO "reports/cleaning-audit.json";
+AUDIT EXPORT TO 'reports/cleaning-audit.json';
 ```
 
 ### Feature engineering and analytical intelligence
 
 ```adql
-CORRELATION MIN_ABS 0.3;
+CORRELATION MIN ABS 0.3;
 READINESS;
 FEATURES;
 FEATURE APPLY;
 FEATURE CREATE Margin METHOD difference COLUMNS Revenue,Cost;
 FEATURE CREATE LogRevenue METHOD log COLUMN Revenue;
-FEATURE CREATE RevenueBand METHOD bin COLUMN Revenue
-    BINS "0,1000,5000,10000" LABELS "Low,Medium,High";
+FEATURE CREATE "Revenue Band" METHOD bin COLUMN Revenue
+    BINS '0,1000,5000,10000' LABELS 'Low,Medium,High';
 ```
 
 `READINESS` returns a transparent weighted scorecard rather than only a final
@@ -714,7 +743,7 @@ is excluded from the score denominator. Register a representative earlier or
 production dataset to add PSI-based distribution stability:
 
 ```adql
-ADD DATASET baseline FROM "../datasets/baseline-sales.csv";
+ADD DATASET baseline FROM '../datasets/baseline-sales.csv';
 READINESS REFERENCE baseline;
 
 -- Score a named cleaned snapshot without first making the baseline active.
@@ -759,16 +788,16 @@ with any operational command:
 
 ```adql
 OPERATIONS DATASET orders
-    ENTITY Order_ID
-    TIME Order_Date
-    STATUS Order_Status
-    STAGE Fulfilment_Step
-    DURATION Cycle_Time_Hours
-    VALUE Order_Value
-    COST Fulfilment_Cost
+    ENTITY "Order ID"
+    TIME "Order Date"
+    STATUS "Order Status"
+    STAGE "Fulfilment Step"
+    DURATION "Cycle Time Hours"
+    VALUE "Order Value"
+    COST "Fulfilment Cost"
     QUANTITY Units
-    CAPACITY Daily_Capacity
-    GROUP_BY Region,Warehouse
+    CAPACITY "Daily Capacity"
+    GROUP BY Region,Warehouse
     SLA 24
     PERIOD week
     TOP 10;
@@ -779,7 +808,7 @@ derives non-negative duration in hours:
 
 ```adql
 PROCESS DATASET tickets
-    START Opened_At END Resolved_At
+    START "Opened At" END "Resolved At"
     STATUS Status STAGE Queue
     GROUP Team
     SLA 8 PERIOD day;
@@ -797,9 +826,9 @@ echelon, parent, stock, demand, lead-time, safety-stock, cost, and capacity
 roles automatically:
 
 ```adql
-INVENTORY SERVICE_LEVEL 95 HORIZON 30 TOP 20;
-INVENTORY NETWORK SERVICE_LEVEL 95 HORIZON 30 TOP 20;
-INVENTORY REBALANCE SERVICE_LEVEL 95 HORIZON 30 TOP 20;
+INVENTORY SERVICE LEVEL 95 HORIZON 30 TOP 20;
+INVENTORY NETWORK SERVICE LEVEL 95 HORIZON 30 TOP 20;
+INVENTORY REBALANCE SERVICE LEVEL 95 HORIZON 30 TOP 20;
 ```
 
 - `INVENTORY` explains the recognized network and calculates inventory KPIs.
@@ -807,9 +836,9 @@ INVENTORY REBALANCE SERVICE_LEVEL 95 HORIZON 30 TOP 20;
 - `INVENTORY REBALANCE` first allocates available same-SKU excess to shortages,
   then recommends external or upstream replenishment for the residual gap.
 
-`DEMAND` is interpreted as expected units per day, `LEAD_TIME` as days, and
-`HORIZON` as the number of planning days. Inventory position is `ON_HAND +
-ON_ORDER - BACKORDER`. Reorder point is lead-time demand plus supplied safety
+`DEMAND` is interpreted as expected units per day, `LEAD TIME` as days, and
+`HORIZON` as the number of planning days. Inventory position is `ON HAND +
+ON ORDER - BACKORDER`. Reorder point is lead-time demand plus supplied safety
 stock. The planning target adds horizon demand. AutoDQ never transfers between
 different SKUs or allocates more than calculated donor excess.
 
@@ -817,20 +846,20 @@ For non-standard source columns, map roles explicitly:
 
 ```adql
 INVENTORY DATASET stock_snapshot
-    ITEM Material_Code
+    ITEM "Material Code"
     LOCATION Facility
-    ECHELON Network_Level
-    PARENT Supplying_Facility
-    TIME Snapshot_Date
-    ON_HAND Available_Units
-    ON_ORDER Inbound_Units
-    BACKORDER Unfilled_Units
-    DEMAND Average_Daily_Demand
-    LEAD_TIME Replenishment_Days
-    SAFETY_STOCK Buffer_Units
-    UNIT_COST Standard_Cost
-    CAPACITY Storage_Limit
-    SERVICE_LEVEL 0.95
+    ECHELON "Network Level"
+    PARENT "Supplying Facility"
+    TIME "Snapshot Date"
+    ON HAND "Available Units"
+    ON ORDER "Inbound Units"
+    BACKORDER "Unfilled Units"
+    DEMAND "Average Daily Demand"
+    LEAD TIME "Replenishment Days"
+    SAFETY STOCK "Buffer Units"
+    UNIT COST "Standard Cost"
+    CAPACITY "Storage Limit"
+    SERVICE LEVEL 0.95
     HORIZON 30
     TOP 20;
 ```
@@ -850,9 +879,9 @@ priority, and governance status.
 ```adql
 PRESCRIBE OBJECTIVE reduce_delay
     SOURCE operations
-    MAX_ACTIONS 5
-    MIN_CONFIDENCE 0.60
-    MAX_RISK medium;
+    MAX ACTIONS 5
+    MIN CONFIDENCE 0.60
+    MAX RISK medium;
 ```
 
 Supported objectives are `balanced`, `reduce_delay`, `reduce_failures`,
@@ -869,30 +898,30 @@ they are not presented as currency.
 ```adql
 OPTIMIZE OBJECTIVE minimize_shortage
     BUDGET 25000
-    MAX_ACTIONS 8
-    MIN_CONFIDENCE 0.70
-    MAX_RISK medium;
+    MAX ACTIONS 8
+    MIN CONFIDENCE 0.70
+    MAX RISK medium;
 ```
 
 What-if scenarios compare the current KPI baseline with transparent
 percentage-change assumptions. They never mutate the dataset:
 
 ```adql
-SCENARIO NAME "Faster fulfilment"
-    DURATION_CHANGE -20
-    FAILURE_CHANGE -10
-    COST_CHANGE 5
-    CAPACITY_CHANGE 15;
+SCENARIO NAME 'Faster fulfilment'
+    DURATION CHANGE -20
+    FAILURE CHANGE -10
+    COST CHANGE 5
+    CAPACITY CHANGE 15;
 ```
 
 Govern selected recommendations explicitly:
 
 ```adql
 ACTION LIST STATUS selected;
-ACTION APPROVE A001 ACTOR "operations lead";
-ACTION REJECT A002 REASON "Supplier constraint";
-ACTION EXECUTE A001 ACTOR "operations lead";
-ACTION AUDIT TO "reports/prescription-audit.json" OVERWRITE;
+ACTION APPROVE A001 ACTOR 'operations lead';
+ACTION REJECT A002 REASON 'Supplier constraint';
+ACTION EXECUTE A001 ACTOR 'operations lead';
+ACTION AUDIT TO 'reports/prescription-audit.json' OVERWRITE;
 ```
 
 `ACTION EXECUTE` records that an approved recommendation was implemented. It
@@ -903,7 +932,7 @@ and recorded execution remain in the plan audit trail.
 ### BLUE diagnostics and visualization gallery
 
 ```adql
-BLUE SOURCE data MAX_FEATURES 12 SIGNIFICANCE 0.05;
+BLUE SOURCE data MAX FEATURES 12 SIGNIFICANCE 0.05;
 BLUE VISUALIZE APPEND true;
 BLUE INTERPRET;
 BLUE PRESCRIBE;
@@ -911,8 +940,8 @@ BLUE PRESCRIBE;
 GALLERY LIST;
 GALLERY GET bar_Region_by_Revenue_current;
 GALLERY CUSTOMIZE bar_Region_by_Revenue_current
-    TITLE "Regional revenue" THEME journal DPI 300;
-GALLERY SAVE TO "charts" FORMAT png;
+    TITLE 'Regional revenue' THEME journal DPI 300;
+GALLERY SAVE TO 'charts' FORMAT png;
 GALLERY REMOVE bar_Region_by_Revenue_current;
 GALLERY CLEAR;
 ```
@@ -923,21 +952,21 @@ diagnostics based on an already-trained compatible linear model.
 ### Dashboard and report export
 
 ```adql
-DASHBOARD TITLE "Sales Analytics"
+DASHBOARD TITLE 'Sales Analytics'
     THEME executive
-    SAVE "reports/sales-dashboard.html"
+    SAVE 'reports/sales-dashboard.html'
     OVERWRITE;
 
-REPORT TO "reports/autodq-report.json" OVERWRITE;
+REPORT TO 'reports/autodq-report.json' OVERWRITE;
 ```
 
 ### Dataset export
 
 ```adql
-EXPORT CURRENT TO "exports/current.csv" OVERWRITE;
-EXPORT CLEANED TO "exports/cleaned.xlsx";
-EXPORT ENGINEERED TO "exports/features.csv";
-EXPORT PREDICTIONS TO "exports/predictions.csv";
+EXPORT CURRENT TO 'exports/current.csv' OVERWRITE;
+EXPORT CLEANED TO 'exports/cleaned.xlsx';
+EXPORT ENGINEERED TO 'exports/features.csv';
+EXPORT PREDICTIONS TO 'exports/predictions.csv';
 ```
 
 Existing files are never replaced unless `OVERWRITE` is explicitly included.
@@ -948,21 +977,21 @@ Use `SET TYPE` to convert a column in the active or explicitly selected
 dataset. Existing two-argument conversions remain valid:
 
 ```adql
-SET TYPE Customer_Age int;
+SET TYPE "Customer Age" int;
 SET TYPE Region category;
 SET TYPE Revenue float;
-SET TYPE Created_At datetime;
+SET TYPE "Created At" datetime;
 ```
 
 For datetime strings, `FORMAT` may be a familiar pattern, a Python `strftime`
 pattern, or a named parsing mode:
 
 ```adql
-SET TYPE Created_At datetime FORMAT "DD/MM/YYYY HH:mm:ss";
-SET TYPE Created_At datetime FORMAT "%d/%m/%Y %H:%M:%S";
-SET TYPE Api_Timestamp datetime FORMAT ISO8601 UTC true;
-SET TYPE Imported_At datetime FORMAT MIXED DAYFIRST true;
-SET TYPE Fiscal_Date datetime FORMAT AUTO YEARFIRST true;
+SET TYPE "Created At" datetime FORMAT 'DD/MM/YYYY HH:mm:ss';
+SET TYPE "Created At" datetime FORMAT '%d/%m/%Y %H:%M:%S';
+SET TYPE "Api Timestamp" datetime FORMAT ISO8601 UTC true;
+SET TYPE "Imported At" datetime FORMAT MIXED DAYFIRST true;
+SET TYPE "Fiscal Date" datetime FORMAT AUTO YEARFIRST true;
 ```
 
 Supported human-readable tokens are:
@@ -1002,8 +1031,8 @@ the column usable by `SELECT`, modeling, visualization, and numeric exports.
 The same operation can target a registered dataset directly:
 
 ```adql
-SET DATASET customers TYPE Created_At datetime
-    FORMAT "YYYY-MM-DD HH:mm:ss";
+SET DATASET customers TYPE "Created At" datetime
+    FORMAT 'YYYY-MM-DD HH:mm:ss';
 ```
 
 ### Session inspection
@@ -1033,12 +1062,12 @@ history query.
 
 ```adql
 SET TARGET Revenue;
-SET TYPE Date datetime FORMAT "YYYY-MM-DD";
+SET TYPE Date datetime FORMAT 'YYYY-MM-DD';
 SET TYPE Revenue decimal DECIMALS 2;
 USE DATASET main;
 HEAD 10;
 TAIL 10;
-SAMPLE 10 RANDOM_STATE 42;
+SAMPLE 10 RANDOM STATE 42;
 HELP;
 HELP MODEL;
 HISTORY LIMIT 10;

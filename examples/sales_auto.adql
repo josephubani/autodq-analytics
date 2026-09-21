@@ -1,6 +1,6 @@
 #!/usr/bin/env autodq
 # %% [Dataset]
-DATASET "../datasets/sample/sales.csv" TARGET Revenue;
+DATASET '../datasets/sample/sales.csv' TARGET Revenue;
 # %% [markdown] Automatic sales workflow
 This notebook delegates profiling, diagnosis, cleaning, feature preparation,
 modeling, prediction, explainability, visualization, and reporting to
@@ -8,22 +8,21 @@ modeling, prediction, explainability, visualization, and reporting to
 # %% [Automatic workflow]
 AUTO MODE full
     VISUALIZE true
-    APPLY_FEATURES true
+    APPLY FEATURES true
     ALGORITHM random_forest_regressor
-    TEST_SIZE 0.20
-    RANDOM_STATE 42
-    REPORT "../reports/adql-sales-auto-report.html"
-    REPORT_STYLE executive
-    CONTINUE_ON_ERROR true;
+    TEST SIZE 0.20
+    RANDOM STATE 42
+    REPORT '../reports/adql-sales-auto-report.html'
+    REPORT STYLE executive
+    CONTINUE ON ERROR true;
 # %% [Prediction review]
-SELECT Transaction_ID,
+SELECT "Transaction ID",
        Region,
        Revenue,
-       AutoDQ_Prediction,
-       AutoDQ_Prediction_Lower,
-       AutoDQ_Prediction_Upper
+       "AutoDQ Prediction",
+       "AutoDQ Prediction Lower",
+       "AutoDQ Prediction Upper"
 FROM PREDICTIONS
-ORDER BY AutoDQ_Prediction DESC
+ORDER BY "AutoDQ Prediction" DESC
 LIMIT 25;
 # %% [Cell 5]
-

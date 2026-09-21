@@ -131,6 +131,114 @@ class ADQLTests(unittest.TestCase):
             self.assertEqual(dataset, "customers")
             self.assertEqual(rewritten, command)
 
+    def test_parser_supports_readable_identifiers_and_natural_options(self):
+        statements = ADQLParser().parse(
+            '''
+            LET "Clean Sales" = CURRENT OVERWRITE;
+            MODEL TARGET "Gross Sales" USING random_forest_regressor
+                TEST SIZE 0.2
+                RANDOM STATE 42
+                USE ENGINEERED false
+                EXCLUDE "Transaction ID", "Customer ID";
+            ASSERT MISSING PERCENT "Customer Age" <= 5
+                FAIL ON never;
+            '''
+        ).statements
+
+        self.assertEqual(statements[0].parameters["name"], "Clean Sales")
+        self.assertEqual(statements[1].parameters["target"], "Gross Sales")
+        self.assertEqual(statements[1].parameters["test_size"], 0.2)
+        self.assertEqual(statements[1].parameters["random_state"], 42)
+        self.assertFalse(statements[1].parameters["use_engineered"])
+        self.assertEqual(
+            statements[1].parameters["exclude_features"],
+            ["Transaction ID", "Customer ID"],
+        )
+        self.assertEqual(
+            statements[2].parameters["assertion"]["subject"],
+            "missing_percent",
+        )
+        self.assertEqual(
+            statements[2].parameters["assertion"]["column"],
+            "Customer Age",
+        )
+        self.assertEqual(statements[2].parameters["fail_on"], "never")
+
+    def test_readable_identifiers_resolve_without_renaming_source_columns(self):
+        readable_path = self.root / "readable.csv"
+        source = pd.DataFrame(
+            {
+                "Transaction_ID": ["T-1", "T-2", "T-3"],
+                "Customer_Age": [30, 40, 30],
+                "Gross_Sales": [100.0, 250.0, 150.0],
+                "Unit_Price": [10.0, 25.0, 15.0],
+            }
+        )
+        source.to_csv(readable_path, index=False)
+        project = AutoDQ(str(readable_path))
+
+        selected = project.query(
+            '''
+            LET "Clean Sales" = CURRENT OVERWRITE;
+            SELECT "Customer Age", SUM("Gross Sales") AS "Total Sales"
+            FROM "Clean Sales"
+            GROUP BY "Customer Age"
+            ORDER BY "Total Sales" DESC;
+            ''',
+            auto_display=False,
+        )
+
+        self.assertEqual(
+            selected.data.columns.tolist(),
+            ["Customer Age", "Total Sales"],
+        )
+        self.assertEqual(selected.data["Total Sales"].tolist(), [250.0, 250.0])
+        self.assertEqual(project.state.data.columns.tolist(), source.columns.tolist())
+        self.assertIn("Customer Age", selected.to_html())
+        self.assertNotIn("Customer_Age</th>", selected.to_html())
+
+        feature = project.query(
+            '''
+            FEATURE CREATE "Gross Margin" METHOD expression
+                EXPRESSION '`Gross Sales` - `Unit Price`';
+            ''',
+            auto_display=False,
+        )
+        self.assertTrue(feature.success)
+        self.assertIn("Gross Margin", project.state.engineered_data.columns)
+        self.assertEqual(
+            project.state.engineered_data["Gross Margin"].tolist(),
+            [90.0, 225.0, 135.0],
+        )
+
+        project.assign_dataset("sales_archive", source, overwrite=False)
+        profiled = project.query(
+            'PROFILE "Sales Archive";',
+            auto_display=False,
+        )
+        self.assertTrue(profiled.success)
+        self.assertEqual(project.dataset_manager.primary().name, "sales_archive")
+
+        selected_archive = project.query(
+            'SELECT "Transaction ID" FROM "Sales Archive" LIMIT 1;',
+            auto_display=False,
+        )
+        self.assertEqual(
+            selected_archive.data.columns.tolist(),
+            ["Transaction ID"],
+        )
+
+    def test_readable_identifier_resolution_rejects_ambiguous_matches(self):
+        ambiguous_path = self.root / "ambiguous.csv"
+        pd.DataFrame({"A_B": [1], "A B": [2]}).to_csv(
+            ambiguous_path,
+            index=False,
+        )
+        project = AutoDQ(str(ambiguous_path))
+
+        with self.assertRaisesRegex(ADQLExecutionError, "ambiguous"):
+            project.query('SELECT "A-B" FROM CURRENT;', auto_display=False)
+
     def test_parser_supports_session_summary_events_and_datasets(self):
         statements = ADQLParser().parse(
             "SESSION; SESSION EVENTS; SESSION EVENTS LIMIT 7; "

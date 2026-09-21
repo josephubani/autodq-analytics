@@ -1,4 +1,4 @@
-# ADQL 2.7 Data Types and Conversion Rules
+# ADQL 2.8 Data Types and Conversion Rules
 
 This document is normative for ADQL literals, option coercion, query values,
 and `SET TYPE` conversions.
@@ -9,17 +9,19 @@ ADQL parses these scalar literal classes:
 
 | Class | Examples | Runtime value |
 | --- | --- | --- |
-| String | `"North"`, `'High priority'` | Unicode string |
+| String | `'North'`, `'High priority'` | Unicode string |
 | Integer | `0`, `-12`, `450` | Integer |
 | Floating point | `2.5`, `.75`, `1e-4` | Floating-point number |
 | Boolean | `TRUE`, `FALSE` | Boolean |
 | Null | `NULL`, `NONE` | Missing/null value |
 | Bare value | `North`, `median`, `executive` | String token |
 
-Single- and double-quoted strings support backslash escapes accepted by Python
-string-literal syntax. Quoted ADQL values MUST evaluate to strings; tuples,
-lists, dictionaries, and other Python literal types are not general ADQL
-literals.
+Single quotes are canonical for string literals. Double-quoted strings remain
+accepted in literal positions for ADQL 2.x compatibility, but double quotes
+identify column, dataset, alias, and feature names in identifier positions.
+Both accepted string forms support backslash escapes. Quoted ADQL values MUST
+evaluate to strings; tuples, lists, dictionaries, and other Python literal
+types are not general ADQL literals.
 
 `EDIT ... CHANGES` is the sole mapping-literal exception. It requires a quoted,
 non-empty dictionary literal with non-empty string keys:
@@ -104,9 +106,9 @@ Human-readable tokens are case-sensitive:
 returns timezone-aware UTC values.
 
 ```adql
-SET TYPE Created_At datetime FORMAT "DD/MM/YYYY HH:mm:ss";
-SET TYPE Api_Time timestamp FORMAT ISO8601 UTC true;
-SET TYPE Imported_At date FORMAT MIXED DAYFIRST true;
+SET TYPE "Created At" datetime FORMAT 'DD/MM/YYYY HH:mm:ss';
+SET TYPE "Api Time" timestamp FORMAT ISO8601 UTC true;
+SET TYPE "Imported At" date FORMAT MIXED DAYFIRST true;
 ```
 
 The format string MUST be non-empty, contain at most 255 characters, and MUST
@@ -140,7 +142,7 @@ SET TYPE Revenue float DECIMALS 2;
 SET TYPE Margin decimal DECIMALS 4;
 ```
 
-ADQL 2.7 `decimal` is an alias for floating-point conversion; it is not an
+ADQL 2.8 `decimal` is an alias for floating-point conversion; it is not an
 arbitrary-precision decimal type. Rounding changes numeric values, not merely
 their display formatting.
 

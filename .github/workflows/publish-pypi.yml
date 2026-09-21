@@ -6,7 +6,7 @@ on:
       version:
         description: Version to verify and publish
         required: true
-        default: "0.1.25"
+        default: "0.1.26"
         type: string
 
 jobs:

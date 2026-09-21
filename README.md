@@ -59,7 +59,7 @@ autodq --version
 python -c "import autodq; print(autodq.__version__)"
 ```
 
-Version 0.1.25 is available on
+Version 0.1.26 is available on
 [PyPI](https://pypi.org/project/autodq/). To work on AutoDQ itself, install
 directly from the project source:
 
@@ -118,13 +118,13 @@ chart.show()
 
 ADQL is AutoDQ's standalone analytics language. A `.adql` file can contain
 named executable cells and markdown cells, while retaining project state
-between executions. In the AutoDQ ADQL 0.3.18 VS Code extension, `REVIEW`
+between executions. In the AutoDQ ADQL 0.3.19 VS Code extension, `REVIEW`
 opens a theme-aware interactive panel for approvals, rejections, previews,
 manual row edits, audit inspection, and applying reviewed work to `CLEANED`.
 
 ```adql
 # %% [Dataset]
-DATASET "sales.csv" TARGET Revenue;
+DATASET 'sales.csv' TARGET Revenue;
 
 # %% [Data quality]
 PROFILE;
@@ -137,34 +137,34 @@ MISSING FILL ALL STRATEGY auto;
 DUPLICATES SUMMARY;
 DUPLICATES DROP KEEP first;
 CLEANING APPLY;
-LET cleaned_sales = CLEANED;
+LET "Cleaned Sales" = CLEANED;
 
 # %% [Quality gate]
-ASSERT SUITE ADD sales_gate Transaction_ID UNIQUE;
+ASSERT SUITE ADD sales_gate "Transaction ID" UNIQUE;
 ASSERT SUITE ADD sales_gate Revenue MIN 0;
-ASSERT SUITE RUN sales_gate FAIL_ON error;
+ASSERT SUITE RUN sales_gate FAIL ON error;
 
 # %% [Schema and drift gates]
-CONTRACT sales_v1 FROM cleaned_sales
-    VERSION 1.0.0 EXTRA_COLUMNS warning;
+CONTRACT sales_v1 FROM "Cleaned Sales"
+    VERSION 1.0.0 EXTRA COLUMNS warning;
 CONTRACT sales_v1 REQUIRE Revenue TYPE numeric NOT NULL MIN 0;
-CHECK CONTRACT sales_v1 ON cleaned_sales FAIL ON error;
+CHECK CONTRACT sales_v1 ON "Cleaned Sales" FAIL ON error;
 
-BASELINE sales_baseline FROM cleaned_sales;
-CHECK DRIFT sales_baseline ON cleaned_sales
+BASELINE sales_baseline FROM "Cleaned Sales";
+CHECK DRIFT sales_baseline ON "Cleaned Sales"
     CONTRACT sales_v1 SENSITIVITY normal FAIL ON warning;
 
 # %% [Regional analysis]
 SELECT Region,
-       SUM(Revenue) AS total_revenue,
+       SUM(Revenue) AS "Total Revenue",
        COUNT(*) AS transactions
 FROM CURRENT
 GROUP BY Region
-ORDER BY total_revenue DESC;
+ORDER BY "Total Revenue" DESC;
 
 # %% [Visualization]
 VISUALIZE bar X Region Y Revenue
-    TITLE "Revenue by Region"
+    TITLE 'Revenue by Region'
     THEME journal;
 
 # %% [Session]
@@ -183,19 +183,19 @@ or export its assigned name:
 
 ```adql
 CLEAN;
-LET cleaned_sales = CLEANED;
-EXPORT cleaned_sales TO "exports/cleaned-sales.csv" OVERWRITE;
+LET "Cleaned Sales" = CLEANED;
+EXPORT "Cleaned Sales" TO 'exports/cleaned-sales.csv' OVERWRITE;
 
-LET regional_summary = SELECT Region, SUM(Revenue) AS total_revenue
+LET "Regional Summary" = SELECT Region, SUM(Revenue) AS "Total Revenue"
                        FROM CURRENT GROUP BY Region;
-SELECT * FROM regional_summary ORDER BY total_revenue DESC;
+SELECT * FROM "Regional Summary" ORDER BY "Total Revenue" DESC;
 ```
 
 Convert string dates with an explicit format and control numeric precision:
 
 ```adql
-SET TYPE Created_At datetime FORMAT "DD/MM/YYYY HH:mm:ss";
-SET TYPE Imported_At datetime FORMAT MIXED DAYFIRST true UTC true;
+SET TYPE "Created At" datetime FORMAT 'DD/MM/YYYY HH:mm:ss';
+SET TYPE "Imported At" datetime FORMAT MIXED DAYFIRST true UTC true;
 SET TYPE Revenue decimal DECIMALS 2;
 ```
 
@@ -209,10 +209,10 @@ an ADQL cell:
 # %% [Automatic workflow]
 AUTO MODE full
     VISUALIZE true
-    APPLY_FEATURES true
+    APPLY FEATURES true
     ALGORITHM random_forest_regressor
-    REPORT "reports/auto-report.html"
-    CONTINUE_ON_ERROR true;
+    REPORT 'reports/auto-report.html'
+    CONTINUE ON ERROR true;
 ```
 
 `review` mode analyzes data and prepares cleaning actions without applying
@@ -297,7 +297,7 @@ python -m unittest discover -s tests
 
 References: [Python API](docs/API_REFERENCE.md),
 [ADQL user guide](docs/ADQL_SPEC.md),
-[ADQL 2.7 specification](docs/adql/SPECIFICATION.md),
+[ADQL 2.8 specification](docs/adql/SPECIFICATION.md),
 [pipeline runner](docs/PIPELINE_RUNNER.md),
 [troubleshooting](docs/TROUBLESHOOTING.md),
 [release guide](docs/RELEASING.md), and [changelog](CHANGELOG.md).
@@ -316,7 +316,7 @@ For the complete release process, see the
 ## Documentation
 
 - [ADQL language reference](https://github.com/josephubani/autodq-analytics/blob/main/docs/ADQL_SPEC.md)
-- [Formal ADQL 2.7 specification](https://github.com/josephubani/autodq-analytics/blob/main/docs/adql/SPECIFICATION.md)
+- [Formal ADQL 2.8 specification](https://github.com/josephubani/autodq-analytics/blob/main/docs/adql/SPECIFICATION.md)
 - [Machine-readable ADQL grammar](https://github.com/josephubani/autodq-analytics/blob/main/docs/adql/grammar.ebnf)
 - [Quickstart](https://github.com/josephubani/autodq-analytics/blob/main/docs/QUICKSTART.md)
 - [Pipeline runner](https://github.com/josephubani/autodq-analytics/blob/main/docs/PIPELINE_RUNNER.md)
@@ -326,7 +326,7 @@ For the complete release process, see the
 - [Plugin development](https://github.com/josephubani/autodq-analytics/blob/main/docs/PLUGIN_GUIDE.md)
 - [Project roadmap](https://github.com/josephubani/autodq-analytics/blob/main/docs/ROADMAP.md)
 - [Package and release procedure](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASING.md)
-- [AutoDQ 0.1.25 release notes](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.25.md)
+- [AutoDQ 0.1.26 release notes](https://github.com/josephubani/autodq-analytics/blob/main/docs/RELEASE_NOTES_0.1.26.md)
 
 ## License
 

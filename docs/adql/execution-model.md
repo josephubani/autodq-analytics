@@ -1,6 +1,6 @@
-# ADQL 2.7 Execution Model
+# ADQL 2.8 Execution Model
 
-This document is normative for AutoDQ ADQL 2.7 runtimes.
+This document is normative for AutoDQ ADQL 2.8 runtimes.
 
 ## 1. Runtime unit
 
@@ -22,9 +22,12 @@ successful state change made by earlier statements in the same project.
 
 ## 2. Dataset registry and active dataset
 
-The dataset registry maps a case-sensitive normalized name to a tabular data
+The dataset registry maps a case-preserving normalized name to a tabular data
 snapshot and optional source path. Leading and trailing whitespace is removed
-from names. Exactly one registered dataset may be active.
+from names. Lookup first uses exact spelling, then one unique case-insensitive
+match, then one unique space/underscore/hyphen-equivalent match. Ambiguous
+readable matches fail instead of guessing. Exactly one registered dataset may
+be active.
 
 `ADD DATASET` registers data without changing the active dataset. `USE DATASET`
 changes the active dataset. A `COMMAND DATASET name ...` selector performs the
@@ -69,7 +72,7 @@ stage:
 
 ```adql
 CLEANING APPLY;
-LET clean_customers = CLEANED;
+LET "Clean Customers" = CLEANED;
 ```
 
 ## 4. Artifact invalidation
@@ -180,7 +183,7 @@ current active dataset and its artifacts remain active.
 - `full` additionally enables modeling, prediction, and explanation when the
   data and target support them.
 
-Explicit options override mode defaults. `CONTINUE_ON_ERROR` controls stage
+Explicit options override mode defaults. `CONTINUE ON ERROR` controls stage
 behavior inside the automatic workflow; host-level continue-on-error controls
 whether later ADQL statements execute after a failed statement. These are
 distinct controls.
@@ -193,7 +196,7 @@ validation failure MUST leave project state unchanged.
 Statement execution is sequential. Successful prior statements are not rolled
 back when a later statement fails. A runtime SHOULD validate inputs before a
 mutation and SHOULD stage complex changes on a copy so a failed statement does
-not leave a partially modified table. ADQL 2.7 does not define multi-statement
+not leave a partially modified table. ADQL 2.8 does not define multi-statement
 transactions or rollback syntax.
 
 Without host continue-on-error, the first execution failure stops the run.

@@ -1,0 +1,213 @@
+#!/usr/bin/env autodq
+# %% [markdown] The power of SHAP in AutoDQ and ADQL
+
+This notebook builds two tree models from the sales dataset and uses SHAP to
+explain them. The first model predicts revenue; the second predicts whether an
+order will be returned. Together they demonstrate global importance, effect
+direction, feature-response patterns, and row-level prediction explanations.
+
+SHAP answers four different questions:
+
+- Which features matter most across the model?
+- Does a feature generally push predictions higher or lower?
+- How does the effect change as a feature value changes?
+- Why did the model produce one particular prediction?
+# %% [markdown] 1. Load and understand the dataset
+
+# %% [Load sales data]
+DATASET '../datasets/sample/sales.csv' TARGET Revenue;
+# %% [Normalize the order date]
+SET TYPE Date datetime FORMAT 'YYYY-MM-DD';
+# %% [Inspect the dataset]
+HEAD 10;
+# %% [Profile model inputs]
+PROFILE;
+# %% [Diagnose data-quality risks]
+DIAGNOSE;
+# %% [Inspect relationships before modeling]
+CORRELATION MIN ABS 0.50;
+# %% [Check machine-learning readiness]
+READINESS;
+# %% [markdown] 2. Clean and engineer interpretable features
+
+SHAP explains the features supplied to the model. These transparent manual
+features make the resulting explanations easier to connect to the business.
+# %% [Clean the dataset]
+CLEAN;
+# %% [Retain the cleaned snapshot]
+LET "Shap Sales Clean" = CLEANED OVERWRITE;
+# %% [Create age nonlinearity]
+FEATURE CREATE "Customer Age Squared"
+    METHOD square
+    COLUMN "Customer Age";
+# %% [Create a slow-delivery indicator]
+FEATURE CREATE "Delivery Is Slow"
+    METHOD flag_greater_equal
+    COLUMN "Delivery Days"
+    EXPRESSION '5';
+# %% [Create calendar context]
+FEATURE CREATE "Order Year" METHOD date_year COLUMN Date;
+FEATURE CREATE "Order Month" METHOD date_month COLUMN Date;
+FEATURE CREATE "Order Weekday" METHOD date_weekday COLUMN Date;
+# %% [Retain the explainable feature set]
+LET "Shap Sales Engineered" = ENGINEERED OVERWRITE;
+# %% [Preview engineered features]
+SELECT "Transaction ID",Revenue,Returned,"Customer Age",
+       "Customer Age Squared",Quantity,"Delivery Days",
+       "Delivery Is Slow","Order Year","Order Month","Order Weekday"
+FROM "Shap Sales Engineered"
+LIMIT 20;
+# %% [markdown] 3. Train a revenue regression model
+
+The model uses engineered features while excluding identifiers and detected
+target leakage. A tree ensemble gives SHAP a nonlinear model to explain.
+# %% [Train revenue model]
+MODEL TARGET Revenue USING random_forest_regressor
+    TEST SIZE 0.20
+    RANDOM STATE 42
+    USE ENGINEERED true
+    EXCLUDE LEAKAGE true
+    EXCLUDE "Transaction ID","Customer ID";
+# %% [Inspect revenue predictions and intervals]
+PREDICT CONFIDENCE 0.90
+    UNCERTAINTY true
+    LOW CONFIDENCE 0.60;
+# %% [Retain revenue predictions]
+LET "Shap Revenue Predictions" = PREDICTIONS OVERWRITE;
+# %% [Preview revenue prediction confidence]
+SELECT "Transaction ID",Revenue,"AutoDQ Prediction",
+       "AutoDQ Prediction Lower","AutoDQ Prediction Upper",
+       "AutoDQ Interval Width","AutoDQ Confidence Level"
+FROM "Shap Revenue Predictions"
+ORDER BY "AutoDQ Interval Width" DESC
+LIMIT 20;
+# %% [markdown] 4. Generate structured SHAP explanations
+
+EXPLAIN computes SHAP values once and retains reusable artifacts. Its output
+contains the explainer method, global contribution ranking, and readable
+row-level explanations for the selected sample.
+# %% [Explain 75 revenue predictions]
+EXPLAIN MAX ROWS 75 USE ENGINEERED true;
+# %% [markdown] 5. Global SHAP importance
+
+The bar plot ranks features by mean absolute SHAP value. It answers which
+features have the greatest overall influence, regardless of direction.
+# %% [Revenue global importance]
+SHAP CHART bar
+    SAVE '../reports/shap_power/revenue-global-importance.png';
+# %% [markdown] 6. SHAP value direction and distribution
+
+Summary and beeswarm plots retain the sign and spread of every contribution.
+They reveal whether high or low feature values raise predictions, lower them,
+or behave differently across observations.
+# %% [Revenue summary plot]
+SHAP CHART summary
+    SAVE '../reports/shap_power/revenue-summary.png';
+# %% [Revenue beeswarm plot]
+SHAP CHART beeswarm
+    SAVE '../reports/shap_power/revenue-beeswarm.png';
+# %% [markdown] 7. SHAP dependence and nonlinear response
+
+A dependence plot places the raw feature value on the horizontal axis and its
+SHAP contribution on the vertical axis. This exposes thresholds, nonlinear
+effects, and interaction patterns that a simple correlation can miss.
+# %% [Quantity effect on predicted revenue]
+SHAP CHART dependence FEATURE Quantity
+    SAVE '../reports/shap_power/revenue-dependence-quantity.png';
+# %% [Customer age effect on predicted revenue]
+SHAP CHART dependence FEATURE "Customer Age"
+    SAVE '../reports/shap_power/revenue-dependence-customer-age.png';
+# %% [markdown] 8. Local explanations for individual predictions
+
+Waterfall plots start at the model's expected prediction and add each feature's
+positive or negative contribution until they reach the selected row's output.
+The row numbers refer to positions in the 75-row explanation sample.
+# %% [Explain revenue row 0]
+SHAP CHART waterfall ROW 0
+    SAVE '../reports/shap_power/revenue-waterfall-row-0.png';
+# %% [Explain revenue row 7]
+SHAP CHART waterfall ROW 7
+    SAVE '../reports/shap_power/revenue-waterfall-row-7.png';
+# %% [Explain revenue row 15]
+SHAP CHART waterfall ROW 15
+    SAVE '../reports/shap_power/revenue-waterfall-row-15.png';
+# %% [Publish the revenue explanation report]
+REPORT TO '../reports/shap_power/revenue-shap-report.html'
+    STYLE journal
+    OVERWRITE;
+# %% [markdown] 9. Explain a classification model
+
+SHAP also explains classification decisions. This model predicts Returned and
+shows which features push an order toward or away from the returned class.
+# %% [Train return classifier]
+MODEL TARGET Returned USING random_forest_classifier
+    TEST SIZE 0.20
+    RANDOM STATE 42
+    USE ENGINEERED true
+    EXCLUDE LEAKAGE true
+    EXCLUDE "Transaction ID","Customer ID";
+# %% [Generate return predictions]
+PREDICT CONFIDENCE 0.90
+    UNCERTAINTY true
+    LOW CONFIDENCE 0.60;
+# %% [Retain return predictions]
+LET "Shap Return Predictions" = PREDICTIONS OVERWRITE;
+# %% [Preview classification confidence]
+SELECT "Transaction ID",Returned,"AutoDQ Prediction",
+       "AutoDQ Confidence","AutoDQ Uncertainty",
+       "AutoDQ Prediction Margin","AutoDQ Entropy",
+       "AutoDQ Low Confidence"
+FROM "Shap Return Predictions"
+ORDER BY "AutoDQ Confidence" ASC
+LIMIT 20;
+# %% [Explain 75 return decisions]
+EXPLAIN MAX ROWS 75 USE ENGINEERED true;
+# %% [Return-model global importance]
+SHAP CHART bar
+    SAVE '../reports/shap_power/returns-global-importance.png';
+# %% [Return-model beeswarm]
+SHAP CHART beeswarm
+    SAVE '../reports/shap_power/returns-beeswarm.png';
+# %% [Delivery-time effect on return risk]
+SHAP CHART dependence FEATURE "Delivery Days"
+    SAVE '../reports/shap_power/returns-dependence-delivery-days.png';
+# %% [Explain one return decision]
+SHAP CHART waterfall ROW 0
+    SAVE '../reports/shap_power/returns-waterfall-row-0.png';
+# %% [Explain another return decision]
+SHAP CHART waterfall ROW 12
+    SAVE '../reports/shap_power/returns-waterfall-row-12.png';
+# %% [Publish the return explanation report]
+REPORT TO '../reports/shap_power/returns-shap-report.html'
+    STYLE journal
+    OVERWRITE;
+# %% [markdown] 10. Export and inspect reusable results
+
+The complete prediction datasets remain available after visual explanation.
+They can be exported for review, monitoring, or downstream decision workflows.
+# %% [Export revenue predictions]
+EXPORT "Shap Revenue Predictions"
+    TO '../exports/shap-power-revenue-predictions.csv'
+    OVERWRITE;
+# %% [Export return predictions]
+EXPORT "Shap Return Predictions"
+    TO '../exports/shap-power-return-predictions.csv'
+    OVERWRITE;
+# %% [Inspect retained datasets]
+LIST DATASETS;
+# %% [Inspect explainability session state]
+SESSION;
+SESSION EVENTS LIMIT 30;
+# %% [markdown] How to read the outputs
+
+- **Bar:** overall feature importance by average absolute SHAP contribution.
+- **Summary:** global importance plus contribution direction and distribution.
+- **Beeswarm:** dense observation-level view of positive and negative effects.
+- **Dependence:** the feature-response curve, including nonlinear behavior.
+- **Waterfall:** the exact contribution path behind one prediction.
+- **EXPLAIN output:** structured global and local evidence suitable for review.
+- **HTML reports:** shareable explanation summaries with model context.
+
+SHAP describes the fitted model's behavior; it does not prove causality. Large
+contributions mean the model relied strongly on a feature, not that changing
+that feature will necessarily cause the predicted outcome to change.

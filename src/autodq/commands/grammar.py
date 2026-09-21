@@ -2,7 +2,7 @@
 
 # Public language version. This is intentionally independent from the AutoDQ
 # package and VS Code extension versions.
-ADQL_LANGUAGE_VERSION = "2.7"
+ADQL_LANGUAGE_VERSION = "2.8"
 
 # Human-readable drift sensitivity presets. Explicit threshold options on a
 # CHECK DRIFT statement override the selected preset.
@@ -415,7 +415,7 @@ SET_TYPE_OPTIONS = {
 COMMAND_HELP = [
     {
         "command": "DATASET",
-        "syntax": "DATASET \"path/to/data.csv\" [TARGET column]",
+        "syntax": "DATASET 'path/to/data.csv' [TARGET column]",
         "description": "Declare the dataset for a standalone ADQL file.",
     },
     {
@@ -446,9 +446,9 @@ COMMAND_HELP = [
         "command": "ASSERT",
         "syntax": (
             "ASSERT Revenue NOT NULL; ASSERT Email FORMAT email; "
-            "ASSERT ROW_COUNT > 0; "
+            "ASSERT ROW COUNT > 0; "
             "ASSERT SUITE ADD release_gate Revenue MIN 0; "
-            "ASSERT SUITE RUN release_gate [FAIL_ON error|warning|info|never]"
+            "ASSERT SUITE RUN release_gate [FAIL ON error|warning|info|never]"
         ),
         "description": (
             "Evaluate non-mutating data-quality expectations or define, run, "
@@ -459,7 +459,7 @@ COMMAND_HELP = [
         "command": "SCHEMA",
         "syntax": (
             "SCHEMA CONTRACT CREATE name FROM dataset; "
-            "SCHEMA CONTRACT VALIDATE name DATASET dataset [FAIL_ON level]"
+            "SCHEMA CONTRACT VALIDATE name DATASET dataset [FAIL ON level]"
         ),
         "description": (
             "Infer, refine, validate, inspect, export, and load versioned "
@@ -503,7 +503,7 @@ COMMAND_HELP = [
     {
         "command": "CHECK",
         "syntax": (
-            "CHECK CONTRACT name ON dataset [FAIL_ON level]; "
+            "CHECK CONTRACT name ON dataset [FAIL ON level]; "
             "CHECK DRIFT baseline ON dataset [CONTRACT name] "
             "[SENSITIVITY strict|normal|relaxed]"
         ),
@@ -515,28 +515,28 @@ COMMAND_HELP = [
     {
         "command": "REVIEW / APPROVE / REJECT / CLEAN / VALIDATE",
         "syntax": (
-            "REVIEW; APPROVE ALL|1,2; REJECT 3 REASON \"...\"; "
+            "REVIEW; APPROVE ALL|1,2; REJECT 3 REASON '...'; "
             "CLEAN; VALIDATE;"
         ),
         "description": "Review and explicitly apply cleaning decisions.",
     },
     {
         "command": "VISUALIZE",
-        "syntax": "VISUALIZE bar X Region Y Revenue [TITLE \"Revenue\"]",
+        "syntax": "VISUALIZE bar X Region Y Revenue [TITLE 'Revenue']",
         "description": "Generate and register an AutoDQ visualization.",
     },
     {
         "command": "MODEL",
         "syntax": (
             "MODEL TARGET Revenue USING linear_regression; "
-            "MODEL SAVE TO model.autodq; MODEL LOAD FROM model.autodq"
+            "MODEL SAVE TO 'model.autodq'; MODEL LOAD FROM 'model.autodq'"
         ),
         "description": "Train, save, or load an AutoDQ model.",
     },
     {
         "command": "EXPLAIN / SHAP",
         "syntax": (
-            "EXPLAIN MAX_ROWS 20; SHAP CHART summary; "
+            "EXPLAIN MAX ROWS 20; SHAP CHART summary; "
             "SHAP CHART waterfall ROW 0"
         ),
         "description": "Explain the active model and render SHAP plots.",
@@ -549,7 +549,7 @@ COMMAND_HELP = [
     {
         "command": "DASHBOARD",
         "syntax": (
-            "DASHBOARD THEME executive SAVE \"reports/dashboard.html\" "
+            "DASHBOARD THEME executive SAVE 'reports/dashboard.html' "
             "OVERWRITE"
         ),
         "description": "Build or export the current project dashboard.",
@@ -565,8 +565,8 @@ COMMAND_HELP = [
     {
         "command": "WORKSPACE / ADD / LIST / MERGE / CONCAT",
         "syntax": (
-            "WORKSPACE CREATE sales ROOT .autodq/workspaces; "
-            "ADD DATASET costs FROM costs.csv; LIST DATASETS; "
+            "WORKSPACE CREATE sales ROOT '.autodq/workspaces'; "
+            "ADD DATASET costs FROM 'costs.csv'; LIST DATASETS; "
             "PROFILE costs; AUTO DATASET costs MODE review; "
             "MERGE main WITH costs AS joined ON Product"
         ),
@@ -587,7 +587,7 @@ COMMAND_HELP = [
             "MISSING SUMMARY; MISSING FILL column VALUE value; "
             "MISSING FILL ALL STRATEGY auto; "
             "MISSING DROP ROWS [COLUMNS a,b] [HOW any|all]; "
-            "MISSING DROP COLUMNS a,b|MIN_PERCENT n"
+            "MISSING DROP COLUMNS a,b|MIN PERCENT n"
         ),
         "description": (
             "Summarize, fill, or remove missing data with a cell-level audit "
@@ -608,7 +608,7 @@ COMMAND_HELP = [
     {
         "command": "KNOWLEDGE / CLEANING",
         "syntax": (
-            "KNOWLEDGE; CLEANING PREVIEW ACTIONS 1,2 MAX_ROWS 5; "
+            "KNOWLEDGE; CLEANING PREVIEW ACTIONS 1,2 MAX ROWS 5; "
             "CLEANING APPLY"
         ),
         "description": "Apply domain knowledge or inspect/apply review changes.",
@@ -616,7 +616,7 @@ COMMAND_HELP = [
     {
         "command": "CORRELATION / READINESS / FEATURES / FEATURE",
         "syntax": (
-            "CORRELATION MIN_ABS 0.3; READINESS [REFERENCE baseline]; "
+            "CORRELATION MIN ABS 0.3; READINESS [REFERENCE baseline]; "
             "FEATURES; "
             "FEATURE CREATE Margin METHOD difference COLUMNS Revenue,Cost"
         ),
@@ -641,7 +641,7 @@ COMMAND_HELP = [
         "command": "INVENTORY",
         "syntax": (
             "INVENTORY [DATASET name] [ITEM sku] [LOCATION node] "
-            "[ECHELON level] [ON_HAND stock] [DEMAND daily_demand]; "
+            "[ECHELON level] [ON HAND \"On Hand\"] [DEMAND \"Daily Demand\"]; "
             "INVENTORY NETWORK; INVENTORY REBALANCE"
         ),
         "description": (
@@ -654,12 +654,12 @@ COMMAND_HELP = [
         "syntax": (
             "PRESCRIBE [DATASET name] OBJECTIVE reduce_delay "
             "[SOURCE auto|operations|inventory|all] [BUDGET number] "
-            "[MAX_ACTIONS n] [MIN_CONFIDENCE 0..1] [MAX_RISK level]; "
-            "SCENARIO NAME \"Faster service\" DURATION_CHANGE -20; "
-            "OPTIMIZE OBJECTIVE reduce_delay MAX_ACTIONS 3; "
+            "[MAX ACTIONS n] [MIN CONFIDENCE 0..1] [MAX RISK level]; "
+            "SCENARIO NAME 'Faster service' DURATION CHANGE -20; "
+            "OPTIMIZE OBJECTIVE reduce_delay MAX ACTIONS 3; "
             "ACTION LIST; ACTION APPROVE A001; ACTION REJECT A002 "
-            "REASON \"Not feasible\"; ACTION EXECUTE A001; "
-            "ACTION AUDIT [TO audit.json]"
+            "REASON 'Not feasible'; ACTION EXECUTE A001; "
+            "ACTION AUDIT [TO 'audit.json']"
         ),
         "description": (
             "Generate traceable recommendations, compare what-if KPI scenarios, "
@@ -671,15 +671,15 @@ COMMAND_HELP = [
         "command": "BLUE / GALLERY",
         "syntax": (
             "BLUE; BLUE VISUALIZE; BLUE INTERPRET; BLUE PRESCRIBE; "
-            "GALLERY LIST; GALLERY SAVE TO charts FORMAT png"
+            "GALLERY LIST; GALLERY SAVE TO 'charts' FORMAT png"
         ),
         "description": "Run BLUE diagnostics and manage reusable charts.",
     },
     {
         "command": "LET",
         "syntax": (
-            "LET cleaned_customers = CLEANED; "
-            "LET regional_sales = SELECT Region, SUM(Revenue) AS total "
+            "LET \"Cleaned Customers\" = CLEANED; "
+            "LET \"Regional Sales\" = SELECT Region, SUM(Revenue) AS \"Total\" "
             "FROM CURRENT GROUP BY Region"
         ),
         "description": (
@@ -690,7 +690,7 @@ COMMAND_HELP = [
     {
         "command": "REPORT / EXPORT",
         "syntax": (
-            "REPORT TO \"report.html\"; EXPORT CLEANED TO \"cleaned.csv\";"
+            "REPORT TO 'report.html'; EXPORT CLEANED TO 'cleaned.csv';"
         ),
         "description": "Export project artifacts to an explicit path.",
     },
@@ -711,7 +711,7 @@ COMMAND_HELP = [
     {
         "command": "SET",
         "syntax": (
-            "SET TARGET column; SET TYPE column datetime "
+            "SET TARGET column; SET TYPE \"Created At\" datetime "
             "[FORMAT pattern] [DAYFIRST bool] [YEARFIRST bool] [UTC bool]; "
             "SET TYPE column float [DECIMALS n]"
         ),

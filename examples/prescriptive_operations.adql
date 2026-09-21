@@ -6,72 +6,60 @@
 This notebook turns operational evidence into prioritized actions, evaluates
 what-if assumptions, optimizes the portfolio, and records human decisions.
 `ACTION EXECUTE` is audit-only and does not change an external system.
-
 # %% [Load operational data]
-DATASET "../datasets/sample/sales.csv";
-
+DATASET '../datasets/sample/sales.csv';
 # %% [Build the operational evidence layer]
 OPERATIONS TIME Date
-    DURATION Delivery_Days
+    DURATION "Delivery Days"
     STATUS Returned
-    STAGE Sales_Channel
+    STAGE "Sales Channel"
     VALUE Revenue
     COST Cost
     QUANTITY Quantity
-    GROUP_BY Region,Sales_Channel
+    GROUP BY Region,"Sales Channel"
     SLA 5 PERIOD month TOP 20;
-
 # %% [Generate a constrained action plan]
 PRESCRIBE OBJECTIVE reduce_delay
     SOURCE operations
-    MAX_ACTIONS 5
-    MIN_CONFIDENCE 0.50
-    MAX_RISK medium
+    MAX ACTIONS 5
+    MIN CONFIDENCE 0.50
+    MAX RISK medium
     TOP 20;
-
 # %% [Inspect selected recommendations]
 ACTION LIST STATUS selected;
-
 # %% [Compare a faster-service scenario]
-SCENARIO NAME "Faster delivery"
-    DURATION_CHANGE -20
-    FAILURE_CHANGE -10
-    COST_CHANGE 5
-    CAPACITY_CHANGE 15;
-
+SCENARIO NAME 'Faster delivery'
+    DURATION CHANGE -20
+    FAILURE CHANGE -10
+    COST CHANGE 5
+    CAPACITY CHANGE 15;
 # %% [Optimize under revised limits]
 OPTIMIZE OBJECTIVE reduce_delay
-    MAX_ACTIONS 3
-    MIN_CONFIDENCE 0.60
-    MAX_RISK medium;
-
+    MAX ACTIONS 3
+    MIN CONFIDENCE 0.60
+    MAX RISK medium;
 # %% [Inspect the revised portfolio]
 ACTION LIST STATUS selected;
-
 # %% [Record an approval decision]
 ACTION APPROVE A001
-    ACTOR "operations lead"
-    REASON "Approved for controlled pilot";
-
+    ACTOR 'operations lead'
+    REASON 'Approved for controlled pilot';
 # %% [Record implementation]
 ACTION EXECUTE A001
-    ACTOR "operations lead"
-    REASON "Pilot implementation completed";
-
+    ACTOR 'operations lead'
+    REASON 'Pilot implementation completed';
 # %% [Export the complete decision audit]
-ACTION AUDIT TO "../reports/prescriptive/action-audit.json" OVERWRITE;
-
+ACTION AUDIT TO '../reports/prescriptive/action-audit.json' OVERWRITE;
 # %% [Include prescriptions in a dashboard]
 DASHBOARD
-    TITLE "Operational Decision Dashboard"
-    SUBTITLE "Evidence, selected actions, scenarios, and governance"
+    TITLE 'Operational Decision Dashboard'
+    SUBTITLE 'Evidence, selected actions, scenarios, and governance'
     THEME executive
     CHARTS false
     PREVIEW false
-    SAVE "../reports/prescriptive/dashboard.html"
+    SAVE '../reports/prescriptive/dashboard.html'
     OVERWRITE
     DISPLAY false;
-
 # %% [Export a complete project report]
-REPORT TO "../reports/prescriptive/report.html"
+REPORT TO '../reports/prescriptive/report.html'
     STYLE executive OVERWRITE;

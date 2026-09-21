@@ -1,18 +1,317 @@
 #!/usr/bin/env autodq
-# %% [markdown] Multi-echelon inventory management
+# %% [markdown] Complete inventory operations analytics
 
-This workflow analyzes a network inventory snapshot, explains its inferred
-roles, summarizes every echelon, and produces bounded same-SKU rebalancing and
-replenishment recommendations.
+This notebook demonstrates AutoDQ's complete operational analytics workflow
+for a multi-echelon inventory network. It combines data-quality controls,
+reusable datasets, schema and drift monitoring, operational KPIs, process and
+bottleneck analysis, root-cause signals, inventory positioning, rebalancing,
+visualization, dashboards, reports, exports, and session inspection.
+
+The source is an inventory snapshot rather than an event log. Operational
+process analysis therefore treats each SKU-location record as work, echelon as
+the process stage, lead time as duration, and a positive backorder as an
+operational exception.
+# %% [markdown] 1. Load and register the inventory snapshot
+
+Load the network snapshot and normalize its date before creating a reusable
+named dataset.
 # %% [Load inventory network]
-DATASET "../datasets/sample/inventory_network.csv";
+DATASET '../datasets/sample/inventory_network.csv';
+# %% [Normalize snapshot date]
+SET TYPE "Snapshot Date" datetime FORMAT 'YYYY-MM-DD';
+# %% [Register the raw inventory snapshot]
+LET "Inventory Raw" = CURRENT OVERWRITE;
+# %% [List registered datasets]
+LIST DATASETS;
+# %% [Preview inventory records]
+HEAD 20;
+# %% [markdown] 2. Establish data quality
+
+Profile and diagnose the snapshot, inspect missing and duplicate records, and
+run a reusable quality gate over the operationally critical fields.
 # %% [Profile inventory data]
-PROFILE;
+PROFILE "Inventory Raw";
+# %% [Diagnose inventory quality]
+DIAGNOSE "Inventory Raw";
+# %% [Calculate descriptive statistics]
+STATISTICS "Inventory Raw";
+# %% [Inspect missing values]
+MISSING SUMMARY;
+# %% [Inspect exact duplicate rows]
+DUPLICATES SUMMARY;
+# %% [Add identity quality tests]
+ASSERT SUITE ADD inventory_operations_gate SKU NOT NULL
+    NAME 'Every inventory record has an SKU';
+ASSERT SUITE ADD inventory_operations_gate Location NOT NULL
+    NAME 'Every inventory record has a location';
+# %% [Add inventory measure tests]
+ASSERT SUITE ADD inventory_operations_gate "On Hand" MIN 0
+    NAME 'On-hand inventory is non-negative';
+ASSERT SUITE ADD inventory_operations_gate "Daily Demand" MIN 0
+    NAME 'Daily demand is non-negative';
+# %% [Add policy quality tests]
+ASSERT SUITE ADD inventory_operations_gate "Lead Time Days" MIN 0
+    NAME 'Lead time is non-negative';
+ASSERT SUITE ADD inventory_operations_gate "Storage Capacity" MIN 1
+    NAME 'Storage capacity is positive';
+# %% [Inspect the quality suite]
+ASSERT SUITE SHOW inventory_operations_gate;
+# %% [Run the inventory quality gate]
+ASSERT SUITE RUN inventory_operations_gate FAIL ON never;
+# %% [markdown] 3. Create operational measures
+
+Create a row-level inventory cost and a transparent exception flag. These
+features make generic operational cost and outcome KPIs meaningful for this
+snapshot.
+# %% [Calculate inventory cost]
+FEATURE CREATE "Inventory Cost" METHOD expression
+    EXPRESSION '`On Hand` * `Unit Cost`';
+# %% [Flag records carrying backorders]
+FEATURE CREATE "Backorder Failed" METHOD flag_greater_equal
+    COLUMN Backorders EXPRESSION '1';
+# %% [Register the operational dataset]
+LET "Operational Inventory" = ENGINEERED OVERWRITE;
+# %% [Preview operational measures]
+SELECT SKU,Location,Echelon,"On Hand",Backorders,
+       "Inventory Cost","Backorder Failed"
+FROM "Operational Inventory"
+ORDER BY Backorders DESC;
+# %% [markdown] 4. Govern schema and drift
+
+Create a concise structural contract and a reusable drift baseline for future
+inventory snapshots.
+# %% [Infer the inventory contract]
+CONTRACT inventory_operations_contract FROM "Operational Inventory"
+    VERSION 1.0.0
+    EXTRA COLUMNS warning
+    INFER RANGES false
+    INFER CATEGORIES true
+    OVERWRITE;
+# %% [Require inventory identities]
+CONTRACT inventory_operations_contract REQUIRE SKU
+    TYPE string NOT NULL SEVERITY error;
+CONTRACT inventory_operations_contract REQUIRE Location
+    TYPE string NOT NULL SEVERITY error;
+# %% [Require valid inventory measures]
+CONTRACT inventory_operations_contract REQUIRE "On Hand"
+    TYPE numeric NOT NULL MIN 0 SEVERITY error;
+CONTRACT inventory_operations_contract REQUIRE "Daily Demand"
+    TYPE numeric NOT NULL MIN 0 SEVERITY error;
+# %% [Check the inventory contract]
+CHECK CONTRACT inventory_operations_contract
+    ON "Operational Inventory" FAIL ON never;
+# %% [Create the inventory drift baseline]
+BASELINE inventory_operations_baseline
+    FROM "Operational Inventory" OVERWRITE;
+# %% [Check the current snapshot for drift]
+CHECK DRIFT inventory_operations_baseline ON "Operational Inventory"
+    CONTRACT inventory_operations_contract
+    SENSITIVITY normal
+    FAIL ON never;
+# %% [markdown] 5. Build reusable operational summaries
+
+Use ADQL aggregation to summarize inventory exposure by echelon and location.
+# %% [Create echelon summary]
+LET "Echelon Summary" = SELECT Echelon,
+                             COUNT(*) AS "Sku Locations",
+                             SUM("On Hand") AS "On Hand",
+                             SUM("On Order") AS "On Order",
+                             SUM(Backorders) AS backorders,
+                             SUM("Daily Demand") AS "Daily Demand",
+                             AVG("Lead Time Days") AS "Average Lead Time"
+                      FROM "Operational Inventory"
+                      GROUP BY Echelon
+                      ORDER BY backorders DESC
+                      OVERWRITE;
+# %% [Display echelon summary]
+SELECT * FROM "Echelon Summary"
+ORDER BY backorders DESC;
+# %% [Create location summary]
+LET "Location Summary" = SELECT Location,Echelon,
+                              COUNT(*) AS "Sku Count",
+                              SUM("On Hand") AS "On Hand",
+                              SUM(Backorders) AS backorders,
+                              SUM("Daily Demand") AS "Daily Demand",
+                              SUM("Inventory Cost") AS "Inventory Cost"
+                       FROM "Operational Inventory"
+                       GROUP BY Location,Echelon
+                       ORDER BY backorders DESC
+                       OVERWRITE;
+# %% [Display location summary]
+SELECT * FROM "Location Summary"
+ORDER BY backorders DESC;
+# %% [Inspect active backorders]
+SELECT SKU,Location,Echelon,"Parent Location",
+       "On Hand","On Order",Backorders,"Daily Demand","Lead Time Days"
+FROM "Operational Inventory"
+WHERE Backorders > 0
+ORDER BY Backorders DESC;
+# %% [markdown] 6. Run complete operational analytics
+
+The explicit mappings keep every operational command consistent. The five
+views cover recognition, KPIs, process segments and time trends, bottleneck
+ranking, and evidence-based root-cause signals.
+# %% [Recognize the inventory operation]
+OPERATIONS DATASET "Operational Inventory"
+    ENTITY SKU
+    TIME "Snapshot Date"
+    STATUS "Backorder Failed"
+    STAGE Echelon
+    DURATION "Lead Time Days"
+    COST "Inventory Cost"
+    QUANTITY "On Hand"
+    CAPACITY "Storage Capacity"
+    GROUP BY Location,Echelon
+    SLA 5
+    PERIOD day
+    TOP 20;
+# %% [Calculate operational KPIs]
+KPI DATASET "Operational Inventory"
+    ENTITY SKU
+    TIME "Snapshot Date"
+    STATUS "Backorder Failed"
+    DURATION "Lead Time Days"
+    COST "Inventory Cost"
+    QUANTITY "On Hand"
+    CAPACITY "Storage Capacity"
+    SLA 5;
+# %% [Analyze process stages and time trends]
+PROCESS DATASET "Operational Inventory"
+    TIME "Snapshot Date"
+    STATUS "Backorder Failed"
+    STAGE Echelon
+    DURATION "Lead Time Days"
+    GROUP BY Location,Echelon
+    SLA 5
+    PERIOD day
+    TOP 20;
+# %% [Rank operational bottlenecks]
+BOTTLENECKS DATASET "Operational Inventory"
+    STATUS "Backorder Failed"
+    STAGE Echelon
+    DURATION "Lead Time Days"
+    QUANTITY "On Hand"
+    CAPACITY "Storage Capacity"
+    GROUP BY Location,Echelon
+    SLA 5
+    TOP 20;
+# %% [Inspect root-cause signals]
+ROOT CAUSE DATASET "Operational Inventory"
+    STATUS "Backorder Failed"
+    DURATION "Lead Time Days"
+    COST "Inventory Cost"
+    GROUP BY Location,Echelon
+    TOP 20;
+# %% [Analyze operational correlations]
+CORRELATION DATASET "Operational Inventory" MIN ABS 0.25;
+# %% [markdown] 7. Run specialized multi-echelon inventory analytics
+
+The inventory engine calculates position, reorder points, planning targets,
+coverage, stockout exposure, inventory value, capacity utilization, echelon
+rollups, bounded same-SKU transfers, and residual replenishment requirements.
 # %% [Recognize inventory roles and policy]
-INVENTORY SERVICE_LEVEL 95 HORIZON 14 TOP 20;
+INVENTORY DATASET "Operational Inventory"
+    ITEM SKU
+    LOCATION Location
+    ECHELON Echelon
+    PARENT "Parent Location"
+    TIME "Snapshot Date"
+    ON HAND "On Hand"
+    ON ORDER "On Order"
+    BACKORDER Backorders
+    DEMAND "Daily Demand"
+    LEAD TIME "Lead Time Days"
+    SAFETY STOCK "Safety Stock"
+    UNIT COST "Unit Cost"
+    CAPACITY "Storage Capacity"
+    SERVICE LEVEL 95
+    HORIZON 14
+    TOP 20;
 # %% [Review echelon and node positions]
-INVENTORY NETWORK SERVICE_LEVEL 95 HORIZON 14 TOP 20;
+INVENTORY DATASET "Operational Inventory" NETWORK
+    SERVICE LEVEL 95 HORIZON 14 TOP 20;
 # %% [Generate the rebalancing plan]
-INVENTORY REBALANCE SERVICE_LEVEL 95 HORIZON 14 TOP 20;
-# %% [Export a complete inventory report]
-REPORT TO "../reports/inventory-network-report.html" STYLE executive OVERWRITE;
+INVENTORY DATASET "Operational Inventory" REBALANCE
+    SERVICE LEVEL 95 HORIZON 14 TOP 20;
+# %% [markdown] 8. Visualize operational exposure
+
+Create reusable charts for workload, exceptions, demand, stock, and numeric
+relationships. They are also available to the dashboard and report builders.
+# %% [Chart backorders by location]
+VISUALIZE bar X Location Y Backorders STAGE current
+    TITLE 'Backorders by Inventory Location'
+    X LABEL 'Location'
+    Y LABEL 'Backordered Units'
+    THEME presentation
+    COLOR '#dc2626'
+    FIGSIZE '11,6'
+    DPI 160
+    GRID true
+    LEGEND false
+    APPEND true;
+# %% [Chart demand against available stock]
+VISUALIZE scatter X "Daily Demand" Y "On Hand" STAGE current
+    TITLE 'Daily Demand and On-Hand Inventory'
+    X LABEL 'Expected Daily Demand'
+    Y LABEL 'On-Hand Units'
+    THEME journal
+    COLOR '#2563eb'
+    FIGSIZE '10,6'
+    DPI 180
+    GRID true
+    APPEND true;
+# %% [Chart numeric operational relationships]
+VISUALIZE correlation_heatmap STAGE current
+    TITLE 'Inventory Operations Correlations'
+    THEME journal
+    PALETTE 'viridis'
+    FIGSIZE '12,9'
+    DPI 180
+    GRID false
+    APPEND true;
+# %% [Inspect reusable charts]
+GALLERY LIST;
+# %% [Export the visualization gallery]
+GALLERY SAVE TO '../reports/inventory_network/charts' FORMAT png;
+# %% [markdown] 9. Generate operational deliverables
+
+Generate an executive dashboard, complete HTML and JSON reports, and reusable
+CSV outputs for downstream planning or orchestration.
+# %% [Generate inventory operations dashboard]
+DASHBOARD
+    TITLE 'Multi-Echelon Inventory Operations'
+    SUBTITLE 'Quality, operational KPIs, bottlenecks, stock risk, and rebalancing actions'
+    THEME executive
+    STAGE current
+    MAX CHARTS 12
+    MAX ROWS 20
+    CHARTS true
+    PREVIEW true
+    REFRESH false
+    DISPLAY false
+    SAVE '../reports/inventory_network/dashboard.html'
+    OVERWRITE;
+# %% [Generate complete HTML report]
+REPORT TO '../reports/inventory_network/report.html'
+    STYLE executive
+    OVERWRITE;
+# %% [Generate machine-readable JSON report]
+REPORT TO '../reports/inventory_network/report.json'
+    STYLE executive
+    OVERWRITE;
+# %% [Export operational inventory]
+EXPORT "Operational Inventory"
+    TO '../exports/inventory-network-operational.csv' OVERWRITE;
+# %% [Export echelon summary]
+EXPORT "Echelon Summary"
+    TO '../exports/inventory-network-echelon-summary.csv' OVERWRITE;
+# %% [Export location summary]
+EXPORT "Location Summary"
+    TO '../exports/inventory-network-location-summary.csv' OVERWRITE;
+# %% [markdown] 10. Inspect the completed session
+
+Finish with the current project state and recent audit history.
+# %% [Show session state]
+SESSION;
+# %% [Show recent session events]
+HISTORY LIMIT 30;

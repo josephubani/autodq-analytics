@@ -88,22 +88,22 @@ Create `sales_review.adql` next to `sales.csv`:
 
 ```adql
 # %% [Dataset]
-DATASET "sales.csv" TARGET Revenue;
+DATASET 'sales.csv' TARGET Revenue;
 
 # %% [Automatic review]
-AUTO MODE review VISUALIZE false CONTINUE_ON_ERROR false;
+AUTO MODE review VISUALIZE false CONTINUE ON ERROR false;
 
 # %% [Session state]
 SESSION;
 
 # %% [Regional summary]
 SELECT Region,
-       SUM(Revenue) AS total_revenue,
+       SUM(Revenue) AS "Total Revenue",
        COUNT(*) AS transactions
 FROM CURRENT
 WHERE Region IS NOT NULL
 GROUP BY Region
-ORDER BY total_revenue DESC;
+ORDER BY "Total Revenue" DESC;
 ```
 
 ## Save and reuse a result with LET
@@ -111,26 +111,26 @@ ORDER BY total_revenue DESC;
 `LET` turns a stage or query result into a named dataset for later cells:
 
 `LET` prints only a compact assignment confirmation. It does not repeat the
-assigned table; use `HEAD regional_summary 10` or a bounded `SELECT` when you
+assigned table; use `HEAD "Regional Summary" 10` or a bounded `SELECT` when you
 want to inspect the saved snapshot.
 
 ```adql
 # %% [Reusable regional result]
-LET regional_summary = SELECT Region,
-                              SUM(Revenue) AS total_revenue
+LET "Regional Summary" = SELECT Region,
+                              SUM(Revenue) AS "Total Revenue"
                        FROM CURRENT
                        WHERE Region IS NOT NULL
                        GROUP BY Region;
 
 # %% [Export the assigned result]
-EXPORT regional_summary TO "regional-summary.csv" OVERWRITE;
+EXPORT "Regional Summary" TO 'regional-summary.csv' OVERWRITE;
 ```
 
 After cleaning, the same pattern captures the complete cleaned stage:
 
 ```adql
-LET cleaned_sales = CLEANED;
-EXPORT cleaned_sales TO "cleaned-sales.csv" OVERWRITE;
+LET "Cleaned Sales" = CLEANED;
+EXPORT "Cleaned Sales" TO 'cleaned-sales.csv' OVERWRITE;
 ```
 
 ## Resolve remaining missing values
@@ -141,20 +141,20 @@ Use `MISSING SUMMARY` to see what remains, then choose a fill or removal policy:
 ```adql
 # %% [Missing-value review]
 MISSING SUMMARY;
-MISSING FILL City VALUE "Not provided";
-MISSING FILL Customer_Age STRATEGY median;
+MISSING FILL City VALUE 'Not provided';
+MISSING FILL "Customer Age" STRATEGY median;
 MISSING FILL ALL STRATEGY auto;
 
 # %% [Finalize and retain]
 CLEANING APPLY;
 MISSING SUMMARY;
-LET complete_sales = CLEANED;
-EXPORT complete_sales TO "complete-sales.csv" OVERWRITE;
-AUDIT EXPORT TO "missing-value-audit.json";
+LET "Complete Sales" = CLEANED;
+EXPORT "Complete Sales" TO 'complete-sales.csv' OVERWRITE;
+AUDIT EXPORT TO 'missing-value-audit.json';
 ```
 
 Use `MISSING DROP ROWS COLUMNS City HOW any` when complete cases are required,
-or `MISSING DROP COLUMNS MIN_PERCENT 50` when a highly incomplete field is not
+or `MISSING DROP COLUMNS MIN PERCENT 50` when a highly incomplete field is not
 analytically useful.
 
 ## Inspect and remove exact duplicate rows
@@ -171,13 +171,13 @@ original row index, group number, and occurrence count. Stage a removal policy,
 finalize it into `CLEANED`, and preserve the result with `LET`:
 
 ```adql
-DUPLICATES DROP KEEP first REASON "Repeated source-system import";
+DUPLICATES DROP KEEP first REASON 'Repeated source-system import';
 DUPLICATES SUMMARY;
 CLEANING APPLY;
 
-LET unique_sales = CLEANED;
-EXPORT unique_sales TO "unique-sales.csv" OVERWRITE;
-AUDIT EXPORT TO "duplicate-removal-audit.json";
+LET "Unique Sales" = CLEANED;
+EXPORT "Unique Sales" TO 'unique-sales.csv' OVERWRITE;
+AUDIT EXPORT TO 'duplicate-removal-audit.json';
 ```
 
 Use `KEEP last` when the final occurrence is authoritative. `KEEP none`
@@ -190,19 +190,19 @@ copy should remain. Named datasets are supported with
 Convert a string datetime column before profiling or modeling:
 
 ```adql
-SET TYPE Created_At datetime FORMAT "DD/MM/YYYY HH:mm:ss";
+SET TYPE "Created At" datetime FORMAT 'DD/MM/YYYY HH:mm:ss';
 SET TYPE Revenue decimal DECIMALS 2;
 
 PROFILE;
-LET typed_sales = CURRENT;
-EXPORT typed_sales TO "typed-sales.csv" OVERWRITE;
+LET "Typed Sales" = CURRENT;
+EXPORT "Typed Sales" TO 'typed-sales.csv' OVERWRITE;
 ```
 
 For a column containing several date styles, use mixed parsing. Add `UTC true`
 when all results should be normalized to UTC:
 
 ```adql
-SET TYPE Imported_At datetime FORMAT MIXED DAYFIRST true UTC true;
+SET TYPE "Imported At" datetime FORMAT MIXED DAYFIRST true UTC true;
 ```
 
 Validate and run it:
@@ -228,19 +228,19 @@ two reusable safeguards:
 ```adql
 LET approved_sales = CLEANED;
 
-CONTRACT sales_v1 FROM approved_sales;
-CONTRACT sales_v1 REQUIRE Transaction_ID TYPE integer NOT NULL;
+CONTRACT sales_v1 FROM "Approved Sales";
+CONTRACT sales_v1 REQUIRE "Transaction ID" TYPE integer NOT NULL;
 CONTRACT sales_v1 REQUIRE Revenue TYPE numeric NOT NULL MIN 0;
 
-BASELINE sales_baseline FROM approved_sales;
+BASELINE sales_baseline FROM "Approved Sales";
 ```
 
 When a later batch is registered, validate its structure and compare its
 distributions without changing it:
 
 ```adql
-CHECK CONTRACT sales_v1 ON august_sales FAIL ON error;
-CHECK DRIFT sales_baseline ON august_sales
+CHECK CONTRACT sales_v1 ON "August Sales" FAIL ON error;
+CHECK DRIFT sales_baseline ON "August Sales"
     CONTRACT sales_v1 SENSITIVITY normal FAIL ON warning;
 ```
 
@@ -248,8 +248,8 @@ Export the JSON definitions when they should travel independently of a saved
 workspace:
 
 ```adql
-CONTRACT SAVE sales_v1 TO "contracts/sales-v1.json" OVERWRITE;
-BASELINE SAVE sales_baseline TO "baselines/sales.json" OVERWRITE;
+CONTRACT SAVE sales_v1 TO 'contracts/sales-v1.json' OVERWRITE;
+BASELINE SAVE sales_baseline TO 'baselines/sales.json' OVERWRITE;
 ```
 
 ## Turn operational evidence into governed actions
@@ -258,16 +258,16 @@ After running `OPERATIONS` or `INVENTORY`, create a prescriptive plan and
 compare a non-mutating scenario:
 
 ```adql
-OPERATIONS DURATION Delivery_Days STATUS Returned
-    GROUP_BY Region,Sales_Channel SLA 5;
+OPERATIONS DURATION "Delivery Days" STATUS Returned
+    GROUP BY Region,"Sales Channel" SLA 5;
 
 PRESCRIBE OBJECTIVE reduce_delay SOURCE operations
-    MAX_ACTIONS 5 MIN_CONFIDENCE 0.60 MAX_RISK medium;
+    MAX ACTIONS 5 MIN CONFIDENCE 0.60 MAX RISK medium;
 
-SCENARIO NAME "Faster delivery"
-    DURATION_CHANGE -20 FAILURE_CHANGE -10 COST_CHANGE 5;
+SCENARIO NAME 'Faster delivery'
+    DURATION CHANGE -20 FAILURE CHANGE -10 COST CHANGE 5;
 
-OPTIMIZE OBJECTIVE reduce_delay MAX_ACTIONS 3;
+OPTIMIZE OBJECTIVE reduce_delay MAX ACTIONS 3;
 ACTION LIST STATUS selected;
 ```
 
@@ -275,9 +275,9 @@ Approve, reject, and record implementation explicitly. Recorded execution is
 audit-only and does not call an external system:
 
 ```adql
-ACTION APPROVE A001 ACTOR "operations lead";
-ACTION EXECUTE A001 ACTOR "operations lead";
-ACTION AUDIT TO "reports/action-audit.json" OVERWRITE;
+ACTION APPROVE A001 ACTOR 'operations lead';
+ACTION EXECUTE A001 ACTOR 'operations lead';
+ACTION AUDIT TO 'reports/action-audit.json' OVERWRITE;
 ```
 
 ## Continue from here

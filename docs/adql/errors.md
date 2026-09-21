@@ -1,4 +1,4 @@
-# ADQL 2.7 Error Model
+# ADQL 2.8 Error Model
 
 This document defines the stable ADQL error categories and failure reporting
 requirements.
@@ -103,7 +103,7 @@ Continue-on-error does not convert a failure to a warning, does not roll back
 earlier successful statements, and does not guarantee that dependent later
 statements can run.
 
-`AUTO CONTINUE_ON_ERROR` controls stages inside `AUTO`; it does not change the
+`AUTO CONTINUE ON ERROR` controls stages inside `AUTO`; it does not change the
 host's multi-statement behavior.
 
 ## 6. Result status

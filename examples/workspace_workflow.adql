@@ -1,0 +1,288 @@
+#!/usr/bin/env autodq
+# %% [markdown] AutoDQ workspace isolation and persistence
+
+This notebook demonstrates how AutoDQ workspaces actually behave. It creates
+two independent projects under one workspace root, gives each project its own
+datasets and analytical artifacts, saves them, switches between them, and
+proves that their state does not leak across workspace boundaries.
+
+Run the creation section once. Workspace names are intentionally unique and
+cannot be overwritten. On later sessions, skip the two CREATE cells and begin
+with one of the OPEN cells in the restoration section.
+# %% [markdown] 1. Start from a standalone source dataset
+
+The DATASET declaration initializes the ADQL file. WORKSPACE CREATE then copies
+the active source into isolated workspace storage as its `main` dataset.
+# %% [Load the sales source]
+DATASET '../datasets/sample/sales.csv' TARGET Revenue;
+# %% [Inspect existing workspaces]
+WORKSPACE LIST ROOT '../workspaces';
+# %% [markdown] 2. Create the sales workspace
+
+This is a one-time cell. The workspace gets a normalized identifier, its own
+directory tree, a copied primary dataset, target metadata, and a session log.
+# %% [Create sales workspace - run once]
+WORKSPACE CREATE adql_sales_workspace_demo
+    ROOT '../workspaces'
+    TARGET Revenue;
+# %% [Inspect sales workspace metadata]
+WORKSPACE INFO;
+# %% [Normalize a persistent data type]
+SET TYPE Date datetime FORMAT 'YYYY-MM-DD';
+# %% [Register a related dataset]
+ADD DATASET customers
+    FROM '../datasets/sample/customers.csv';
+# %% [Inspect the sales workspace registry]
+LIST DATASETS;
+# %% [Profile the workspace primary dataset]
+PROFILE main;
+# %% [Check critical sales fields]
+ASSERT "Transaction ID" NOT NULL SEVERITY error FAIL ON never;
+ASSERT "Transaction ID" UNIQUE SEVERITY warning FAIL ON never;
+ASSERT Revenue MIN 0 SEVERITY error FAIL ON never;
+# %% [Clean the active sales dataset]
+CLEAN;
+# %% [Retain a cleaned workspace dataset]
+LET "Sales Clean" = CLEANED OVERWRITE;
+# %% [Create a reusable date feature]
+FEATURE CREATE "Order Year" METHOD date_year COLUMN Date;
+# %% [Create a reusable margin feature]
+FEATURE CREATE "Gross Margin"
+    METHOD difference
+    COLUMNS Revenue,Cost;
+# %% [Retain the engineered sales dataset]
+LET "Sales Engineered" = ENGINEERED OVERWRITE;
+# %% [Create a workspace summary dataset]
+LET "Regional Summary" = SELECT Region,
+                              COUNT(*) AS transactions,
+                              SUM(Revenue) AS "Total Revenue",
+                              AVG(Profit) AS "Average Profit"
+                       FROM "Sales Engineered"
+                       GROUP BY Region
+                       ORDER BY "Total Revenue" DESC
+                       OVERWRITE;
+# %% [Activate the dataset that should reopen later]
+USE DATASET "Sales Engineered";
+# %% [Inspect the active sales dataset]
+HEAD 10;
+# %% [markdown] 3. Add governance artifacts to the sales workspace
+
+Contracts and drift baselines live in memory until WORKSPACE SAVE persists
+them inside this workspace. They are restored automatically by WORKSPACE OPEN.
+# %% [Create a sales schema contract]
+CONTRACT workspace_sales_contract FROM "Sales Engineered"
+    VERSION 1.0.0
+    EXTRA COLUMNS warning
+    INFER RANGES false
+    INFER CATEGORIES true
+    OVERWRITE;
+# %% [Require a valid revenue column]
+CONTRACT workspace_sales_contract REQUIRE Revenue
+    TYPE numeric NOT NULL MIN 0 SEVERITY error;
+# %% [Validate the sales contract]
+CHECK CONTRACT workspace_sales_contract
+    ON "Sales Engineered"
+    FAIL ON never;
+# %% [Create a sales drift baseline]
+BASELINE workspace_sales_baseline
+    FROM "Sales Engineered"
+    OVERWRITE;
+# %% [Verify the baseline against current data]
+CHECK DRIFT workspace_sales_baseline
+    ON "Sales Engineered"
+    CONTRACT workspace_sales_contract
+    SENSITIVITY normal
+    FAIL ON never;
+# %% [markdown] 4. Train state that belongs only to the sales workspace
+
+The model is stored under the workspace models directory when `INCLUDE MODEL`
+is true. Opening this workspace with `LOAD MODEL true` restores it for
+prediction.
+# %% [Train a sales model]
+MODEL TARGET Revenue USING decision_tree_regressor
+    TEST SIZE 0.20
+    RANDOM STATE 42
+    USE ENGINEERED false
+    EXCLUDE "Transaction ID","Customer ID";
+# %% [Generate predictions before persistence]
+PREDICT CONFIDENCE 0.90 UNCERTAINTY true;
+# %% [Save every persistent sales artifact]
+WORKSPACE SAVE
+    INCLUDE MODEL true
+    MODEL NAME 'revenue_model';
+# %% [Confirm saved sales state]
+WORKSPACE INFO;
+SESSION DATASETS;
+# %% [markdown] 5. Create an independent inventory workspace
+
+The inventory source is temporarily registered in the sales session only so it
+can become the seed for a new workspace. The last saved sales workspace is not
+changed by the cells below.
+# %% [Register the inventory seed]
+ADD DATASET "Inventory Seed"
+    FROM '../datasets/sample/inventory_network.csv';
+# %% [Make inventory the active source]
+USE DATASET "Inventory Seed";
+# %% [Create inventory workspace - run once]
+WORKSPACE CREATE adql_inventory_workspace_demo
+    ROOT '../workspaces'
+    TARGET Backorders;
+# %% [Inspect inventory workspace metadata]
+WORKSPACE INFO;
+# %% [Normalize inventory date]
+SET TYPE "Snapshot Date" datetime FORMAT 'YYYY-MM-DD';
+# %% [Create inventory value]
+FEATURE CREATE "Inventory Value" METHOD expression
+    EXPRESSION '`On Hand` * `Unit Cost`';
+# %% [Create an operational exception flag]
+FEATURE CREATE "Has Backorder" METHOD flag_greater_equal
+    COLUMN Backorders
+    EXPRESSION '1';
+# %% [Retain inventory operational data]
+LET "Inventory Operational" = ENGINEERED OVERWRITE;
+# %% [Activate inventory operational data]
+USE DATASET "Inventory Operational";
+# %% [Recognize operational roles]
+OPERATIONS DATASET "Inventory Operational"
+    ENTITY SKU
+    TIME "Snapshot Date"
+    STATUS "Has Backorder"
+    STAGE Echelon
+    DURATION "Lead Time Days"
+    COST "Inventory Value"
+    QUANTITY "On Hand"
+    CAPACITY "Storage Capacity"
+    GROUP BY Location,Echelon
+    SLA 5
+    PERIOD day
+    TOP 20;
+# %% [Run multi-echelon inventory analysis]
+INVENTORY DATASET "Inventory Operational"
+    ITEM SKU
+    LOCATION Location
+    ECHELON Echelon
+    PARENT "Parent Location"
+    TIME "Snapshot Date"
+    ON HAND "On Hand"
+    ON ORDER "On Order"
+    BACKORDER Backorders
+    DEMAND "Daily Demand"
+    LEAD TIME "Lead Time Days"
+    SAFETY STOCK "Safety Stock"
+    UNIT COST "Unit Cost"
+    CAPACITY "Storage Capacity"
+    SERVICE LEVEL 95
+    HORIZON 14
+    TOP 20;
+# %% [Create an inventory schema contract]
+CONTRACT workspace_inventory_contract FROM "Inventory Operational"
+    VERSION 1.0.0
+    EXTRA COLUMNS warning
+    INFER RANGES false
+    INFER CATEGORIES true
+    OVERWRITE;
+# %% [Require non-negative stock]
+CONTRACT workspace_inventory_contract REQUIRE "On Hand"
+    TYPE numeric NOT NULL MIN 0 SEVERITY error;
+# %% [Create an inventory drift baseline]
+BASELINE workspace_inventory_baseline
+    FROM "Inventory Operational"
+    OVERWRITE;
+# %% [Create an inventory summary dataset]
+LET "Echelon Summary" = SELECT Echelon,
+                             COUNT(*) AS "Sku Locations",
+                             SUM("On Hand") AS "On Hand",
+                             SUM(Backorders) AS backorders,
+                             AVG("Lead Time Days") AS "Average Lead Time"
+                      FROM "Inventory Operational"
+                      GROUP BY Echelon
+                      ORDER BY backorders DESC
+                      OVERWRITE;
+# %% [Save inventory without a model]
+WORKSPACE SAVE INCLUDE MODEL false;
+# %% [Confirm saved inventory state]
+WORKSPACE INFO;
+SESSION DATASETS;
+# %% [markdown] 6. Compare the persistent workspace inventory
+
+Both workspaces share the same root but retain separate manifests, datasets,
+targets, sessions, governance artifacts, models, and generated files.
+# %% [List both workspaces]
+WORKSPACE LIST ROOT '../workspaces';
+# %% [markdown] 7. Restore the sales workspace
+
+Opening replaces the in-memory project with the selected workspace state. The
+saved active dataset, target, registered datasets, data types, contracts,
+baseline, session, and model are restored together.
+# %% [Open sales and restore its model]
+WORKSPACE OPEN adql_sales_workspace_demo
+    ROOT '../workspaces'
+    LOAD MODEL true;
+# %% [Verify restored sales metadata]
+WORKSPACE INFO;
+# %% [Verify restored sales datasets]
+LIST DATASETS;
+# %% [Verify restored sales governance]
+CONTRACT LIST;
+BASELINE LIST;
+# %% [Use the restored model]
+PREDICT CONFIDENCE 0.90 UNCERTAINTY true;
+# %% [Inspect the restored sales session]
+SESSION;
+SESSION EVENTS LIMIT 20;
+# %% [markdown] 8. Prove that SAVE is the persistence boundary
+
+This temporary dataset is created after the last sales save. It exists only in
+the current in-memory session. Switching away and reopening sales will discard
+it because no WORKSPACE SAVE follows this assignment.
+# %% [Create an intentionally unsaved dataset]
+LET "Session Only Sales Copy" = CURRENT OVERWRITE;
+# %% [Show the temporary in-memory dataset]
+LIST DATASETS;
+# %% [markdown] 9. Switch to inventory and verify isolation
+
+The inventory registry contains its own datasets and no sales datasets. Its
+governance definitions are also independent from the sales definitions.
+# %% [Open inventory without a model]
+WORKSPACE OPEN adql_inventory_workspace_demo
+    ROOT '../workspaces'
+    LOAD MODEL false;
+# %% [Verify restored inventory metadata]
+WORKSPACE INFO;
+# %% [Verify restored inventory datasets]
+LIST DATASETS;
+# %% [Verify restored inventory governance]
+CONTRACT LIST;
+BASELINE LIST;
+# %% [Inspect restored inventory data]
+HEAD 10;
+# %% [Inspect the restored inventory session]
+SESSION;
+# %% [markdown] 10. Reopen sales and confirm unsaved state was discarded
+
+The restored registry contains the datasets from the last WORKSPACE SAVE, but
+`Session Only Sales Copy` is absent. This proves that changing an in-memory
+workspace and saving a workspace are separate actions.
+# %% [Reopen the saved sales boundary]
+WORKSPACE OPEN adql_sales_workspace_demo
+    ROOT '../workspaces'
+    LOAD MODEL true;
+# %% [Confirm only saved sales datasets returned]
+LIST DATASETS;
+# %% [Confirm the saved model still works]
+PREDICT CONFIDENCE 0.90 UNCERTAINTY true;
+# %% [Final workspace and session inspection]
+WORKSPACE INFO;
+WORKSPACE LIST ROOT '../workspaces';
+SESSION DATASETS;
+# %% [markdown] What this notebook proves
+
+- CREATE establishes isolated storage and copies the active source as `main`.
+- Named datasets remain local to the active workspace.
+- USE DATASET controls which dataset is active when a workspace is saved.
+- SAVE persists datasets, target, dtypes, session, contracts, baselines, audit
+  state, and optionally the active model.
+- OPEN replaces current memory with the selected saved workspace state.
+- `LOAD MODEL` controls whether the saved model is restored.
+- Unsaved in-memory changes disappear after switching away.
+- LIST and INFO expose workspace inventory and active-workspace metadata.

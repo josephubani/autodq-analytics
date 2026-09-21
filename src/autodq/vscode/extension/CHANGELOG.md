@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+## 0.3.19 - 2026-09-20
+
+- Added ADQL 2.8 highlighting for double-quoted and backtick identifiers,
+  single-quoted string literals, natural-space options, and natural-space
+  quality metrics.
+- Updated bundled notebooks and documentation to the readable canonical
+  syntax while retaining underscore, hyphen, and earlier ADQL 2.x forms.
+- Humanized identifier labels in notebook and interactive-review output
+  without changing source DataFrame column names.
+- Bundled AutoDQ 0.1.26.
+
 ## 0.3.18 - 2026-09-20
 
 - Added case-insensitive highlighting for ADQL 2.7 `PRESCRIBE`, `SCENARIO`,

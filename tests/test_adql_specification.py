@@ -31,7 +31,7 @@ class ADQLSpecificationConformanceTests(unittest.TestCase):
         )
         grammar = (SPEC_ROOT / "grammar.ebnf").read_text(encoding="utf-8")
 
-        self.assertEqual(ADQL_LANGUAGE_VERSION, "2.7")
+        self.assertEqual(ADQL_LANGUAGE_VERSION, "2.8")
         self.assertIn(
             f"| Language version | {ADQL_LANGUAGE_VERSION} |",
             specification,

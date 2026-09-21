@@ -68,6 +68,21 @@ class ADQLParser:
         "theme",
         "validate",
     }
+    LIST_OPTION_DESTINATIONS = {
+        "action_ids",
+        "allowed_values",
+        "bins",
+        "chart_ids",
+        "columns",
+        "exclude_features",
+        "features",
+        "group_by",
+        "labels",
+        "left_on",
+        "on",
+        "right_on",
+        "suffixes",
+    }
 
     def parse(self, source: str) -> ADQLScript:
         if not isinstance(source, str):
@@ -128,8 +143,9 @@ class ADQLParser:
             statement_number=number,
         )
 
-    @staticmethod
+    @classmethod
     def _extract_dataset_target(
+        cls,
         kind: str,
         raw: str,
     ) -> tuple[str, str | None]:
@@ -138,7 +154,7 @@ class ADQLParser:
             return raw, None
 
         try:
-            tokens = shlex.split(raw, posix=True)
+            tokens = cls._tokenize(raw)
         except ValueError:
             # Keep the original statement so the regular workflow parser emits
             # its established invalid-quoting error.
@@ -177,7 +193,7 @@ class ADQLParser:
 
     def _parse_workflow(self, kind: str, raw: str) -> dict[str, Any]:
         try:
-            tokens = shlex.split(raw, posix=True)
+            tokens = self._tokenize(raw)
         except ValueError as error:
             raise ADQLSyntaxError(f"Invalid quoting: {error}") from error
 
@@ -435,18 +451,28 @@ class ADQLParser:
             )
 
         if kind == "APPROVE":
-            if len(arguments) != 1:
+            if not arguments:
                 raise ADQLSyntaxError(
                     "APPROVE requires ALL or a comma-separated action list."
                 )
 
-            if arguments[0].upper() == "ALL":
+            if len(arguments) == 1 and arguments[0].upper() == "ALL":
                 return {"all": True, "action_ids": []}
+
+            action_ids, end = self._consume_comma_list(
+                arguments,
+                0,
+                option="APPROVE",
+            )
+            if end != len(arguments):
+                raise ADQLSyntaxError(
+                    "APPROVE accepts only ALL or a comma-separated action list."
+                )
 
             return {
                 "all": False,
                 "action_ids": self._integer_list(
-                    arguments[0],
+                    action_ids,
                     option="APPROVE",
                 ),
             }
@@ -457,12 +483,18 @@ class ADQLParser:
                     "REJECT requires a comma-separated action list."
                 )
 
+            action_values, option_start = self._consume_comma_list(
+                arguments,
+                0,
+                option_map={"REASON": "reason"},
+                option="REJECT",
+            )
             action_ids = self._integer_list(
-                arguments[0],
+                action_values,
                 option="REJECT",
             )
             options = self._parse_options(
-                arguments[1:],
+                arguments[option_start:],
                 {"REASON": "reason"},
             )
             return {"action_ids": action_ids, **options}
@@ -549,14 +581,18 @@ class ADQLParser:
         if kind == "SAMPLE":
             rows = 5
             start = 0
+            sample_options = {"RANDOM_STATE": "random_state"}
 
-            if arguments and self._key(arguments[0]) != "RANDOM_STATE":
+            if (
+                arguments
+                and self._match_option(arguments, 0, sample_options) is None
+            ):
                 rows = self._positive_integer(arguments[0], option="SAMPLE")
                 start = 1
 
             options = self._parse_options(
                 arguments[start:],
-                {"RANDOM_STATE": "random_state"},
+                sample_options,
             )
             options = self._coerce_options(options)
             return {"rows": rows, **options}
@@ -1166,21 +1202,23 @@ class ADQLParser:
         index = 0
 
         while index < len(tokens):
-            key = self._key(tokens[index])
-            if key not in option_map:
+            matched = self._match_option(tokens, index, option_map)
+            if matched is None:
                 expression.append(tokens[index])
                 index += 1
                 continue
 
+            key, key_length = matched
             destination = option_map[key]
             if destination in options:
                 raise ADQLSyntaxError(
                     f"ASSERT option {key} was provided more than once."
                 )
-            if index + 1 >= len(tokens):
+            value_index = index + key_length
+            if value_index >= len(tokens):
                 raise ADQLSyntaxError(f"ASSERT option {key} requires a value.")
-            options[destination] = tokens[index + 1]
-            index += 2
+            options[destination] = tokens[value_index]
+            index = value_index + 1
 
         if not expression:
             raise ADQLSyntaxError("ASSERT quality expression cannot be empty.")
@@ -1202,7 +1240,13 @@ class ADQLParser:
             "DISTINCT_COUNT",
             "QUALITY_SCORE",
         }
-        subject = tokens[0].upper()
+        subject = self._key(tokens[0])
+        subject_width = 1
+        if subject not in metrics and len(tokens) >= 2:
+            candidate = self._key(f"{tokens[0]}_{tokens[1]}")
+            if candidate in metrics:
+                subject = candidate
+                subject_width = 2
         assertion = {
             "severity": str(options.get("severity", "error")).lower(),
             "name": options.get("name"),
@@ -1210,7 +1254,7 @@ class ADQLParser:
 
         if subject in metrics:
             assertion["subject"] = subject.lower()
-            remainder = tokens[1:]
+            remainder = tokens[subject_width:]
             column_metrics = {
                 "MISSING_COUNT",
                 "MISSING_PERCENT",
@@ -1273,8 +1317,15 @@ class ADQLParser:
                 }
             )
         elif predicate == "ALLOWED" and len(remainder) >= 2:
-            raw_values = " ".join(remainder[1:])
-            values = self._string_list(raw_values, option="ASSERT ALLOWED")
+            values, end = self._consume_comma_list(
+                remainder,
+                1,
+                option="ASSERT ALLOWED",
+            )
+            if end != len(remainder):
+                raise ADQLSyntaxError(
+                    "ASSERT ALLOWED values must be separated by commas."
+                )
             assertion.update(
                 {
                     "predicate": "allowed",
@@ -1346,7 +1397,7 @@ class ADQLParser:
 
     def _parse_let(self, raw: str) -> dict[str, Any]:
         match = re.match(
-            r"^\s*LET\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+?)\s*$",
+            r"^\s*LET\s+((?:[A-Za-z_][A-Za-z0-9_]*)|(?:\"(?:\\.|[^\"\\])*\")|(?:'(?:\\.|[^'\\])*')|(?:`(?:\\.|[^`\\])*`))\s*=\s*(.+?)\s*$",
             raw,
             flags=re.IGNORECASE | re.DOTALL,
         )
@@ -1356,7 +1407,7 @@ class ADQLParser:
                 "LET syntax is LET name = source [OVERWRITE]."
             )
 
-        name = match.group(1)
+        name = self._identifier(match.group(1))
         expression = match.group(2).strip()
         overwrite_match = re.search(
             r"\s+OVERWRITE\s*$",
@@ -1395,7 +1446,7 @@ class ADQLParser:
             expression = expression[:overwrite_match.start()].strip()
 
         try:
-            tokens = shlex.split(expression, posix=True)
+            tokens = self._tokenize(expression)
         except ValueError as error:
             raise ADQLSyntaxError(f"Invalid LET quoting: {error}") from error
 
@@ -1496,8 +1547,9 @@ class ADQLParser:
         if "right" not in options:
             raise ADQLSyntaxError("MERGE requires WITH followed by a dataset.")
         for key in ("on", "left_on", "right_on"):
-            if key in options and "," in str(options[key]):
-                options[key] = self._string_list(options[key], option=key)
+            if key in options:
+                values = self._string_list(options[key], option=key)
+                options[key] = values[0] if len(values) == 1 else values
         if "suffixes" in options:
             suffixes = self._string_list(options["suffixes"], option="SUFFIXES")
             if len(suffixes) != 2:
@@ -1513,18 +1565,25 @@ class ADQLParser:
             raise ADQLSyntaxError(
                 "CONCAT syntax is CONCAT first,second AS output."
             )
-        datasets = self._string_list(arguments[0], option="CONCAT")
+        option_map = {
+            "AS": "output_name",
+            "AXIS": "axis",
+            "IGNORE_INDEX": "ignore_index",
+            "JOIN": "join",
+            "MAKE_ACTIVE": "make_active",
+        }
+        dataset_values, option_start = self._consume_comma_list(
+            arguments,
+            0,
+            option_map=option_map,
+            option="CONCAT",
+        )
+        datasets = self._string_list(dataset_values, option="CONCAT")
         if len(datasets) < 2:
             raise ADQLSyntaxError("CONCAT requires at least two datasets.")
         options = self._parse_options(
-            arguments[1:],
-            {
-                "AS": "output_name",
-                "AXIS": "axis",
-                "IGNORE_INDEX": "ignore_index",
-                "JOIN": "join",
-                "MAKE_ACTIVE": "make_active",
-            },
+            arguments[option_start:],
+            option_map,
         )
         return {"datasets": datasets, **self._coerce_options(options)}
 
@@ -1560,7 +1619,10 @@ class ADQLParser:
         if "allowed_values" in options:
             options["allowed_values"] = [
                 self._literal(item)
-                for item in self._split_top_level(options["allowed_values"], ",")
+                for item in self._string_list(
+                    options["allowed_values"],
+                    option="ALLOWED",
+                )
             ]
         options = self._coerce_options(options)
         return {"action": action, "column": arguments[1], **options}
@@ -1631,11 +1693,21 @@ class ADQLParser:
                     raise ADQLSyntaxError(
                         "MISSING FILL COLUMNS requires a comma-separated list."
                     )
-                parameters["columns"] = self._string_list(
-                    arguments[2],
+                option_map = {
+                    "STRATEGY": "strategy",
+                    "VALUE": "value",
+                    "REASON": "reason",
+                }
+                column_values, start = self._consume_comma_list(
+                    arguments,
+                    2,
+                    option_map=option_map,
                     option="COLUMNS",
                 )
-                start = 3
+                parameters["columns"] = self._string_list(
+                    column_values,
+                    option="COLUMNS",
+                )
             else:
                 parameters["columns"] = [target]
 
@@ -1702,27 +1774,36 @@ class ADQLParser:
 
         options: dict[str, Any]
 
-        if self._key(rest[0]) in {"COLUMNS", "MIN_PERCENT", "REASON"}:
+        drop_options = {
+            "COLUMNS": "columns",
+            "MIN_PERCENT": "min_percent",
+            "REASON": "reason",
+        }
+
+        if self._match_option(rest, 0, drop_options) is not None:
             options = self._parse_options(
                 rest,
-                {
-                    "COLUMNS": "columns",
-                    "MIN_PERCENT": "min_percent",
-                    "REASON": "reason",
-                },
+                drop_options,
             )
         else:
+            option_map = {
+                "MIN_PERCENT": "min_percent",
+                "REASON": "reason",
+            }
+            column_values, option_start = self._consume_comma_list(
+                rest,
+                0,
+                option_map=option_map,
+                option="MISSING DROP COLUMNS",
+            )
             options = {
                 "columns": self._string_list(
-                    rest[0],
+                    column_values,
                     option="MISSING DROP COLUMNS",
                 ),
                 **self._parse_options(
-                    rest[1:],
-                    {
-                        "MIN_PERCENT": "min_percent",
-                        "REASON": "reason",
-                    },
+                    rest[option_start:],
+                    option_map,
                 ),
             }
 
@@ -2229,10 +2310,12 @@ class ADQLParser:
         index = 0
 
         while index < len(tokens):
-            key = self._key(tokens[index])
+            matched = self._match_option(tokens, index, option_map)
 
-            if key not in option_map:
+            if matched is None:
                 raise ADQLSyntaxError(f"Unsupported option: {tokens[index]}")
+
+            key, key_length = matched
 
             destination = option_map[key]
 
@@ -2240,10 +2323,11 @@ class ADQLParser:
                 raise ADQLSyntaxError(f"Option {key} was provided more than once.")
 
             if key in flags:
+                value_index = index + key_length
                 if (
-                    index + 1 < len(tokens)
-                    and self._key(tokens[index + 1]) not in option_map
-                    and tokens[index + 1].lower()
+                    value_index < len(tokens)
+                    and self._match_option(tokens, value_index, option_map) is None
+                    and tokens[value_index].lower()
                     in {
                         "true",
                         "false",
@@ -2255,21 +2339,101 @@ class ADQLParser:
                         "off",
                     }
                 ):
-                    options[destination] = tokens[index + 1]
-                    index += 2
+                    options[destination] = tokens[value_index]
+                    index = value_index + 1
                 else:
                     options[destination] = True
-                    index += 1
+                    index = value_index
 
                 continue
 
-            if index + 1 >= len(tokens):
+            value_index = index + key_length
+            if value_index >= len(tokens):
                 raise ADQLSyntaxError(f"Option {key} requires a value.")
 
-            options[destination] = tokens[index + 1]
-            index += 2
+            if destination in self.LIST_OPTION_DESTINATIONS:
+                values, index = self._consume_comma_list(
+                    tokens,
+                    value_index,
+                    option_map=option_map,
+                    option=key,
+                )
+                options[destination] = values
+            else:
+                options[destination] = tokens[value_index]
+                index = value_index + 1
 
         return options
+
+    @classmethod
+    def _match_option(
+        cls,
+        tokens: list[str],
+        index: int,
+        option_map: dict[str, str],
+    ) -> tuple[str, int] | None:
+        """Match underscore, hyphen, or natural-space option spellings."""
+        if index >= len(tokens):
+            return None
+
+        candidates = sorted(
+            (key for key in option_map if "_" in key),
+            key=lambda key: len(key.split("_")),
+            reverse=True,
+        )
+        for key in candidates:
+            pieces = key.split("_")
+            end = index + len(pieces)
+            if end > len(tokens):
+                continue
+            if [cls._key(token) for token in tokens[index:end]] == pieces:
+                return key, len(pieces)
+
+        direct = cls._key(tokens[index])
+        if direct in option_map:
+            return direct, 1
+
+        return None
+
+    @classmethod
+    def _consume_comma_list(
+        cls,
+        tokens: list[str],
+        index: int,
+        *,
+        option_map: dict[str, str] | None = None,
+        option: str,
+    ) -> tuple[list[str], int]:
+        values: list[str] = []
+        expect_value = True
+
+        while index < len(tokens):
+            token = tokens[index]
+
+            if expect_value:
+                if token == ",":
+                    raise ADQLSyntaxError(f"{option} list contains an empty value.")
+                values.append(token)
+                index += 1
+                expect_value = False
+                continue
+
+            if token != ",":
+                break
+
+            index += 1
+            expect_value = True
+
+            if (
+                option_map is not None
+                and cls._match_option(tokens, index, option_map) is not None
+            ):
+                raise ADQLSyntaxError(f"{option} list cannot end with a comma.")
+
+        if not values or expect_value:
+            raise ADQLSyntaxError(f"{option} list cannot be empty or end with a comma.")
+
+        return values, index
 
     def _coerce_options(self, options: dict[str, Any]) -> dict[str, Any]:
         boolean_options = {
@@ -2369,11 +2533,24 @@ class ADQLParser:
                 key in self.CASE_INSENSITIVE_OPTION_VALUES
                 and isinstance(value, str)
             ):
-                coerced[key] = value.lower()
+                coerced[key] = re.sub(
+                    r"[\s-]+",
+                    "_",
+                    value.strip().lower(),
+                )
             else:
                 coerced[key] = value
 
         return coerced
+
+    @staticmethod
+    def _tokenize(source: str) -> list[str]:
+        """Tokenize workflow syntax while preserving comma list boundaries."""
+        lexer = shlex.shlex(source, posix=True, punctuation_chars=",")
+        lexer.whitespace_split = True
+        lexer.commenters = ""
+        lexer.quotes = "'\"`"
+        return list(lexer)
 
     @staticmethod
     def _strip_comments(source: str) -> str:
@@ -2693,7 +2870,12 @@ class ADQLParser:
 
     @classmethod
     def _integer_list(cls, value: Any, *, option: str) -> list[int]:
-        values = str(value).split(",")
+        if isinstance(value, (list, tuple)):
+            values = list(value)
+            if len(values) == 1 and "," in str(values[0]):
+                values = str(values[0]).split(",")
+        else:
+            values = str(value).split(",")
 
         if not values or any(not item.strip() for item in values):
             raise ADQLSyntaxError(f"{option} action list cannot be empty.")
@@ -2705,7 +2887,13 @@ class ADQLParser:
 
     @staticmethod
     def _string_list(value: Any, *, option: str) -> list[str]:
-        values = [item.strip() for item in str(value).split(",")]
+        if isinstance(value, (list, tuple)):
+            source = list(value)
+            if len(source) == 1 and "," in str(source[0]):
+                source = str(source[0]).split(",")
+        else:
+            source = str(value).split(",")
+        values = [str(item).strip() for item in source]
 
         if not values or any(not item for item in values):
             raise ADQLSyntaxError(f"{option} list cannot be empty.")

@@ -47,6 +47,10 @@ function valueLabel(value) {
   return String(value);
 }
 
+function humanizeIdentifier(value) {
+  return valueLabel(value).replaceAll('_', ' ');
+}
+
 function addMetric(container, label, value) {
   const card = element('div', 'autodq-review__metric');
   card.append(element('span', '', label), element('strong', '', valueLabel(value)));
@@ -70,7 +74,7 @@ function renderRecords(records) {
   const table = element('table');
   const head = element('thead');
   const headRow = element('tr');
-  for (const column of columns) headRow.append(element('th', '', column));
+  for (const column of columns) headRow.append(element('th', '', humanizeIdentifier(column)));
   head.append(headRow);
   table.append(head);
   const body = element('tbody');
@@ -244,7 +248,11 @@ function renderReview(context, outputItem, host) {
     row.append(element('td', '', action.action_id));
     row.append(element('td', '', String(action.issue_type || '').replaceAll('_', ' ')));
     row.append(element('td', '', action.strategy));
-    row.append(element('td', 'autodq-review__columns', (action.affected_columns || []).join(', ') || '—'));
+    row.append(element(
+      'td',
+      'autodq-review__columns',
+      (action.affected_columns || []).map(humanizeIdentifier).join(', ') || '—'
+    ));
     row.append(element('td', '', action.priority || '—'));
     const statusCell = element('td');
     statusCell.append(element('span', `autodq-review__badge autodq-review__badge--${action.status || 'pending'}`, action.status || 'pending'));
@@ -295,7 +303,7 @@ function renderReview(context, outputItem, host) {
   rowLabel.append(rowIndex);
   const changesLabel = element('label', '', 'Column changes (JSON object)');
   const changes = element('textarea');
-  changes.placeholder = '{"Region": "North", "Customer_Age": 36}';
+  changes.placeholder = '{"Region": "North", "Customer Age": 36}';
   changesLabel.append(changes);
   const editReasonLabel = element('label', '', 'Audit reason');
   const editReason = element('input');
@@ -324,8 +332,9 @@ function renderReview(context, outputItem, host) {
     const auditBody = element('tbody');
     for (const entry of audit.slice().reverse()) {
       const row = element('tr');
-      for (const value of [entry.audit_id, entry.event_type, entry.action_id, entry.row_index, entry.column, entry.reason, entry.timestamp]) {
-        row.append(element('td', '', valueLabel(value)));
+      const values = [entry.audit_id, entry.event_type, entry.action_id, entry.row_index, entry.column, entry.reason, entry.timestamp];
+      for (const [index, value] of values.entries()) {
+        row.append(element('td', '', index === 4 ? humanizeIdentifier(value) : valueLabel(value)));
       }
       auditBody.append(row);
     }

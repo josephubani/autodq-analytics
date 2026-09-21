@@ -66,7 +66,7 @@
     - Non-mutating what-if KPI scenarios
     - Budget, action-count, confidence, and risk-constrained optimization
     - Human approvals, rejections, recorded execution, and exportable audit trails
-    - Python, ADQL 2.7, notebook, report, dashboard, and release integration
+    - Python, ADQL 2.8, notebook, report, dashboard, and release integration
 
 ## 0.1.0 release status
 

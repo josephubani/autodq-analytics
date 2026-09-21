@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 import re
 from datetime import datetime
 from pathlib import Path
@@ -16,6 +17,7 @@ from autodq.commands.errors import (
 )
 from autodq.commands.grammar import COMMAND_HELP, DATA_SOURCES
 from autodq.commands.models import ADQLResult, ADQLRunResult
+from autodq.utils.identifiers import resolve_identifier
 
 
 class ADQLExecutor:
@@ -23,6 +25,40 @@ class ADQLExecutor:
 
     DEFAULT_QUERY_LIMIT = 1_000
     MAX_HISTORY = 25
+    COLUMN_PARAMETERS = {
+        "capacity_column",
+        "column",
+        "cost_column",
+        "demand_column",
+        "duration_column",
+        "echelon_column",
+        "end_column",
+        "entity_column",
+        "feature",
+        "item_column",
+        "lead_time_column",
+        "location_column",
+        "on_hand_column",
+        "on_order_column",
+        "parent_location_column",
+        "quantity_column",
+        "safety_stock_column",
+        "stage_column",
+        "start_column",
+        "status_column",
+        "target",
+        "time_column",
+        "unit_cost_column",
+        "value_column",
+        "x",
+        "y",
+        "backorder_column",
+    }
+    COLUMN_LIST_PARAMETERS = {
+        "columns",
+        "exclude_features",
+        "group_by",
+    }
 
     def execute(
         self,
@@ -148,6 +184,10 @@ class ADQLExecutor:
         dataset_name = parameters.pop("dataset_name", None)
 
         if dataset_name is not None:
+            dataset_name = self._resolve_dataset_identifier(
+                project,
+                dataset_name,
+            )
             project.use_dataset(dataset_name)
 
         if kind == "DATASET":
@@ -155,7 +195,8 @@ class ADQLExecutor:
             target = parameters.get("target")
 
             if target is not None:
-                project.set_target(target)
+                target = resolve_identifier(target, data.columns, label="target")
+                project.set_target(str(target))
 
             return {
                 "total_rows": len(data),
@@ -176,6 +217,12 @@ class ADQLExecutor:
 
         if kind == "LET":
             return self._execute_let(project, parameters)
+
+        parameters = self._resolve_statement_identifiers(
+            project,
+            kind,
+            parameters,
+        )
 
         if kind == "ASSERT":
             return self._execute_assert(project, parameters)
@@ -1380,9 +1427,215 @@ class ADQLExecutor:
             ],
         )
 
+    def _resolve_statement_identifiers(
+        self,
+        project,
+        kind: str,
+        parameters: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Resolve human-readable ADQL column references without renaming data."""
+        resolved = deepcopy(parameters)
+
+        for key in ("dataset", "reference_dataset", "source_dataset"):
+            if resolved.get(key) is not None:
+                resolved[key] = self._resolve_dataset_identifier(
+                    project,
+                    resolved[key],
+                )
+
+        if kind == "CONCAT" and resolved.get("datasets") is not None:
+            resolved["datasets"] = [
+                self._resolve_dataset_identifier(project, value)
+                for value in resolved["datasets"]
+            ]
+
+        if kind == "EXPORT" and resolved.get("source") is not None:
+            source = str(resolved["source"])
+            if source.upper() not in DATA_SOURCES:
+                resolved["source"] = self._resolve_dataset_identifier(
+                    project,
+                    source,
+                )
+
+        if kind == "MERGE":
+            return self._resolve_merge_identifiers(project, resolved)
+
+        has_column_reference = bool(
+            self.COLUMN_PARAMETERS.intersection(resolved)
+            or self.COLUMN_LIST_PARAMETERS.intersection(resolved)
+            or (
+                isinstance(resolved.get("assertion"), dict)
+                and resolved["assertion"].get("column") is not None
+            )
+            or isinstance(resolved.get("changes"), dict)
+        )
+        if not has_column_reference and not (
+            kind == "FEATURE" and resolved.get("expression")
+        ):
+            return resolved
+
+        columns = self._available_columns(project)
+        if not columns:
+            return resolved
+
+        for key in self.COLUMN_PARAMETERS:
+            if resolved.get(key) is not None:
+                resolved[key] = resolve_identifier(
+                    resolved[key],
+                    columns,
+                    label="column",
+                )
+
+        for key in self.COLUMN_LIST_PARAMETERS:
+            values = resolved.get(key)
+            if values is None:
+                continue
+            if isinstance(values, str):
+                values = [values]
+            resolved[key] = [
+                resolve_identifier(value, columns, label="column")
+                for value in values
+            ]
+
+        assertion = resolved.get("assertion")
+        if isinstance(assertion, dict) and assertion.get("column") is not None:
+            assertion["column"] = resolve_identifier(
+                assertion["column"],
+                columns,
+                label="column",
+            )
+
+        changes = resolved.get("changes")
+        if isinstance(changes, dict):
+            resolved["changes"] = {
+                resolve_identifier(key, columns, label="column"): value
+                for key, value in changes.items()
+            }
+
+        expression = resolved.get("expression")
+        if kind == "FEATURE" and isinstance(expression, str):
+            resolved["expression"] = self._resolve_expression_identifiers(
+                expression,
+                columns,
+            )
+
+        return resolved
+
+    @staticmethod
+    def _available_columns(project) -> list[Any]:
+        if project.state.data is None:
+            project.load()
+
+        columns: list[Any] = []
+        frames = (
+            project.state.data,
+            project.state.cleaned_data,
+            project.state.engineered_data,
+            project.state.prediction_data,
+        )
+        for frame in frames:
+            if not isinstance(frame, pd.DataFrame):
+                continue
+            for column in frame.columns:
+                if column not in columns:
+                    columns.append(column)
+        return columns
+
+    @staticmethod
+    def _resolve_dataset_identifier(project, value: Any) -> str:
+        return str(
+            resolve_identifier(
+                value,
+                project.dataset_manager.names(),
+                label="dataset",
+            )
+        )
+
+    @staticmethod
+    def _resolve_expression_identifiers(
+        expression: str,
+        columns: list[Any],
+    ) -> str:
+        def replace(match: re.Match) -> str:
+            requested = match.group(1)
+            resolved = resolve_identifier(
+                requested,
+                columns,
+                label="expression column",
+            )
+            return f"`{resolved}`"
+
+        return re.sub(r"`([^`]+)`", replace, expression)
+
+    @staticmethod
+    def _resolve_merge_identifiers(
+        project,
+        parameters: dict[str, Any],
+    ) -> dict[str, Any]:
+        parameters["left"] = ADQLExecutor._resolve_dataset_identifier(
+            project,
+            parameters["left"],
+        )
+        parameters["right"] = ADQLExecutor._resolve_dataset_identifier(
+            project,
+            parameters["right"],
+        )
+        left = project.dataset_manager.get_data(parameters["left"])
+        right = project.dataset_manager.get_data(parameters["right"])
+
+        def values(value):
+            return value if isinstance(value, list) else [value]
+
+        if parameters.get("on") is not None:
+            requested = values(parameters["on"])
+            left_names = [
+                resolve_identifier(item, left.columns, label="left merge column")
+                for item in requested
+            ]
+            right_names = [
+                resolve_identifier(item, right.columns, label="right merge column")
+                for item in requested
+            ]
+            if left_names != right_names:
+                raise ValueError(
+                    "MERGE ON resolved to different stored names. Use LEFT ON "
+                    "and RIGHT ON to name each side explicitly."
+                )
+            parameters["on"] = left_names[0] if len(left_names) == 1 else left_names
+
+        for key, frame, label in (
+            ("left_on", left, "left merge column"),
+            ("right_on", right, "right merge column"),
+        ):
+            if parameters.get(key) is None:
+                continue
+            resolved = [
+                resolve_identifier(item, frame.columns, label=label)
+                for item in values(parameters[key])
+            ]
+            parameters[key] = resolved[0] if len(resolved) == 1 else resolved
+
+        return parameters
+
     def _execute_select(self, project, parameters) -> dict[str, Any]:
+        parameters = deepcopy(parameters)
         source_name = parameters["source"]
         frame = self._source_frame(project, source_name).copy()
+
+        for condition in parameters["where"]:
+            condition["column"] = resolve_identifier(
+                condition["column"], frame.columns, label="WHERE column"
+            )
+        parameters["group_by"] = [
+            resolve_identifier(column, frame.columns, label="GROUP BY column")
+            for column in parameters["group_by"]
+        ]
+        for item in parameters["select"]:
+            if item["kind"] != "wildcard" and item["column"] != "*":
+                item["column"] = resolve_identifier(
+                    item["column"], frame.columns, label="SELECT column"
+                )
+
         filtered = self._apply_conditions(frame, parameters["where"])
         items = parameters["select"]
         aggregates = [
@@ -1414,7 +1667,14 @@ class ADQLExecutor:
         order_by = parameters["order_by"]
 
         if order_by:
-            columns = [item["column"] for item in order_by]
+            columns = [
+                resolve_identifier(
+                    item["column"],
+                    selected.columns,
+                    label="ORDER BY column",
+                )
+                for item in order_by
+            ]
             missing = [column for column in columns if column not in selected.columns]
 
             if missing:
@@ -1517,6 +1777,7 @@ class ADQLExecutor:
         }
 
         if source not in built_in_sources:
+            source = self._resolve_dataset_identifier(project, source)
             try:
                 entry = project.dataset_manager.get(source)
             except KeyError as error:

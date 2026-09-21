@@ -10,6 +10,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from autodq.utils.identifiers import display_frame
+
 
 def serializable_value(value: Any) -> Any:
     if isinstance(value, np.generic):
@@ -196,7 +198,7 @@ class ADQLRunResult:
             content = ""
 
             if result.data is not None and result.display_data:
-                content = result.data.head(100).to_html(
+                content = display_frame(result.data.head(100)).to_html(
                     index=False,
                     escape=True,
                     border=0,

@@ -235,7 +235,8 @@ HEAD 2;
             [item["mime"] for item in payload["outputs"]],
             ["text/plain", "text/html"],
         )
-        self.assertIn("total_revenue", payload["outputs"][1]["data"])
+        self.assertIn("total revenue", payload["outputs"][1]["data"])
+        self.assertNotIn("total_revenue</th>", payload["outputs"][1]["data"])
         self.assertIn("autodq-output-toggle", payload["outputs"][1]["data"])
         self.assertIn("Click to show or hide", payload["outputs"][1]["data"])
         self.assertIn("<details", payload["outputs"][1]["data"])
@@ -506,9 +507,9 @@ STATISTICS;
         self.assertIn("Output truncated", markup)
         self.assertIn("View full output", markup)
         self.assertIn("Hide full output", markup)
-        self.assertIn("column_2", preview)
-        self.assertNotIn("column_3", preview)
-        self.assertIn("column_24", markup)
+        self.assertIn("column 2", preview)
+        self.assertNotIn("column 3", preview)
+        self.assertIn("column 24", markup)
         self.assertIn("<td>39</td>", markup)
         self.assertEqual(preview.count("<tr"), 6)
 
@@ -654,7 +655,8 @@ body { background: white; color: black; }
             1,
         )[0]
 
-        self.assertIn("Customer_Age", preview)
+        self.assertIn("Customer Age", preview)
+        self.assertNotIn("Customer_Age", preview)
         self.assertNotIn("Revenue", preview)
         self.assertIn("Revenue", markup)
         self.assertIn("View full output", markup)
@@ -690,7 +692,7 @@ body { background: white; color: black; }
         )
 
         self.assertIn("Descriptive", markup)
-        self.assertIn("Customer_Age", markup)
+        self.assertIn("Customer Age", markup)
         self.assertIn("4,908", markup)
         self.assertIn("35.9423", markup)
         self.assertIn("75.0%", markup)
@@ -776,9 +778,9 @@ body { background: white; color: black; }
         )[0]
 
         self.assertIn("autodq-matrix-table", preview)
-        self.assertIn("feature_2", preview)
-        self.assertNotIn("feature_7", preview)
-        self.assertIn("feature_7", markup)
+        self.assertIn("feature 2", preview)
+        self.assertNotIn("feature 7", preview)
+        self.assertIn("feature 7", markup)
         self.assertIn("View full output", markup)
 
     def test_notebook_model_explain_and_blue_outputs_use_structured_views(self):
@@ -864,7 +866,7 @@ body { background: white; color: black; }
         self.assertIn("Apply median strategy to Customer_Age.", markup)
         self.assertIn("88% confidence", markup)
         self.assertIn("Why this is recommended", markup)
-        self.assertIn("Customer_Age", markup)
+        self.assertIn("Customer Age", markup)
         self.assertNotIn('&quot;issue_type&quot;', markup)
         self.assertNotIn("Inspect the complete recommendation.", preview)
         self.assertIn("Inspect the complete recommendation.", markup)
@@ -896,7 +898,7 @@ body { background: white; color: black; }
         self.assertNotIn("transientOutputs: true", extension)
         self.assertIn("notebook.maxOutputRows", extension)
         self.assertIn("notebook.maxOutputCharacters", extension)
-        self.assertEqual(package["version"], "0.3.18")
+        self.assertEqual(package["version"], "0.3.19")
         renderer = package["contributes"]["notebookRenderer"][0]
         self.assertEqual(renderer["id"], "autodq-adql-review-renderer")
         self.assertEqual(renderer["requiresMessaging"], "always")
@@ -950,6 +952,9 @@ body { background: white; color: black; }
         command_pattern = re.compile(repository["commands"]["match"])
         action_pattern = re.compile(repository["actions"]["match"])
         option_pattern = re.compile(repository["options"]["match"])
+        natural_option_pattern = re.compile(
+            repository["naturalOptions"]["match"]
+        )
         function_pattern = re.compile(
             repository["aggregateFunctions"]["match"]
         )
@@ -965,6 +970,18 @@ body { background: white; color: black; }
         )
         enum_pattern = re.compile(repository["enumValues"]["match"])
         identifier_pattern = re.compile(repository["identifiers"]["match"])
+
+        quoted_identifiers = repository["quotedIdentifiers"]["patterns"]
+        self.assertEqual(
+            {pattern["begin"] for pattern in quoted_identifiers},
+            {'"', "`"},
+        )
+        self.assertTrue(
+            all(
+                pattern["name"] == "variable.other.quoted.adql"
+                for pattern in quoted_identifiers
+            )
+        )
 
         for command in sorted(SUPPORTED_COMMANDS):
             self.assertIsNotNone(
@@ -1101,6 +1118,29 @@ body { background: white; color: black; }
                 f"Expected {option} to use the ADQL option scope",
             )
 
+        for option in (
+            "GROUP BY",
+            "MAX ROWS",
+            "TEST SIZE",
+            "USE ENGINEERED",
+            "FAIL ON",
+            "ON HAND",
+        ):
+            self.assertIsNotNone(
+                natural_option_pattern.fullmatch(option),
+                f"Missing natural-space option highlighting for {option}",
+            )
+
+        for compatible_option in (
+            "GROUP_BY",
+            "MAX-ROWS",
+            "FAIL_ON",
+        ):
+            self.assertIsNotNone(
+                natural_option_pattern.fullmatch(compatible_option),
+                f"Missing compatible option highlighting for {compatible_option}",
+            )
+
         for function in (
             "AVG",
             "COUNT",
@@ -1129,6 +1169,21 @@ body { background: white; color: black; }
             self.assertIsNotNone(
                 quality_metric_pattern.fullmatch(metric),
                 f"Missing quality-metric highlighting for {metric}",
+            )
+
+        for metric in (
+            "COLUMN COUNT",
+            "DISTINCT COUNT",
+            "DUPLICATE PERCENT",
+            "DUPLICATE ROWS",
+            "MISSING COUNT",
+            "MISSING PERCENT",
+            "QUALITY SCORE",
+            "ROW COUNT",
+        ):
+            self.assertIsNotNone(
+                quality_metric_pattern.fullmatch(metric),
+                f"Missing natural quality-metric highlighting for {metric}",
             )
 
         for predicate in (
@@ -1191,6 +1246,7 @@ body { background: white; color: black; }
             "commands": "keyword.control.adql",
             "aggregateFunctions": "support.function.aggregate.adql",
             "qualityPredicates": "keyword.control.quality.adql",
+            "naturalOptions": "storage.modifier.option.adql",
             "options": "storage.modifier.option.adql",
             "dataSources": "constant.language.data-source.adql",
             "identifiers": "variable.other.readwrite.adql",

@@ -5,6 +5,33 @@ versioning and Python package releases follow PEP 440.
 
 ## Unreleased
 
+## 0.1.26 - 2026-09-20
+
+### Added
+
+- Added readable ADQL identifiers so a quoted name such as `"Customer Age"`
+  can safely resolve a unique stored `Customer_Age`, `Customer-Age`, or
+  `Customer Age` column without renaming source data, with the same lookup
+  behavior for registered dataset references.
+- Added natural-space spellings for multiword command options and quality
+  metrics while retaining underscore and hyphen compatibility.
+- Added display-only humanization for rich notebook table headings and
+  structured result identifiers.
+
+### Changed
+
+- Advanced the language to ADQL 2.8 and migrated every bundled notebook to
+  canonical double-quoted identifiers, single-quoted literals, and natural
+  multiword options.
+- Advanced the bundled AutoDQ ADQL VS Code extension to 0.3.19 with matching
+  case-insensitive highlighting for identifiers, strings, options, and quality
+  metrics.
+
+### Validation
+
+- Added parser, ambiguity, execution, result-rendering, TextMate grammar,
+  example-notebook, packaging, and distribution coverage for ADQL 2.8.
+
 ## 0.1.25 - 2026-09-20
 
 ### Added

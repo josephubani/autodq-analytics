@@ -3,12 +3,12 @@
 | Field | Value |
 | --- | --- |
 | Language | AutoDQ Analytics Domain Query Language (ADQL) |
-| Language version | 2.7 |
+| Language version | 2.8 |
 | Specification status | Stable |
 | Text encoding | UTF-8 |
 | Canonical file extension | `.adql` |
 
-This document is the normative definition of ADQL 2.7. It defines the
+This document is the normative definition of ADQL 2.8. It defines the
 language independently of a particular user interface or AutoDQ package
 release. The public Python constant `autodq.ADQL_LANGUAGE_VERSION` identifies
 the language version implemented by an installed AutoDQ package.
@@ -77,33 +77,52 @@ All commands, clauses, option names, aggregate names, built-in data sources,
 booleans, and null words defined in `grammar.ebnf` are reserved when they
 appear in their grammatical positions. Their matching is case-insensitive.
 
-Hyphens and underscores are equivalent only in option keys processed as
-options. For example, `RANDOM-STATE` and `RANDOM_STATE` select the same option.
-This equivalence does not apply to dataset or column names.
+Multiword option names use spaces in canonical ADQL. Hyphens and underscores
+remain accepted compatibility spellings. For example, `RANDOM STATE`,
+`RANDOM-STATE`, and `RANDOM_STATE` select the same option. This equivalence
+does not rename datasets or columns.
 
 ### 3.2 Identifiers
 
-An assignment identifier used on the left side of `LET` MUST begin with an
-ASCII letter or underscore and continue with ASCII letters, digits, or
-underscores. It MUST contain at most 128 characters and MUST NOT replace a
-built-in data source.
-
-Column names, output aliases, and registered dataset names MAY be quoted with
-single quotes, double quotes, or backticks when they contain spaces or words
-that would otherwise be read as clauses.
+Simple identifiers MAY begin with an ASCII letter or underscore and continue
+with ASCII letters, digits, or underscores. Double quotes are the canonical
+delimiter for readable identifiers, including `LET` assignments, column
+names, output aliases, and registered dataset names. Backticks and single
+quotes in identifier positions remain accepted for compatibility; backticks
+are also useful for column references inside feature expressions. A `LET` name
+MUST contain at most 128 characters and MUST NOT replace a built-in data
+source.
 
 ```adql
-SELECT `Order Date`, "Gross Sales" AS gross FROM CURRENT;
+LET "Clean Sales" = CLEANED;
+SELECT "Order Date", "Gross Sales" AS "Total Sales"
+FROM "Clean Sales";
 ```
 
 Identifiers MUST NOT be empty or contain a semicolon, carriage return, or
 newline. A registered dataset selector MUST contain at most 255 characters.
 
+When a quoted readable identifier does not exactly match a stored column,
+the runtime resolves it in this order:
+
+1. exact spelling;
+2. one case-insensitive match;
+3. one separator-equivalent match after ignoring spaces, underscores, and
+   hyphens.
+
+An ambiguous separator-equivalent match MUST fail and list the exact stored
+names instead of guessing. Resolution is lookup-only: source and exported
+column names are not renamed. Notebook result headings MAY replace underscores
+with spaces for display.
+
 ### 3.3 Literals
 
-ADQL has string, integer, floating-point, Boolean, and null literals. Literal
-conversion is defined in [`data-types.md`](data-types.md). Option values that
-contain whitespace MUST be quoted.
+ADQL has string, integer, floating-point, Boolean, and null literals. Single
+quotes are canonical for strings, paths, titles, descriptions, and other
+literal text. Double-quoted values remain accepted in literal positions for
+ADQL 2.x compatibility. Literal conversion is defined in
+[`data-types.md`](data-types.md). Option values that contain whitespace MUST
+be quoted.
 
 ### 3.4 Lists and mappings
 
@@ -125,7 +144,7 @@ and Markdown cells introduced by either comment marker:
 
 ```adql
 # %% [Dataset]
-DATASET "sales.csv" TARGET Revenue;
+DATASET 'sales.csv' TARGET Revenue;
 
 -- %% [markdown] Business context
 # Revenue review
@@ -275,14 +294,14 @@ appear at most once. The following semantic constraints supplement the EBNF:
 | Statement | Requirement |
 | --- | --- |
 | `DATASET`, `ADD DATASET` | Input path suffix MUST be `.csv`, `.xlsx`, or `.xls`. |
-| `AUTO` | Mode defaults to `review`; `TEST_SIZE` is strictly between 0 and 1; `RANDOM_STATE` is an integer; report suffix is `.html` or `.json`. |
-| `MODEL` | Training uses the existing target unless `TARGET` is supplied; `TEST_SIZE` is strictly between 0 and 1; save/load forms require their path clause. |
+| `AUTO` | Mode defaults to `review`; `TEST SIZE` is strictly between 0 and 1; `RANDOM STATE` is an integer; report suffix is `.html` or `.json`. |
+| `MODEL` | Training uses the existing target unless `TARGET` is supplied; `TEST SIZE` is strictly between 0 and 1; save/load forms require their path clause. |
 | `PREDICT` | Confidence is strictly between 0 and 1; low-confidence threshold is between 0 and 1 inclusive. |
-| `EXPLAIN` | `MAX_ROWS` MUST be positive. |
+| `EXPLAIN` | `MAX ROWS` MUST be positive. |
 | `READINESS` | `REFERENCE` MUST name a registered dataset. PSI stability requires at least 50 rows in both the current and reference datasets. |
 | `OPERATIONS`, `KPI`, `PROCESS`, `BOTTLENECKS`, `ROOT CAUSE` | `PERIOD` is `day`, `week`, or `month`; `TOP` is from 1 through 100; `SLA` is positive; `START` and `END` are supplied together; explicit column roles MUST exist in the selected dataset. |
-| `INVENTORY` | `SERVICE_LEVEL` is greater than zero and at most 1, or a percentage greater than 1 and at most 100; `HORIZON` is from 1 through 3,650 days; `TOP` is from 1 through 100; explicit column roles MUST exist. Inventory calculation requires item, location, on-hand, and daily-demand roles. |
-| `PRESCRIBE`, `OPTIMIZE` | `BUDGET` is non-negative; `MAX_ACTIONS` is from 1 through 100; `MIN_CONFIDENCE` is from 0 through 1; `MAX_RISK` is `low`, `medium`, or `high`; objectives and sources are allowlisted. |
+| `INVENTORY` | `SERVICE LEVEL` is greater than zero and at most 1, or a percentage greater than 1 and at most 100; `HORIZON` is from 1 through 3,650 days; `TOP` is from 1 through 100; explicit column roles MUST exist. Inventory calculation requires item, location, on-hand, and daily-demand roles. |
+| `PRESCRIBE`, `OPTIMIZE` | `BUDGET` is non-negative; `MAX ACTIONS` is from 1 through 100; `MIN CONFIDENCE` is from 0 through 1; `MAX RISK` is `low`, `medium`, or `high`; objectives and sources are allowlisted. |
 | `SCENARIO` | `NAME` contains 1 through 200 characters; at least one change is non-zero; every percentage change is greater than -100 and no more than 1,000. |
 | `ACTION` | Action IDs MUST exist in the current plan. Execution requires prior approval. Audit paths end in `.json` or `.csv`. The runtime MUST NOT interpret `ACTION EXECUTE` as authorization to mutate an external system. |
 | `SHAP` | `ROW` cannot be negative; chart is `summary`, `bar`, `beeswarm`, `waterfall`, or `dependence`. |
@@ -291,19 +310,19 @@ appear at most once. The following semantic constraints supplement the EBNF:
 | `EDIT` | `CHANGES` is a non-empty mapping with string column keys. |
 | `MISSING FILL` | Strategy defaults to `constant` when `VALUE` is supplied and `auto` otherwise; `constant` requires a non-null value. |
 | `MISSING DROP ROWS` | `HOW` defaults to `any` and is either `any` or `all`. |
-| `MISSING DROP COLUMNS` | Exactly one of a column list or `MIN_PERCENT` is supplied; percentage is between 0 and 100 inclusive. |
+| `MISSING DROP COLUMNS` | Exactly one of a column list or `MIN PERCENT` is supplied; percentage is between 0 and 100 inclusive. |
 | `DUPLICATES DROP` | `KEEP` defaults to `first` and is `first`, `last`, or `none`. |
 | `DOMAIN ADD` | At least one constraint is REQUIRED. |
 | `OUTLIERS` | `IQR` MUST be positive; `TREAT` requires `COLUMN`. |
-| `CORRELATION` | `MIN_ABS` is between 0 and 1 inclusive. |
-| `BLUE` | `MAX_FEATURES` is positive; `SIGNIFICANCE` is strictly between 0 and 1. |
+| `CORRELATION` | `MIN ABS` is between 0 and 1 inclusive. |
+| `BLUE` | `MAX FEATURES` is positive; `SIGNIFICANCE` is strictly between 0 and 1. |
 | `DASHBOARD` | A supplied output path ends with `.html`. |
 | `GALLERY SAVE` | Format is `png`, `svg`, `pdf`, `jpg`, or `jpeg`. |
 | `REPORT` | Output suffix is `.html` or `.json`. |
 | `EXPORT` | Output suffix is `.csv` or `.xlsx`. |
 | `AUDIT EXPORT` | Output suffix is `.json` or `.csv`. |
-| `ASSERT` | Severity is `error`, `warning`, or `info`; `FAIL_ON` additionally accepts `never`; suite JSON paths end with `.json`; `BETWEEN` bounds are ascending. |
-| `SCHEMA`, `CONTRACT`, `CHECK CONTRACT` | Contract and JSON artifact names are bounded identifiers; `EXTRA_COLUMNS` is `ignore`, `info`, `warning`, or `error`; contract paths end with `.json`. |
+| `ASSERT` | Severity is `error`, `warning`, or `info`; `FAIL ON` additionally accepts `never`; suite JSON paths end with `.json`; `BETWEEN` bounds are ascending. |
+| `SCHEMA`, `CONTRACT`, `CHECK CONTRACT` | Contract and JSON artifact names are bounded identifiers; `EXTRA COLUMNS` is `ignore`, `info`, `warning`, or `error`; contract paths end with `.json`. |
 | `DRIFT`, `BASELINE`, `CHECK DRIFT` | A baseline is required for detection; PSI and missingness warning thresholds cannot exceed error thresholds; baseline paths end with `.json`; sensitivity is `strict`, `normal`, or `relaxed`. |
 | `HEAD`, `TAIL`, `SAMPLE`, `HISTORY`, `SESSION EVENTS LIMIT` | Explicit row or event counts are positive integers. |
 
@@ -326,13 +345,13 @@ requirements independently.
 
 Metric assertions support row count, column count, missing count and percent,
 removable exact-duplicate rows and percent, distinct non-null values, and the
-AutoDQ diagnosis quality score. `MISSING_COUNT` and `MISSING_PERCENT` MAY name
-a column or inspect the complete table. `DISTINCT_COUNT` requires a column.
+AutoDQ diagnosis quality score. `MISSING COUNT` and `MISSING PERCENT` MAY name
+a column or inspect the complete table. `DISTINCT COUNT` requires a column.
 Duplicate metrics count rows after the first exact occurrence, matching the
 default `DUPLICATES DROP KEEP first` behavior.
 
 Each assertion has severity `error` by default. A failed assertion blocks when
-its severity is at least the statement's `FAIL_ON` level. `FAIL_ON error` is
+its severity is at least the statement's `FAIL ON` level. `FAIL ON error` is
 the default; `warning` also blocks warning failures, `info` blocks every
 failure, and `never` records failures without failing the ADQL statement.
 Blocking failures produce a structured failed result and obey normal
@@ -354,11 +373,11 @@ and produce the same versioned contract. Contract creation infers required
 columns, canonical data types,
 nullability, identifier uniqueness, and bounded categorical domains from a
 current or registered dataset. Numeric and datetime ranges are inferred only
-when `INFER_RANGES true` is explicit. `CONTRACT name REQUIRE column ...` is the
+when `INFER RANGES true` is explicit. `CONTRACT name REQUIRE column ...` is the
 concise form of `SCHEMA CONTRACT ADD`; `REQUIRE` implies `REQUIRED true`,
 `NOT NULL` means `NULLABLE false`, and bare `UNIQUE` means `UNIQUE true`.
 `CHECK CONTRACT name ON dataset` validates without mutation and uses the same
-`error`, `warning`, `info`, and `FAIL_ON` gate semantics as quality assertions.
+`error`, `warning`, `info`, and `FAIL ON` gate semantics as quality assertions.
 
 Contracts use a versioned JSON format. Registered definitions survive active
 dataset switches and are persisted with an attached workspace. The latest
@@ -402,7 +421,7 @@ MUST appear in `GROUP BY`. Output aliases are case-insensitively unique.
 
 `WHERE` conditions are combined only with `AND`. Supported operators are `=`,
 `!=`, `<`, `<=`, `>`, `>=`, `IN`, `NOT IN`, `IS NULL`, `IS NOT NULL`,
-`CONTAINS`, `STARTS WITH`, and `ENDS WITH`. ADQL 2.7 does not support `OR`,
+`CONTAINS`, `STARTS WITH`, and `ENDS WITH`. ADQL 2.8 does not support `OR`,
 joins inside `SELECT`, subqueries, window functions, or arbitrary functions.
 
 `DISTINCT` is applied after projection and aggregation. Ordering is stable,
@@ -438,7 +457,7 @@ overwritten by `LET`.
 
 ## 10. Safety limits
 
-A conforming AutoDQ ADQL 2.7 validator enforces:
+A conforming AutoDQ ADQL 2.8 validator enforces:
 
 | Limit | Value |
 | --- | ---: |
@@ -482,13 +501,13 @@ language behavior.
 
 ## 12. Conformance and extensions
 
-An implementation claiming **ADQL 2.7 parser conformance** MUST implement all
-productions in `grammar.ebnf`. An implementation claiming **AutoDQ ADQL 2.7
+An implementation claiming **ADQL 2.8 parser conformance** MUST implement all
+productions in `grammar.ebnf`. An implementation claiming **AutoDQ ADQL 2.8
 runtime conformance** MUST additionally implement every command listed by the
 runtime command set and the state transitions in this specification.
 
 Implementations MAY provide extra renderers, editors, transport protocols, and
-CLI options. They MUST NOT silently reinterpret valid ADQL 2.7 syntax.
+CLI options. They MUST NOT silently reinterpret valid ADQL 2.8 syntax.
 Language extensions require a later ADQL language version and MUST be rejected
 as unknown syntax by implementations that do not support that version.
 

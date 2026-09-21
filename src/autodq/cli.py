@@ -18,6 +18,7 @@ from autodq.commands.errors import ADQLError
 from autodq.commands.models import serializable_value
 from autodq.commands.runner import ADQLFileRunner
 from autodq.pipeline import PipelineRunSpec, PipelineRunner
+from autodq.utils.identifiers import display_frame, display_identifier
 from autodq.vscode import extension_path, install_extension
 
 
@@ -772,7 +773,8 @@ def _dataframe_html(
     limit: int = _NOTEBOOK_DEFAULT_OUTPUT_ROWS,
     column_limit: int = _NOTEBOOK_MAX_OUTPUT_COLUMNS,
 ) -> str:
-    preview = frame.iloc[:limit, :column_limit]
+    displayed = display_frame(frame)
+    preview = displayed.iloc[:limit, :column_limit]
     table = preview.to_html(
         index=False,
         escape=True,
@@ -795,7 +797,7 @@ def _dataframe_html(
     remainder = ""
 
     if notes:
-        full_table = frame.to_html(
+        full_table = displayed.to_html(
             index=False,
             escape=True,
             border=0,
@@ -834,7 +836,7 @@ def _profile_html(
     for column in column_names[:limit]:
         columns.append(
             "<tr>"
-            f"<td>{html.escape(str(column))}</td>"
+            f"<td>{html.escape(display_identifier(column))}</td>"
             f"<td>{html.escape(str(profile.get('data_types', {}).get(column, 'unknown')))}</td>"
             f"<td>{html.escape(str(profile.get('semantic_types', {}).get(column, 'unknown')))}</td>"
             f"<td>{int(profile.get('missing_values', {}).get(column, 0)):,}</td>"
@@ -955,7 +957,9 @@ def _diagnosis_html(
     issues = list(getattr(report, "issues", []))
 
     for issue in issues[:limit]:
-        affected = ", ".join(issue.affected_columns) or "None"
+        affected = ", ".join(
+            display_identifier(column) for column in issue.affected_columns
+        ) or "None"
         confidence = (
             f"{float(issue.confidence) * 100:.1f}%"
             if issue.confidence is not None
@@ -1048,7 +1052,8 @@ def _recommendations_html(
             affected = [affected]
 
         columns = "".join(
-            f'<span class="autodq-column-chip">{html.escape(str(column))}</span>'
+            '<span class="autodq-column-chip">'
+            f'{html.escape(display_identifier(column))}</span>'
             for column in affected
         ) or '<span class="autodq-muted">No specific columns</span>'
         confidence = item.get("confidence")
@@ -1130,7 +1135,9 @@ def _metric_card(label: str, value: str) -> str:
 
 
 def _group_line(label: str, values) -> str:
-    rendered = ", ".join(html.escape(str(value)) for value in values) or "None"
+    rendered = ", ".join(
+        html.escape(display_identifier(value)) for value in values
+    ) or "None"
     return f"<p><strong>{html.escape(label)}:</strong> {rendered}</p>"
 
 
@@ -1335,12 +1342,13 @@ def _structured_html(
     *,
     depth: int = 0,
     full: bool = False,
+    key: str | None = None,
 ) -> str:
     if depth >= (20 if full else 5):
         return '<p class="autodq-structured-note">Additional nested details omitted.</p>'
 
     if _is_scalar(value):
-        return _structured_scalar(value)
+        return _structured_scalar(value, key=key)
 
     if isinstance(value, dict):
         items = dict(value)
@@ -1391,7 +1399,7 @@ def _structured_html(
                         '<details class="autodq-structured-section">'
                         f"<summary><span>{html.escape(label)}</span>{count_badge}</summary>"
                         '<div class="autodq-structured-section__body">'
-                        f"{_structured_html(item, depth=depth + 1, full=full)}"
+                        f"{_structured_html(item, depth=depth + 1, full=full, key=key)}"
                         "</div></details>"
                     )
 
@@ -1426,7 +1434,8 @@ def _structured_html(
             content = (
                 '<div class="autodq-chip-list">'
                 + "".join(
-                    f'<span class="autodq-data-chip">{_structured_scalar(item)}</span>'
+                    '<span class="autodq-data-chip">'
+                    f'{_structured_scalar(item, key=key)}</span>'
                     for item in items
                 )
                 + "</div>"
@@ -1444,7 +1453,7 @@ def _structured_html(
                 cards.append(
                     '<article class="autodq-structured-card">'
                     f'<div class="autodq-structured-card__title">Item {index}</div>'
-                    f"{_structured_html(item, depth=depth + 1, full=full)}"
+                    f"{_structured_html(item, depth=depth + 1, full=full, key=key)}"
                     "</article>"
                 )
 
@@ -1558,7 +1567,7 @@ def _structured_matrix(matrix: dict) -> str:
                 column_names.append(column)
 
     headers = "".join(
-        f"<th>{html.escape(str(column))}</th>"
+        f"<th>{html.escape(display_identifier(column))}</th>"
         for column in column_names
     )
     rows = []
@@ -1569,7 +1578,7 @@ def _structured_matrix(matrix: dict) -> str:
             for column in column_names
         )
         rows.append(
-            f"<tr><th>{html.escape(str(row_name))}</th>{cells}</tr>"
+            f"<tr><th>{html.escape(display_identifier(row_name))}</th>{cells}</tr>"
         )
 
     return (
@@ -1605,6 +1614,34 @@ def _structured_scalar(value, *, key: str | None = None) -> str:
         rendered = f"{value:,}"
     else:
         rendered = str(value)
+
+    identifier_keys = {
+        "column",
+        "columns",
+        "affected_columns",
+        "feature",
+        "feature_a",
+        "feature_b",
+        "feature_name",
+        "feature_names",
+        "features",
+        "features_used",
+        "excluded_features",
+        "target",
+        "group_by",
+        "item",
+        "x",
+        "y",
+    }
+    if (
+        isinstance(value, str)
+        and (
+            normalized_key in identifier_keys
+            or normalized_key.endswith("_column")
+            or normalized_key.endswith("_columns")
+        )
+    ):
+        rendered = display_identifier(rendered)
 
     normalized_value = rendered.lower().strip().replace(" ", "_")
     badge_keys = {

@@ -71,32 +71,38 @@ If AutoDQ is installed elsewhere, set `autodq.commandPath` to the complete
 
 ```adql
 # %% [Dataset]
-DATASET "sales.csv" TARGET Revenue;
+DATASET 'sales.csv' TARGET Revenue;
 
 # %% [Automatic review]
-AUTO MODE review VISUALIZE false CONTINUE_ON_ERROR false;
+AUTO MODE review VISUALIZE false CONTINUE ON ERROR false;
 
 # %% [Reusable reviewed data]
-LET reviewed_sales = CURRENT;
+LET "Reviewed Sales" = CURRENT;
 
 # %% [Regional totals]
-LET regional_totals = SELECT Region,
-                             SUM(Revenue) AS total_revenue,
-                             COUNT(*) AS transactions
-                      FROM CURRENT
-                      WHERE Region IS NOT NULL
-                      GROUP BY Region
-                      ORDER BY total_revenue DESC;
+LET "Regional Totals" = SELECT Region,
+                               SUM(Revenue) AS "Total Revenue",
+                               COUNT(*) AS Transactions
+                        FROM "Reviewed Sales"
+                        WHERE Region IS NOT NULL
+                        GROUP BY Region
+                        ORDER BY "Total Revenue" DESC;
 
 # %% [Export]
-EXPORT regional_totals TO "regional-totals.csv" OVERWRITE;
+EXPORT "Regional Totals" TO 'regional-totals.csv' OVERWRITE;
 ```
+
+ADQL 2.8 uses double quotes for readable identifiers and single quotes for
+literal text. A quoted identifier such as `"Customer Age"` can address a
+uniquely matching stored `Customer_Age` column without renaming the source
+data. Multiword options use spaces in canonical code; underscore and hyphen
+spellings remain compatible.
 
 Format string dates and numeric precision in a cell before analysis:
 
 ```adql
-SET TYPE Created_At datetime FORMAT "DD/MM/YYYY HH:mm:ss";
-SET TYPE Api_Time datetime FORMAT ISO8601 UTC true;
+SET TYPE "Created At" datetime FORMAT 'DD/MM/YYYY HH:mm:ss';
+SET TYPE "Api Time" datetime FORMAT ISO8601 UTC true;
 SET TYPE Revenue decimal DECIMALS 2;
 ```
 
@@ -104,35 +110,35 @@ Resolve remaining missing values in a review cell:
 
 ```adql
 MISSING SUMMARY;
-MISSING FILL City VALUE "Not provided";
+MISSING FILL City VALUE 'Not provided';
 MISSING FILL ALL STRATEGY auto;
 DUPLICATES SUMMARY;
 DUPLICATES DROP KEEP first;
 CLEANING APPLY;
 MISSING SUMMARY;
-LET cleaned_sales = CLEANED;
+LET "Cleaned Sales" = CLEANED;
 ```
 
 Create a data-quality gate in its own cell:
 
 ```adql
-ASSERT SUITE ADD sales_gate Transaction_ID UNIQUE
-    NAME "Transaction IDs are unique";
+ASSERT SUITE ADD sales_gate "Transaction ID" UNIQUE
+    NAME 'Transaction IDs are unique';
 ASSERT SUITE ADD sales_gate Revenue MIN 0;
-ASSERT SUITE ADD sales_gate MISSING_PERCENT Region <= 2
+ASSERT SUITE ADD sales_gate MISSING PERCENT Region <= 2
     SEVERITY warning;
-ASSERT SUITE RUN sales_gate FAIL_ON warning;
+ASSERT SUITE RUN sales_gate FAIL ON warning;
 ```
 
 For customer datasets, use the built-in email format directly or in a suite:
 
 ```adql
-ASSERT Email FORMAT email SEVERITY warning NAME "Valid email format";
+ASSERT Email FORMAT email SEVERITY warning NAME 'Valid email format';
 ```
 
 The result appears as a notebook table. Blocking failures mark the cell as
-failed, while `FAIL_ON never` records results without stopping later cells.
-Use `ASSERT SUITE EXPORT ... TO "suite.json"` to keep the suite with a project.
+failed, while `FAIL ON never` records results without stopping later cells.
+Use `ASSERT SUITE EXPORT ... TO 'suite.json'` to keep the suite with a project.
 
 Open the file with **AutoDQ ADQL Notebook**, then run cells from top to bottom.
 The first code cell automatically initializes the dataset when required.
@@ -143,7 +149,7 @@ active data with a registered baseline:
 ```adql
 READINESS;
 READINESS REFERENCE baseline;
-READINESS DATASET cleaned_sales REFERENCE baseline;
+READINESS DATASET "Cleaned Sales" REFERENCE baseline;
 ```
 
 The output separates sample sufficiency, data quality, feature readiness,
@@ -157,7 +163,7 @@ Analyze operational behavior with automatic column-role inference:
 OPERATIONS;
 KPI SLA 5;
 PROCESS PERIOD month;
-BOTTLENECKS GROUP_BY Region,Sales_Channel TOP 10;
+BOTTLENECKS GROUP BY Region,"Sales Channel" TOP 10;
 ROOT CAUSE TOP 10;
 ```
 
@@ -168,27 +174,27 @@ names need explicit guidance.
 Manage inventory across network echelons with focused notebook outputs:
 
 ```adql
-INVENTORY SERVICE_LEVEL 95 HORIZON 30;
-INVENTORY NETWORK SERVICE_LEVEL 95 HORIZON 30;
-INVENTORY REBALANCE SERVICE_LEVEL 95 HORIZON 30 TOP 20;
+INVENTORY SERVICE LEVEL 95 HORIZON 30;
+INVENTORY NETWORK SERVICE LEVEL 95 HORIZON 30;
+INVENTORY REBALANCE SERVICE LEVEL 95 HORIZON 30 TOP 20;
 ```
 
 Map unusual schemas with `ITEM`, `LOCATION`, `ECHELON`, `PARENT`, `TIME`,
-`ON_HAND`, `ON_ORDER`, `BACKORDER`, `DEMAND`, `LEAD_TIME`, `SAFETY_STOCK`,
-`UNIT_COST`, and `CAPACITY`.
+`ON HAND`, `ON ORDER`, `BACKORDER`, `DEMAND`, `LEAD TIME`, `SAFETY STOCK`,
+`UNIT COST`, and `CAPACITY`.
 
 Turn that evidence into a governed action portfolio:
 
 ```adql
 PRESCRIBE OBJECTIVE reduce_delay SOURCE operations
-    MAX_ACTIONS 5 MIN_CONFIDENCE 0.60 MAX_RISK medium;
-SCENARIO NAME "Faster service"
-    DURATION_CHANGE -20 FAILURE_CHANGE -10 COST_CHANGE 5;
-OPTIMIZE OBJECTIVE reduce_delay MAX_ACTIONS 3;
+    MAX ACTIONS 5 MIN CONFIDENCE 0.60 MAX RISK medium;
+SCENARIO NAME 'Faster service'
+    DURATION CHANGE -20 FAILURE CHANGE -10 COST CHANGE 5;
+OPTIMIZE OBJECTIVE reduce_delay MAX ACTIONS 3;
 ACTION LIST STATUS selected;
-ACTION APPROVE A001 ACTOR "operations lead";
-ACTION EXECUTE A001 ACTOR "operations lead";
-ACTION AUDIT TO "action-audit.json" OVERWRITE;
+ACTION APPROVE A001 ACTOR 'operations lead';
+ACTION EXECUTE A001 ACTOR 'operations lead';
+ACTION AUDIT TO 'action-audit.json' OVERWRITE;
 ```
 
 Recorded execution updates only the plan and audit trail; it does not mutate
@@ -198,12 +204,12 @@ Protect future batches with a structural contract and a distribution
 baseline:
 
 ```adql
-CONTRACT sales_v1 FROM approved_sales;
+CONTRACT sales_v1 FROM "Approved Sales";
 CONTRACT sales_v1 REQUIRE Revenue TYPE numeric NOT NULL MIN 0;
-CHECK CONTRACT sales_v1 ON august_sales FAIL ON error;
+CHECK CONTRACT sales_v1 ON "August Sales" FAIL ON error;
 
-BASELINE sales_baseline FROM approved_sales;
-CHECK DRIFT sales_baseline ON august_sales
+BASELINE sales_baseline FROM "Approved Sales";
+CHECK DRIFT sales_baseline ON "August Sales"
     CONTRACT sales_v1 SENSITIVITY normal FAIL ON warning;
 ```
 
@@ -227,7 +233,7 @@ Select one or more recommendations and use **Approve selected**, **Reject
 selected**, or **Preview selected**. **Approve all** changes every action to
 approved, while **Apply to CLEANED** executes approved actions together with
 staged manual edits. The manual row editor accepts a source row index and a
-JSON object such as `{"Region": "North", "Customer_Age": 36}`. Every status
+JSON object such as `{"Region": "North", "Customer Age": 36}`. Every status
 change and edited cell is recorded in the existing AutoDQ audit trail.
 
 The panel invokes the same project APIs as the equivalent `APPROVE`, `REJECT`,
