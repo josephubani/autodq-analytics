@@ -83,6 +83,21 @@ For editable development and release tools:
 python -m pip install -e ".[dev]"
 ```
 
+## AutoDQ Studio web app
+
+The Streamlit v1 interface provides a guided workflow for dataset upload,
+quality diagnosis, cleaning review, before/after validation, visual analysis,
+ADQL execution, and CSV or Excel export.
+
+```bash
+python -m pip install -r requirements-web.txt
+streamlit run app/streamlit_app.py
+```
+
+Open the local URL printed by Streamlit, then upload a CSV/XLSX file or use
+the bundled sales dataset. Streamlit remains an application-only dependency;
+installing the core `autodq` package does not require it.
+
 New users can follow the [quickstart](docs/QUICKSTART.md) for a safe review
 workflow in Python and ADQL.
 

@@ -1,0 +1,1 @@
+"""AutoDQ application entry points."""
