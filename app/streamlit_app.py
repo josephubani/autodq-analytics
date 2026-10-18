@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
-import shutil
+import logging
 import sys
 import tempfile
 from pathlib import Path
@@ -32,6 +31,14 @@ from app.autodq_web.presenters import (  # noqa: E402
     validation_frame,
 )
 from app.autodq_web.auth import UserIdentity, require_identity  # noqa: E402
+from app.autodq_web.persistence import (  # noqa: E402
+    IdentityContext,
+    bootstrap_identity,
+)
+from app.autodq_web.project_store import (  # noqa: E402
+    RestoredProject,
+    project_service,
+)
 from app.autodq_web.styles import APP_CSS  # noqa: E402
 from autodq import AutoDQ  # noqa: E402
 from autodq.visualization.renderers.matplotlib_renderer import (  # noqa: E402
@@ -46,6 +53,8 @@ NAVIGATION = (
     "Explore",
     "ADQL studio",
 )
+
+LOGGER = logging.getLogger(__name__)
 
 ADQL_TEMPLATES = {
     "Quick quality check": """PROFILE;
@@ -82,11 +91,19 @@ def initialize_state() -> None:
         "project": None,
         "dataset_name": None,
         "dataset_fingerprint": None,
-        "upload_fingerprint": None,
-        "workspace_dir": None,
+        "upload_token": 0,
         "page": "Overview",
         "adql_source": ADQL_TEMPLATES["Quick quality check"],
         "adql_result": None,
+        "identity_context": None,
+        "active_workspace_id": None,
+        "active_project_id": None,
+        "active_dataset_id": None,
+        "loaded_project_id": None,
+        "loaded_dataset_id": None,
+        "persisted_stage_checksums": {},
+        "pending_project_selector": None,
+        "pending_dataset_selector": None,
     }
     for key, value in defaults.items():
         if key not in st.session_state:
@@ -119,7 +136,7 @@ def safe_uploaded_name(name: str) -> str:
     return f"{stem or 'dataset'}{Path(path).suffix.lower()}"
 
 
-def load_project(path: Path, *, display_name: str, fingerprint: str) -> None:
+def load_autodq_path(path: Path, *, display_name: str, fingerprint: str) -> AutoDQ:
     with st.spinner("Loading the dataset into AutoDQ…"):
         current = AutoDQ(str(path))
         current.load()
@@ -127,43 +144,174 @@ def load_project(path: Path, *, display_name: str, fingerprint: str) -> None:
     st.session_state.dataset_name = display_name
     st.session_state.dataset_fingerprint = fingerprint
     st.session_state.adql_result = None
+    return current
+
+
+def hydrate_saved_project(restored: RestoredProject) -> None:
+    """Restore the active dataset and its latest durable stages into AutoDQ."""
+
+    st.session_state.active_project_id = restored.project.id
+    st.session_state.loaded_project_id = restored.project.id
+    st.session_state.active_dataset_id = restored.dataset_id
+    st.session_state.loaded_dataset_id = restored.dataset_id
+    st.session_state.persisted_stage_checksums = restored.stage_checksums or {}
+    st.session_state.adql_result = None
+
+    if restored.raw_path is None:
+        st.session_state.project = None
+        st.session_state.dataset_name = None
+        st.session_state.dataset_fingerprint = None
+        return
+
+    raw_checksum = (restored.stage_checksums or {}).get("raw", restored.dataset_id or "")
+    current = load_autodq_path(
+        restored.raw_path,
+        display_name=restored.dataset_name or restored.original_filename or "Dataset",
+        fingerprint=f"saved:{restored.dataset_id}:{raw_checksum}",
+    )
+    if restored.current_data is not None:
+        current.state.data = restored.current_data.copy()
+    if restored.target_column and restored.target_column in current.state.data.columns:
+        current.set_target(restored.target_column)
+    if restored.cleaned_data is not None:
+        current.state.cleaned_data = restored.cleaned_data.copy()
+    if restored.engineered_data is not None:
+        current.state.engineered_data = restored.engineered_data.copy()
+
+
+def open_saved_project(project_id: str, dataset_id: str | None = None) -> None:
+    context = st.session_state.identity_context
+    with st.spinner("Opening the saved project…"):
+        restored = project_service().restore_project(
+            user_id=context.user_id,
+            project_id=project_id,
+            dataset_id=dataset_id,
+        )
+        hydrate_saved_project(restored)
+
+
+def queue_sidebar_selection(
+    project_id: str | None,
+    dataset_id: str | None = None,
+) -> None:
+    st.session_state.pending_project_selector = project_id or ""
+    st.session_state.pending_dataset_selector = dataset_id or ""
+
+
+def save_active_stages(*stages: str) -> None:
+    current = project()
+    context = st.session_state.identity_context
+    project_id = st.session_state.active_project_id
+    dataset_id = st.session_state.active_dataset_id
+    workspace_id = st.session_state.active_workspace_id
+    if current is None or not all((context, project_id, dataset_id, workspace_id)):
+        return
+
+    frames = {
+        "current": current.state.data,
+        "cleaned": current.state.cleaned_data,
+        "engineered": current.state.engineered_data,
+    }
+    checksums = dict(st.session_state.persisted_stage_checksums)
+    for stage in stages:
+        frame = frames.get(stage)
+        if frame is None:
+            continue
+        version = project_service().save_stage(
+            user_id=context.user_id,
+            workspace_id=workspace_id,
+            project_id=project_id,
+            dataset_id=dataset_id,
+            stage=stage,
+            frame=frame,
+            target_column=current.target,
+        )
+        checksums[stage] = version.checksum
+    st.session_state.persisted_stage_checksums = checksums
+
+
+def save_dataset_payload(
+    payload: bytes,
+    *,
+    filename: str,
+    project_name: str | None = None,
+) -> None:
+    context = st.session_state.identity_context
+    workspace_id = st.session_state.active_workspace_id
+    safe_name = safe_uploaded_name(filename)
+    dataset_name = Path(safe_name).stem
+    with tempfile.TemporaryDirectory(prefix="autodq-studio-import-") as directory:
+        path = Path(directory) / safe_name
+        path.write_bytes(payload)
+        candidate = AutoDQ(str(path))
+        with st.spinner("Validating and saving the dataset…"):
+            frame = candidate.load()
+            saved = project_service().save_upload(
+                user_id=context.user_id,
+                workspace_id=workspace_id,
+                project_id=st.session_state.active_project_id,
+                project_name=project_name or f"{dataset_name} analysis",
+                dataset_name=dataset_name,
+                original_filename=safe_name,
+                payload=payload,
+                frame=frame,
+                target_column=None,
+            )
+            restored = project_service().restore_project(
+                user_id=context.user_id,
+                project_id=saved.project.id,
+                dataset_id=saved.dataset_id,
+            )
+            hydrate_saved_project(restored)
+    st.session_state.upload_token += 1
+    queue_sidebar_selection(saved.project.id, saved.dataset_id)
 
 
 def load_upload(uploaded_file) -> None:
     payload = uploaded_file.getvalue()
-    digest = hashlib.sha256(payload).hexdigest()
-    if digest == st.session_state.upload_fingerprint:
-        return
-
-    root = Path(tempfile.mkdtemp(prefix="autodq-studio-"))
-    path = root / safe_uploaded_name(uploaded_file.name)
-    path.write_bytes(payload)
-    st.session_state.workspace_dir = str(root)
-    st.session_state.upload_fingerprint = digest
-    load_project(path, display_name=path.name, fingerprint=digest)
-    st.toast("Dataset loaded", icon="✅")
+    save_dataset_payload(payload, filename=uploaded_file.name)
+    st.toast("Dataset saved to the project", icon="✅")
     st.rerun()
 
 
 def load_sample() -> None:
     path = REPOSITORY_ROOT / "datasets" / "sample" / "sales.csv"
-    fingerprint = f"sample:{path.stat().st_mtime_ns}:{path.stat().st_size}"
-    load_project(path, display_name="sales.csv · sample", fingerprint=fingerprint)
-    st.toast("Sample sales dataset loaded", icon="✨")
+    save_dataset_payload(
+        path.read_bytes(),
+        filename="sales.csv",
+        project_name="Sample sales analysis",
+    )
+    st.toast("Sample sales dataset saved", icon="✨")
     st.rerun()
 
 
 def reset_session() -> None:
-    clear_session_state()
+    clear_active_project()
+    queue_sidebar_selection(None)
     st.rerun()
 
 
-def clear_session_state() -> None:
-    """Remove session-scoped AutoDQ data without touching the login cookie."""
+def clear_active_project() -> None:
+    """Close the active project without removing identity or workspace state."""
 
-    workspace = st.session_state.get("workspace_dir")
-    if workspace:
-        shutil.rmtree(workspace, ignore_errors=True)
+    for key, value in {
+        "project": None,
+        "dataset_name": None,
+        "dataset_fingerprint": None,
+        "adql_result": None,
+        "active_project_id": None,
+        "active_dataset_id": None,
+        "loaded_project_id": None,
+        "loaded_dataset_id": None,
+        "persisted_stage_checksums": {},
+    }.items():
+        st.session_state[key] = value
+    st.session_state.pop("visualization_result", None)
+
+
+def clear_session_state() -> None:
+    """Remove all session state before signing out."""
+
     for key in list(st.session_state):
         del st.session_state[key]
 
@@ -171,6 +319,29 @@ def clear_session_state() -> None:
 def logout_session() -> None:
     clear_session_state()
     st.logout()
+
+
+def load_identity_context(identity: UserIdentity) -> IdentityContext | None:
+    cached = st.session_state.get("identity_context")
+    if cached is not None and cached.identity_key == identity.identity_key:
+        return cached
+
+    try:
+        with st.spinner("Preparing your AutoDQ workspace…"):
+            context = bootstrap_identity(identity)
+    except Exception:
+        LOGGER.exception("AutoDQ Studio workspace initialization failed")
+        st.error(
+            "AutoDQ could not prepare your workspace. Check the database "
+            "configuration and try again."
+        )
+        return None
+
+    st.session_state.identity_context = context
+    workspace_ids = {workspace.id for workspace in context.workspaces}
+    if st.session_state.get("active_workspace_id") not in workspace_ids:
+        st.session_state.active_workspace_id = context.personal_workspace.id
+    return context
 
 
 def render_brand() -> None:
@@ -185,7 +356,132 @@ def render_brand() -> None:
     )
 
 
-def render_sidebar(identity: UserIdentity) -> str:
+def apply_pending_selector(selector_key: str, pending_key: str, default: str) -> None:
+    pending = st.session_state.get(pending_key)
+    if pending is not None:
+        st.session_state[selector_key] = pending
+        st.session_state[pending_key] = None
+    elif selector_key not in st.session_state:
+        st.session_state[selector_key] = default
+
+
+def render_project_picker(context: IdentityContext) -> None:
+    service = project_service()
+    workspace_id = st.session_state.active_workspace_id
+    projects = service.list_projects(
+        user_id=context.user_id,
+        workspace_id=workspace_id,
+    )
+    project_map = {item.id: item for item in projects}
+    project_name_map = {item.name: item.id for item in projects}
+    project_options = [""] + list(project_name_map)
+    current_project_id = st.session_state.active_project_id
+    if current_project_id not in project_map:
+        current_project_id = None
+        clear_active_project()
+
+    pending_project_id = st.session_state.get("pending_project_selector")
+    if pending_project_id is not None:
+        st.session_state.pending_project_selector = (
+            project_map[pending_project_id].name
+            if pending_project_id in project_map
+            else ""
+        )
+    default_project_name = (
+        project_map[current_project_id].name if current_project_id in project_map else ""
+    )
+    apply_pending_selector(
+        "project_selector",
+        "pending_project_selector",
+        default_project_name,
+    )
+    if st.session_state.project_selector not in project_options:
+        st.session_state.project_selector = ""
+    selected_project_name = st.selectbox(
+        "Project",
+        project_options,
+        key="project_selector",
+        format_func=lambda value: value or "Choose a saved project",
+    )
+    selected_project_id = project_name_map.get(selected_project_name, "")
+    if selected_project_id != (st.session_state.active_project_id or ""):
+        if selected_project_id:
+            open_saved_project(selected_project_id)
+        else:
+            clear_active_project()
+        st.rerun()
+
+    with st.expander("Create a project"):
+        with st.form("create_project_form", clear_on_submit=True):
+            name = st.text_input("Project name", placeholder="Quarterly sales review")
+            description = st.text_area(
+                "Description",
+                placeholder="Optional context for this analysis",
+                height=70,
+            )
+            submitted = st.form_submit_button(
+                "Create project",
+                type="primary",
+                width="stretch",
+            )
+        if submitted:
+            created = service.create_project(
+                user_id=context.user_id,
+                workspace_id=workspace_id,
+                name=name,
+                description=description,
+            )
+            open_saved_project(created.id)
+            queue_sidebar_selection(created.id)
+            st.toast("Project created", icon="✅")
+            st.rerun()
+
+    active_project_id = st.session_state.active_project_id
+    if not active_project_id:
+        return
+
+    datasets = service.list_datasets(
+        user_id=context.user_id,
+        project_id=active_project_id,
+    )
+    if not datasets:
+        st.caption("This project is ready for its first dataset.")
+        return
+
+    dataset_map = {item.id: item for item in datasets}
+    dataset_name_map = {item.name: item.id for item in datasets}
+    default_dataset = (
+        st.session_state.active_dataset_id
+        if st.session_state.active_dataset_id in dataset_map
+        else datasets[0].id
+    )
+    pending_dataset_id = st.session_state.get("pending_dataset_selector")
+    if pending_dataset_id is not None:
+        st.session_state.pending_dataset_selector = (
+            dataset_map[pending_dataset_id].name
+            if pending_dataset_id in dataset_map
+            else ""
+        )
+    default_dataset_name = dataset_map[default_dataset].name
+    apply_pending_selector(
+        "dataset_selector",
+        "pending_dataset_selector",
+        default_dataset_name,
+    )
+    if st.session_state.dataset_selector not in dataset_name_map:
+        st.session_state.dataset_selector = default_dataset_name
+    selected_dataset_name = st.selectbox(
+        "Dataset",
+        list(dataset_name_map),
+        key="dataset_selector",
+    )
+    selected_dataset_id = dataset_name_map[selected_dataset_name]
+    if selected_dataset_id != st.session_state.active_dataset_id:
+        open_saved_project(active_project_id, selected_dataset_id)
+        st.rerun()
+
+
+def render_sidebar(identity: UserIdentity, context: IdentityContext) -> str:
     with st.sidebar:
         render_brand()
         st.markdown(f"**{identity.display_name}**")
@@ -200,10 +496,37 @@ def render_sidebar(identity: UserIdentity) -> str:
             logout_session()
 
         st.markdown('<div class="dq-divider"></div>', unsafe_allow_html=True)
+        workspace_map = {workspace.id: workspace for workspace in context.workspaces}
+        workspace_ids = list(workspace_map)
+        selected_workspace = st.selectbox(
+            "Workspace",
+            workspace_ids,
+            index=workspace_ids.index(st.session_state.active_workspace_id),
+            format_func=lambda workspace_id: workspace_map[workspace_id].name,
+            disabled=len(workspace_ids) == 1,
+        )
+        if selected_workspace != st.session_state.active_workspace_id:
+            clear_active_project()
+            st.session_state.active_workspace_id = selected_workspace
+            st.session_state.pop("project_selector", None)
+            st.session_state.pop("dataset_selector", None)
+        selected_summary = workspace_map[selected_workspace]
+        workspace_kind = "Personal workspace" if selected_summary.is_personal else "Team workspace"
+        st.caption(f"{selected_summary.role.title()} · {workspace_kind}")
+
+        st.markdown('<div class="dq-divider"></div>', unsafe_allow_html=True)
+        try:
+            render_project_picker(context)
+        except Exception as error:
+            LOGGER.exception("AutoDQ Studio project navigation failed")
+            st.error(f"Saved projects could not be loaded: {error}")
+
+        st.markdown('<div class="dq-divider"></div>', unsafe_allow_html=True)
         uploaded = st.file_uploader(
-            "Upload a dataset",
+            "Add a dataset" if st.session_state.active_project_id else "Upload a dataset",
             type=("csv", "xlsx", "xls"),
-            help="Your file stays in this local Streamlit session.",
+            key=f"dataset_upload_{st.session_state.upload_token}",
+            help="The original file is saved privately in the selected workspace.",
         )
         if uploaded is not None:
             load_upload(uploaded)
@@ -241,6 +564,12 @@ def render_sidebar(identity: UserIdentity) -> str:
                     current._invalidate_target_pipeline()
                 else:
                     current.set_target(target)
+                project_service().update_target(
+                    user_id=context.user_id,
+                    dataset_id=st.session_state.active_dataset_id,
+                    target_column=target,
+                )
+                st.toast("Prediction target saved", icon="✅")
 
             st.markdown('<div class="dq-divider"></div>', unsafe_allow_html=True)
             page = st.radio(
@@ -250,12 +579,12 @@ def render_sidebar(identity: UserIdentity) -> str:
                 label_visibility="collapsed",
             )
             st.markdown('<div class="dq-divider"></div>', unsafe_allow_html=True)
-            if st.button("Reset workspace", width="stretch"):
+            if st.button("Close project", width="stretch"):
                 reset_session()
             return page
 
         st.markdown('<div class="dq-divider"></div>', unsafe_allow_html=True)
-        st.caption("Upload CSV or Excel, or begin with the bundled sales example.")
+        st.caption("Choose a project, upload CSV or Excel, or use the bundled sales example.")
         return "Overview"
 
 
@@ -289,7 +618,7 @@ def render_empty_state() -> None:
     st.markdown(
         """
         <section class="dq-hero">
-          <div class="dq-kicker">AutoDQ · Web v1</div>
+          <div class="dq-kicker">AutoDQ · Studio v1.1</div>
           <h1>From raw data to trusted decisions.</h1>
           <p>Profile quality, review evidence-backed cleaning actions, explore patterns, and run ADQL in one focused workspace.</p>
         </section>
@@ -311,7 +640,7 @@ def render_empty_state() -> None:
             load_sample()
     with note:
         st.markdown(
-            '<p class="dq-note">No account or database required for v1. Uploaded files are processed inside the running Streamlit session.</p>',
+            '<p class="dq-note">Projects and dataset versions are saved automatically in your private workspace, so you can close the app and continue later.</p>',
             unsafe_allow_html=True,
         )
 
@@ -347,7 +676,7 @@ def render_overview() -> None:
     page_title(
         "Workspace overview",
         st.session_state.dataset_name,
-        "A live view of the active dataset and every artifact created during this session.",
+        "A live view of the active dataset and the latest saved analysis stages.",
     )
     quality_score = (
         current.state.diagnosis_report.quality_score
@@ -458,9 +787,20 @@ def render_cleaning() -> None:
         "Approve automatic actions, handle missing values and duplicates manually, then validate every change.",
     )
     if current.state.cleaning_review is None:
-        st.info("Prepare a review to inspect every proposed cleaning action before data is changed.")
-        if st.button("Prepare cleaning review", type="primary"):
-            prepare_review()
+        if current.state.cleaned_data is not None:
+            st.success("The latest cleaned dataset was restored from this saved project.")
+            st.dataframe(
+                current.state.cleaned_data.head(100),
+                width="stretch",
+                hide_index=True,
+            )
+            download_exports(current.state.cleaned_data, prefix="autodq-cleaned")
+            if st.button("Prepare a new cleaning review"):
+                prepare_review()
+        else:
+            st.info("Prepare a review to inspect every proposed cleaning action before data is changed.")
+            if st.button("Prepare cleaning review", type="primary"):
+                prepare_review()
         return
 
     review = current.state.cleaning_review
@@ -496,6 +836,7 @@ def render_cleaning() -> None:
                     current.approve_all()
                     current.clean()
                     current.validate_cleaning()
+                    save_active_stages("cleaned")
                 st.toast("Cleaned dataset created", icon="✅")
                 st.rerun()
 
@@ -714,6 +1055,7 @@ def render_adql() -> None:
                     source_name="streamlit",
                     base_path=REPOSITORY_ROOT,
                 )
+                save_active_stages("current", "cleaned", "engineered")
             st.toast("ADQL completed", icon="✅")
         except Exception as error:
             st.session_state.adql_result = None
@@ -749,8 +1091,11 @@ def main() -> None:
     if identity is None:
         return
     initialize_state()
+    identity_context = load_identity_context(identity)
+    if identity_context is None:
+        return
     st.session_state.auth_identity = identity
-    page = render_sidebar(identity)
+    page = render_sidebar(identity, identity_context)
     if project() is None:
         render_empty_state()
         return

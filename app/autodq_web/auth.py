@@ -190,7 +190,7 @@ def render_login_page(st: Any, *, provider: str | None, configured: bool) -> Non
             """
             <div class="dq-auth-benefits">
               <div><strong>Verified identity</strong><span>Your account becomes the secure foundation for personal and team workspaces.</span></div>
-              <div><strong>Durable history</strong><span>Project persistence and audit history arrive in the next v1.1 phase.</span></div>
+              <div><strong>Durable projects</strong><span>Return to saved datasets, cleaned results, and engineered versions across sessions.</span></div>
               <div><strong>No AutoDQ passwords</strong><span>Your identity provider handles credentials and account recovery.</span></div>
             </div>
             """,
