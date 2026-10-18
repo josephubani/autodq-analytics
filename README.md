@@ -91,12 +91,14 @@ ADQL execution, and CSV or Excel export.
 
 ```bash
 python -m pip install -r requirements-web.txt
-streamlit run app/streamlit_app.py
+AUTODQ_AUTH_MODE=development python -m streamlit run app/streamlit_app.py
 ```
 
 Open the local URL printed by Streamlit, then upload a CSV/XLSX file or use
-the bundled sales dataset. Streamlit remains an application-only dependency;
-installing the core `autodq` package does not require it.
+the bundled sales dataset. Production deployments require OIDC login by
+default; see [the Studio setup guide](app/README.md) for Auth0 or another OIDC
+provider. Streamlit remains an application-only dependency; installing the
+core `autodq` package does not require it.
 
 New users can follow the [quickstart](docs/QUICKSTART.md) for a safe review
 workflow in Python and ADQL.

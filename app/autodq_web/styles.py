@@ -91,6 +91,50 @@ APP_CSS = r"""
 }
 .dq-hero p { max-width: 730px; color: #a8c0bb; font-size: 1.04rem; line-height: 1.65; }
 
+.dq-auth-hero {
+  max-width: 980px;
+  margin: clamp(1.2rem, 7vh, 5rem) auto 2rem;
+  text-align: center;
+}
+.dq-auth-mark {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 1.1rem;
+  border-radius: 18px;
+  color: #02130f;
+  font-size: 1.05rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #62f2bd, #2d9fe8);
+  box-shadow: 0 16px 48px rgba(45, 212, 163, .24);
+}
+.dq-auth-hero h1 {
+  margin: .7rem 0 .9rem;
+  font-size: clamp(2.35rem, 6vw, 4.8rem);
+  line-height: .98;
+  letter-spacing: -.055em;
+}
+.dq-auth-hero p {
+  max-width: 680px;
+  margin: 0 auto;
+  color: var(--dq-muted);
+  font-size: 1.02rem;
+  line-height: 1.65;
+}
+.dq-auth-benefits {
+  display: grid;
+  gap: .8rem;
+}
+.dq-auth-benefits > div {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--dq-line);
+  border-radius: 15px;
+  background: var(--dq-panel);
+}
+.dq-auth-benefits strong { display: block; margin-bottom: .25rem; }
+.dq-auth-benefits span { color: var(--dq-muted); font-size: .88rem; }
+
 .dq-page-title { margin: 0 0 1.2rem; }
 .dq-page-title small {
   display: block;

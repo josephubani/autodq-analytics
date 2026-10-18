@@ -31,6 +31,7 @@ from app.autodq_web.presenters import (  # noqa: E402
     to_serializable,
     validation_frame,
 )
+from app.autodq_web.auth import UserIdentity, require_identity  # noqa: E402
 from app.autodq_web.styles import APP_CSS  # noqa: E402
 from autodq import AutoDQ  # noqa: E402
 from autodq.visualization.renderers.matplotlib_renderer import (  # noqa: E402
@@ -153,12 +154,23 @@ def load_sample() -> None:
 
 
 def reset_session() -> None:
+    clear_session_state()
+    st.rerun()
+
+
+def clear_session_state() -> None:
+    """Remove session-scoped AutoDQ data without touching the login cookie."""
+
     workspace = st.session_state.get("workspace_dir")
     if workspace:
         shutil.rmtree(workspace, ignore_errors=True)
     for key in list(st.session_state):
         del st.session_state[key]
-    st.rerun()
+
+
+def logout_session() -> None:
+    clear_session_state()
+    st.logout()
 
 
 def render_brand() -> None:
@@ -173,9 +185,21 @@ def render_brand() -> None:
     )
 
 
-def render_sidebar() -> str:
+def render_sidebar(identity: UserIdentity) -> str:
     with st.sidebar:
         render_brand()
+        st.markdown(f"**{identity.display_name}**")
+        if identity.email:
+            st.caption(identity.email)
+        if identity.is_development:
+            st.markdown(
+                '<span class="dq-status"><span class="dq-dot"></span>Local development</span>',
+                unsafe_allow_html=True,
+            )
+        elif st.button("Log out", width="stretch"):
+            logout_session()
+
+        st.markdown('<div class="dq-divider"></div>', unsafe_allow_html=True)
         uploaded = st.file_uploader(
             "Upload a dataset",
             type=("csv", "xlsx", "xls"),
@@ -721,8 +745,12 @@ def download_exports(frame: pd.DataFrame, *, prefix: str) -> None:
 
 def main() -> None:
     configure_page()
+    identity = require_identity()
+    if identity is None:
+        return
     initialize_state()
-    page = render_sidebar()
+    st.session_state.auth_identity = identity
+    page = render_sidebar(identity)
     if project() is None:
         render_empty_state()
         return
