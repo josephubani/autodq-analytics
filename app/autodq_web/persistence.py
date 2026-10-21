@@ -23,6 +23,7 @@ from sqlalchemy import (
     UniqueConstraint,
     create_engine,
     event,
+    func,
     select,
 )
 from sqlalchemy.engine import Engine, make_url
@@ -42,6 +43,21 @@ WORKSPACE_NAMESPACE = UUID("59c61e8c-2b5a-5a74-b3af-ac926c0c66ee")
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def normalize_invitation_email(email: str) -> str:
+    candidate = email.strip().casefold()
+    if (
+        not candidate
+        or len(candidate) > 320
+        or candidate.count("@") != 1
+        or any(character.isspace() for character in candidate)
+    ):
+        raise ValueError("Enter a valid email address.")
+    local, domain = candidate.split("@", maxsplit=1)
+    if not local or not domain or domain.startswith(".") or domain.endswith("."):
+        raise ValueError("Enter a valid email address.")
+    return candidate
 
 
 class Base(DeclarativeBase):
@@ -104,6 +120,39 @@ class WorkspaceMembershipRecord(Base):
     joined_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )
+
+
+class WorkspaceInvitationRecord(Base):
+    __tablename__ = "workspace_invitations"
+    __table_args__ = (
+        CheckConstraint(
+            "role IN ('editor', 'reviewer', 'viewer')",
+            name="ck_workspace_invitations_role",
+        ),
+        CheckConstraint(
+            "status IN ('pending', 'accepted', 'revoked')",
+            name="ck_workspace_invitations_status",
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    workspace_id: Mapped[str] = mapped_column(
+        ForeignKey("workspaces.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    role: Mapped[str] = mapped_column(String(20), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    invited_by: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    accepted_by: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, nullable=False
+    )
+    accepted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class ProjectRecord(Base):
@@ -211,6 +260,26 @@ class IdentityContext:
             if workspace.is_personal:
                 return workspace
         raise LookupError("The user does not have a personal workspace.")
+
+
+@dataclass(frozen=True)
+class WorkspaceMemberSummary:
+    user_id: str
+    display_name: str
+    email: str | None
+    role: str
+    joined_at: datetime
+    is_owner: bool
+
+
+@dataclass(frozen=True)
+class WorkspaceInvitationSummary:
+    id: str
+    workspace_id: str
+    email: str
+    role: str
+    status: str
+    created_at: datetime
 
 
 @dataclass(frozen=True)
@@ -384,6 +453,14 @@ class StudioRepository:
                     )
                 )
 
+            if identity.email and identity.email_verified:
+                self._accept_pending_invitations(
+                    session,
+                    user_id=user_id,
+                    email=identity.email,
+                    accepted_at=now,
+                )
+
         return self.identity_context(identity)
 
     def identity_context(self, identity: UserIdentity) -> IdentityContext:
@@ -446,6 +523,329 @@ class StudioRepository:
         if write and role not in {"owner", "editor"}:
             raise PermissionError("The user cannot modify this workspace.")
         return role
+
+    def _require_workspace_owner(
+        self,
+        session: Session,
+        *,
+        user_id: str,
+        workspace_id: str,
+    ) -> None:
+        role = self._require_workspace_access(
+            session,
+            user_id=user_id,
+            workspace_id=workspace_id,
+        )
+        if role != "owner":
+            raise PermissionError("Only the workspace owner can manage members.")
+
+    @staticmethod
+    def _workspace_summary(
+        workspace: WorkspaceRecord,
+        role: str,
+    ) -> WorkspaceSummary:
+        return WorkspaceSummary(
+            id=workspace.id,
+            name=workspace.name,
+            role=role,
+            is_personal=workspace.is_personal,
+        )
+
+    @staticmethod
+    def _invitation_summary(
+        invitation: WorkspaceInvitationRecord,
+    ) -> WorkspaceInvitationSummary:
+        return WorkspaceInvitationSummary(
+            id=invitation.id,
+            workspace_id=invitation.workspace_id,
+            email=invitation.email,
+            role=invitation.role,
+            status=invitation.status,
+            created_at=invitation.created_at,
+        )
+
+    def _accept_pending_invitations(
+        self,
+        session: Session,
+        *,
+        user_id: str,
+        email: str,
+        accepted_at: datetime,
+    ) -> None:
+        normalized = normalize_invitation_email(email)
+        invitations = session.scalars(
+            select(WorkspaceInvitationRecord).where(
+                WorkspaceInvitationRecord.email == normalized,
+                WorkspaceInvitationRecord.status == "pending",
+            )
+        ).all()
+        for invitation in invitations:
+            membership_key = {
+                "workspace_id": invitation.workspace_id,
+                "user_id": user_id,
+            }
+            membership = session.get(WorkspaceMembershipRecord, membership_key)
+            if membership is None:
+                session.add(
+                    WorkspaceMembershipRecord(
+                        workspace_id=invitation.workspace_id,
+                        user_id=user_id,
+                        role=invitation.role,
+                        joined_at=accepted_at,
+                    )
+                )
+            invitation.status = "accepted"
+            invitation.accepted_by = user_id
+            invitation.accepted_at = accepted_at
+
+    def create_team_workspace(
+        self,
+        *,
+        user_id: str,
+        name: str,
+    ) -> WorkspaceSummary:
+        base_name = " ".join(name.split()).strip()
+        if not base_name:
+            raise ValueError("Workspace name is required.")
+        base_name = base_name[:255]
+        now = utc_now()
+        with self._sessions.begin() as session:
+            if session.get(UserRecord, user_id) is None:
+                raise LookupError("User not found.")
+            existing_names = set(
+                session.scalars(
+                    select(WorkspaceRecord.name).where(
+                        WorkspaceRecord.owner_user_id == user_id,
+                        WorkspaceRecord.is_personal.is_(False),
+                    )
+                )
+            )
+            candidate = base_name
+            suffix = 2
+            while candidate in existing_names:
+                marker = f" ({suffix})"
+                candidate = f"{base_name[: 255 - len(marker)]}{marker}"
+                suffix += 1
+
+            workspace = WorkspaceRecord(
+                id=str(uuid4()),
+                name=candidate,
+                owner_user_id=user_id,
+                is_personal=False,
+                created_at=now,
+                updated_at=now,
+            )
+            session.add(workspace)
+            session.flush()
+            session.add(
+                WorkspaceMembershipRecord(
+                    workspace_id=workspace.id,
+                    user_id=user_id,
+                    role="owner",
+                    joined_at=now,
+                )
+            )
+            session.flush()
+            return self._workspace_summary(workspace, "owner")
+
+    def list_workspace_members(
+        self,
+        *,
+        user_id: str,
+        workspace_id: str,
+    ) -> tuple[WorkspaceMemberSummary, ...]:
+        with self._sessions() as session:
+            self._require_workspace_access(
+                session,
+                user_id=user_id,
+                workspace_id=workspace_id,
+            )
+            workspace = session.get(WorkspaceRecord, workspace_id)
+            rows = session.execute(
+                select(UserRecord, WorkspaceMembershipRecord)
+                .join(
+                    WorkspaceMembershipRecord,
+                    WorkspaceMembershipRecord.user_id == UserRecord.id,
+                )
+                .where(WorkspaceMembershipRecord.workspace_id == workspace_id)
+                .order_by(
+                    WorkspaceMembershipRecord.role,
+                    UserRecord.display_name,
+                )
+            ).all()
+            return tuple(
+                WorkspaceMemberSummary(
+                    user_id=user.id,
+                    display_name=user.display_name,
+                    email=user.email,
+                    role=membership.role,
+                    joined_at=membership.joined_at,
+                    is_owner=user.id == workspace.owner_user_id,
+                )
+                for user, membership in rows
+            )
+
+    def invite_workspace_member(
+        self,
+        *,
+        user_id: str,
+        workspace_id: str,
+        email: str,
+        role: str,
+    ) -> WorkspaceInvitationSummary:
+        normalized_email = normalize_invitation_email(email)
+        if role not in {"editor", "reviewer", "viewer"}:
+            raise ValueError("Invitation role must be editor, reviewer, or viewer.")
+        now = utc_now()
+        with self._sessions.begin() as session:
+            self._require_workspace_owner(
+                session,
+                user_id=user_id,
+                workspace_id=workspace_id,
+            )
+            workspace = session.get(WorkspaceRecord, workspace_id)
+            if workspace.is_personal:
+                raise ValueError("Personal workspaces cannot have additional members.")
+
+            existing_member = session.scalar(
+                select(UserRecord)
+                .join(
+                    WorkspaceMembershipRecord,
+                    WorkspaceMembershipRecord.user_id == UserRecord.id,
+                )
+                .where(
+                    WorkspaceMembershipRecord.workspace_id == workspace_id,
+                    func.lower(UserRecord.email) == normalized_email,
+                )
+                .limit(1)
+            )
+            if existing_member is not None:
+                raise ValueError("That user is already a workspace member.")
+
+            pending = session.scalar(
+                select(WorkspaceInvitationRecord).where(
+                    WorkspaceInvitationRecord.workspace_id == workspace_id,
+                    WorkspaceInvitationRecord.email == normalized_email,
+                    WorkspaceInvitationRecord.status == "pending",
+                )
+            )
+            if pending is not None:
+                pending.role = role
+                return self._invitation_summary(pending)
+
+            invitation = WorkspaceInvitationRecord(
+                id=str(uuid4()),
+                workspace_id=workspace_id,
+                email=normalized_email,
+                role=role,
+                status="pending",
+                invited_by=user_id,
+                accepted_by=None,
+                created_at=now,
+                accepted_at=None,
+                revoked_at=None,
+            )
+            session.add(invitation)
+            session.flush()
+            return self._invitation_summary(invitation)
+
+    def list_workspace_invitations(
+        self,
+        *,
+        user_id: str,
+        workspace_id: str,
+    ) -> tuple[WorkspaceInvitationSummary, ...]:
+        with self._sessions() as session:
+            self._require_workspace_owner(
+                session,
+                user_id=user_id,
+                workspace_id=workspace_id,
+            )
+            invitations = session.scalars(
+                select(WorkspaceInvitationRecord)
+                .where(
+                    WorkspaceInvitationRecord.workspace_id == workspace_id,
+                    WorkspaceInvitationRecord.status == "pending",
+                )
+                .order_by(WorkspaceInvitationRecord.created_at.desc())
+            ).all()
+            return tuple(self._invitation_summary(item) for item in invitations)
+
+    def update_workspace_member_role(
+        self,
+        *,
+        user_id: str,
+        workspace_id: str,
+        member_user_id: str,
+        role: str,
+    ) -> None:
+        if role not in {"editor", "reviewer", "viewer"}:
+            raise ValueError("Member role must be editor, reviewer, or viewer.")
+        with self._sessions.begin() as session:
+            self._require_workspace_owner(
+                session,
+                user_id=user_id,
+                workspace_id=workspace_id,
+            )
+            workspace = session.get(WorkspaceRecord, workspace_id)
+            if member_user_id == workspace.owner_user_id:
+                raise ValueError("The workspace owner's role cannot be changed.")
+            membership = session.get(
+                WorkspaceMembershipRecord,
+                {"workspace_id": workspace_id, "user_id": member_user_id},
+            )
+            if membership is None:
+                raise LookupError("Workspace member not found.")
+            membership.role = role
+            workspace.updated_at = utc_now()
+
+    def remove_workspace_member(
+        self,
+        *,
+        user_id: str,
+        workspace_id: str,
+        member_user_id: str,
+    ) -> None:
+        with self._sessions.begin() as session:
+            self._require_workspace_owner(
+                session,
+                user_id=user_id,
+                workspace_id=workspace_id,
+            )
+            workspace = session.get(WorkspaceRecord, workspace_id)
+            if member_user_id == workspace.owner_user_id:
+                raise ValueError("The workspace owner cannot be removed.")
+            membership = session.get(
+                WorkspaceMembershipRecord,
+                {"workspace_id": workspace_id, "user_id": member_user_id},
+            )
+            if membership is None:
+                raise LookupError("Workspace member not found.")
+            session.delete(membership)
+            workspace.updated_at = utc_now()
+
+    def revoke_workspace_invitation(
+        self,
+        *,
+        user_id: str,
+        workspace_id: str,
+        invitation_id: str,
+    ) -> None:
+        with self._sessions.begin() as session:
+            self._require_workspace_owner(
+                session,
+                user_id=user_id,
+                workspace_id=workspace_id,
+            )
+            invitation = session.get(WorkspaceInvitationRecord, invitation_id)
+            if (
+                invitation is None
+                or invitation.workspace_id != workspace_id
+                or invitation.status != "pending"
+            ):
+                raise LookupError("Pending invitation not found.")
+            invitation.status = "revoked"
+            invitation.revoked_at = utc_now()
 
     @staticmethod
     def _project_summary(session: Session, project: ProjectRecord) -> ProjectSummary:

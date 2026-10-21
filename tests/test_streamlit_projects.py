@@ -143,6 +143,56 @@ class StreamlitProjectPersistenceTests(unittest.TestCase):
                 project_id=saved.project.id,
             )
 
+    def test_viewer_can_restore_a_named_dataset_without_mutating_the_project(self):
+        workspace = self.repository.create_team_workspace(
+            user_id=self.context.user_id,
+            name="Shared analytics",
+        )
+        saved = self.service.save_upload(
+            user_id=self.context.user_id,
+            workspace_id=workspace.id,
+            project_id=None,
+            project_name="Shared sales",
+            dataset_name="sales",
+            original_filename="sales.csv",
+            payload=self.payload,
+            frame=self.frame,
+        )
+        self.repository.invite_workspace_member(
+            user_id=self.context.user_id,
+            workspace_id=workspace.id,
+            email="viewer@example.test",
+            role="viewer",
+        )
+        viewer = self.repository.synchronize_identity(
+            UserIdentity(
+                issuer="https://identity.example/",
+                subject="viewer-1",
+                display_name="Vera Viewer",
+                email="viewer@example.test",
+                email_verified=True,
+            )
+        )
+
+        restored = self.service.restore_project(
+            user_id=viewer.user_id,
+            project_id=saved.project.id,
+            dataset_id=saved.dataset_id,
+        )
+
+        self.assertEqual(restored.dataset_name, "sales")
+        self.assertEqual(restored.raw_path.read_bytes(), self.payload)
+        with self.assertRaises(PermissionError):
+            self.service.save_stage(
+                user_id=viewer.user_id,
+                workspace_id=workspace.id,
+                project_id=saved.project.id,
+                dataset_id=saved.dataset_id,
+                stage="cleaned",
+                frame=self.frame,
+                target_column=None,
+            )
+
     def test_a_project_can_restore_each_named_dataset(self):
         first = self.service.save_upload(
             user_id=self.context.user_id,

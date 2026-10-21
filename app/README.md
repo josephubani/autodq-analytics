@@ -41,7 +41,7 @@ For a hosted deployment, replace the callback URL with the public HTTPS app
 URL followed by `/oauth2callback`, then add the same secret values through the
 hosting platform's secrets manager.
 
-## Database, projects, and personal workspace
+## Database, projects, and workspaces
 
 The first successful sign-in registers the user and creates a personal
 workspace. Local development uses an ignored SQLite database at
@@ -52,6 +52,22 @@ Each workspace can contain multiple named projects and datasets. Studio keeps
 the original uploaded file and automatically versions the latest current,
 cleaned, and engineered data as typed Parquet snapshots. The local object
 store defaults to `.autodq-studio/objects`.
+
+### Team collaboration
+
+Use **Workspace & members** in the Studio sidebar to create a team workspace.
+The workspace owner can invite people by their verified sign-in email and
+choose one of these roles:
+
+- **Owner** manages members, invitations, projects, datasets, and analysis.
+- **Editor** can create projects, upload data, run cleaning, and run ADQL.
+- **Reviewer** and **Viewer** have read-only access. They can inspect saved
+  data, run non-mutating quality scans and visualizations, and download results.
+
+An invitation becomes active when its recipient next signs in with a verified
+matching email. A signed-in recipient can also select **Refresh workspace
+access**. Studio records invitations in its database; this phase does not send
+invitation emails. Personal workspaces cannot be shared.
 
 To place dataset objects on a separate persistent volume, set:
 
@@ -87,7 +103,7 @@ python -m alembic -c app/alembic.ini upgrade head
 Do not commit production database URLs. Configure them with the hosting
 platform's environment-variable or secrets manager.
 
-The v1.1 workflow supports durable projects, CSV and Excel uploads, profiling and diagnosis,
-evidence-backed cleaning review, missing-value and duplicate treatments,
-before/after validation, AutoDQ visualizations, ADQL execution, and CSV/Excel
-downloads.
+The v1.1 workflow supports durable personal and team workspaces, role-based
+collaboration, CSV and Excel uploads, profiling and diagnosis, evidence-backed
+cleaning review, missing-value and duplicate treatments, before/after
+validation, AutoDQ visualizations, ADQL execution, and CSV/Excel downloads.

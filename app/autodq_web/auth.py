@@ -38,6 +38,7 @@ class UserIdentity:
     subject: str
     display_name: str
     email: str | None = None
+    email_verified: bool = False
     picture_url: str | None = None
     is_development: bool = False
 
@@ -84,6 +85,7 @@ def development_identity(
         or "Local developer",
         email=values.get("AUTODQ_DEV_USER_EMAIL", "developer@localhost").strip()
         or None,
+        email_verified=True,
         is_development=True,
     )
 
@@ -124,6 +126,7 @@ def identity_from_claims(
         subject=subject,
         display_name=display_name,
         email=email,
+        email_verified=bool(claims.get("email_verified", False)),
         picture_url=picture,
     )
 

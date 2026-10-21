@@ -97,6 +97,7 @@ def initialize_state() -> None:
         "adql_result": None,
         "identity_context": None,
         "active_workspace_id": None,
+        "active_workspace_role": None,
         "active_project_id": None,
         "active_dataset_id": None,
         "loaded_project_id": None,
@@ -112,6 +113,10 @@ def initialize_state() -> None:
 
 def project() -> AutoDQ | None:
     return st.session_state.project
+
+
+def workspace_can_edit() -> bool:
+    return st.session_state.get("active_workspace_role") in {"owner", "editor"}
 
 
 def source_frame() -> pd.DataFrame | None:
@@ -204,7 +209,11 @@ def save_active_stages(*stages: str) -> None:
     project_id = st.session_state.active_project_id
     dataset_id = st.session_state.active_dataset_id
     workspace_id = st.session_state.active_workspace_id
-    if current is None or not all((context, project_id, dataset_id, workspace_id)):
+    if (
+        current is None
+        or not workspace_can_edit()
+        or not all((context, project_id, dataset_id, workspace_id))
+    ):
         return
 
     frames = {
@@ -236,6 +245,8 @@ def save_dataset_payload(
     filename: str,
     project_name: str | None = None,
 ) -> None:
+    if not workspace_can_edit():
+        raise PermissionError("This workspace is read-only for your role.")
     context = st.session_state.identity_context
     workspace_id = st.session_state.active_workspace_id
     safe_name = safe_uploaded_name(filename)
@@ -365,7 +376,199 @@ def apply_pending_selector(selector_key: str, pending_key: str, default: str) ->
         st.session_state[selector_key] = default
 
 
-def render_project_picker(context: IdentityContext) -> None:
+def refresh_identity_context(
+    identity: UserIdentity,
+    *,
+    preferred_workspace_id: str | None = None,
+) -> IdentityContext:
+    context = bootstrap_identity(identity)
+    st.session_state.identity_context = context
+    workspace_ids = {workspace.id for workspace in context.workspaces}
+    preferred = preferred_workspace_id or st.session_state.active_workspace_id
+    st.session_state.active_workspace_id = (
+        preferred if preferred in workspace_ids else context.personal_workspace.id
+    )
+    return context
+
+
+def render_workspace_manager(
+    identity: UserIdentity,
+    context: IdentityContext,
+    workspace,
+) -> None:
+    repository = project_service().repository
+    with st.expander("Workspace & members"):
+        if st.button("Refresh workspace access", width="stretch"):
+            refresh_identity_context(identity)
+            st.toast("Workspace access refreshed", icon="✅")
+            st.rerun()
+
+        st.markdown("**Create a team workspace**")
+        with st.form(
+            "create_team_workspace_form",
+            clear_on_submit=True,
+            enter_to_submit=False,
+        ):
+            team_name = st.text_input(
+                "Team workspace name",
+                placeholder="Revenue operations",
+            )
+            create_team = st.form_submit_button(
+                "Create team workspace",
+                width="stretch",
+            )
+        if create_team:
+            try:
+                created = repository.create_team_workspace(
+                    user_id=context.user_id,
+                    name=team_name,
+                )
+            except (ValueError, LookupError) as error:
+                st.error(str(error))
+            else:
+                clear_active_project()
+                refresh_identity_context(
+                    identity,
+                    preferred_workspace_id=created.id,
+                )
+                st.toast("Team workspace created", icon="✅")
+                st.rerun()
+
+        if workspace.is_personal:
+            st.caption("Personal workspaces are private to their owner.")
+            return
+
+        members = repository.list_workspace_members(
+            user_id=context.user_id,
+            workspace_id=workspace.id,
+        )
+        st.markdown(f"**Members · {len(members)}**")
+        for member in members:
+            owner_label = " · owner" if member.is_owner else ""
+            address = f" · {member.email}" if member.email else ""
+            st.caption(
+                f"{member.display_name}{address} · {member.role}{owner_label}"
+            )
+
+        if workspace.role != "owner":
+            st.caption("Only the workspace owner can manage members.")
+            return
+
+        st.markdown("**Invite a member**")
+        with st.form(
+            "invite_workspace_member_form",
+            clear_on_submit=True,
+            enter_to_submit=False,
+        ):
+            invite_email = st.text_input(
+                "Verified email",
+                placeholder="analyst@example.com",
+            )
+            invite_role = st.selectbox(
+                "Role",
+                ("editor", "reviewer", "viewer"),
+                format_func=str.title,
+            )
+            invite_submitted = st.form_submit_button(
+                "Send invitation",
+                type="primary",
+                width="stretch",
+            )
+        if invite_submitted:
+            try:
+                repository.invite_workspace_member(
+                    user_id=context.user_id,
+                    workspace_id=workspace.id,
+                    email=invite_email,
+                    role=invite_role,
+                )
+            except (ValueError, LookupError, PermissionError) as error:
+                st.error(str(error))
+            else:
+                st.toast("Invitation saved", icon="✅")
+                st.rerun()
+        st.caption(
+            "The invitation activates when that verified email next signs in."
+        )
+
+        manageable = [member for member in members if not member.is_owner]
+        if manageable:
+            labels = {
+                f"{member.display_name} · {member.email or member.user_id}": member
+                for member in manageable
+            }
+            st.markdown("**Manage a member**")
+            with st.form(
+                "manage_workspace_member_form",
+                enter_to_submit=False,
+            ):
+                member_label = st.selectbox("Member", tuple(labels))
+                selected_member = labels[member_label]
+                roles = ("editor", "reviewer", "viewer")
+                member_role = st.selectbox(
+                    "Member role",
+                    roles,
+                    index=roles.index(selected_member.role),
+                    format_func=str.title,
+                )
+                update_column, remove_column = st.columns(2)
+                with update_column:
+                    update_member = st.form_submit_button(
+                        "Update role",
+                        width="stretch",
+                    )
+                with remove_column:
+                    remove_member = st.form_submit_button(
+                        "Remove",
+                        width="stretch",
+                    )
+            if update_member:
+                repository.update_workspace_member_role(
+                    user_id=context.user_id,
+                    workspace_id=workspace.id,
+                    member_user_id=selected_member.user_id,
+                    role=member_role,
+                )
+                st.toast("Member role updated", icon="✅")
+                st.rerun()
+            if remove_member:
+                repository.remove_workspace_member(
+                    user_id=context.user_id,
+                    workspace_id=workspace.id,
+                    member_user_id=selected_member.user_id,
+                )
+                st.toast("Member removed", icon="✅")
+                st.rerun()
+
+        invitations = repository.list_workspace_invitations(
+            user_id=context.user_id,
+            workspace_id=workspace.id,
+        )
+        if invitations:
+            st.markdown(f"**Pending invitations · {len(invitations)}**")
+            for invitation in invitations:
+                label, action = st.columns([3, 1])
+                with label:
+                    st.caption(f"{invitation.email} · {invitation.role}")
+                with action:
+                    if st.button(
+                        "Revoke",
+                        key=f"revoke_invitation_{invitation.id}",
+                    ):
+                        repository.revoke_workspace_invitation(
+                            user_id=context.user_id,
+                            workspace_id=workspace.id,
+                            invitation_id=invitation.id,
+                        )
+                        st.toast("Invitation revoked", icon="✅")
+                        st.rerun()
+
+
+def render_project_picker(
+    context: IdentityContext,
+    *,
+    can_write: bool,
+) -> None:
     service = project_service()
     workspace_id = st.session_state.active_workspace_id
     projects = service.list_projects(
@@ -412,29 +615,39 @@ def render_project_picker(context: IdentityContext) -> None:
         st.rerun()
 
     with st.expander("Create a project"):
-        with st.form("create_project_form", clear_on_submit=True):
-            name = st.text_input("Project name", placeholder="Quarterly sales review")
-            description = st.text_area(
-                "Description",
-                placeholder="Optional context for this analysis",
-                height=70,
-            )
-            submitted = st.form_submit_button(
-                "Create project",
-                type="primary",
-                width="stretch",
-            )
-        if submitted:
-            created = service.create_project(
-                user_id=context.user_id,
-                workspace_id=workspace_id,
-                name=name,
-                description=description,
-            )
-            open_saved_project(created.id)
-            queue_sidebar_selection(created.id)
-            st.toast("Project created", icon="✅")
-            st.rerun()
+        if not can_write:
+            st.caption("Your workspace role has read-only project access.")
+        else:
+            with st.form(
+                "create_project_form",
+                clear_on_submit=True,
+                enter_to_submit=False,
+            ):
+                name = st.text_input(
+                    "Project name",
+                    placeholder="Quarterly sales review",
+                )
+                description = st.text_area(
+                    "Description",
+                    placeholder="Optional context for this analysis",
+                    height=70,
+                )
+                submitted = st.form_submit_button(
+                    "Create project",
+                    type="primary",
+                    width="stretch",
+                )
+            if submitted:
+                created = service.create_project(
+                    user_id=context.user_id,
+                    workspace_id=workspace_id,
+                    name=name,
+                    description=description,
+                )
+                open_saved_project(created.id)
+                queue_sidebar_selection(created.id)
+                st.toast("Project created", icon="✅")
+                st.rerun()
 
     active_project_id = st.session_state.active_project_id
     if not active_project_id:
@@ -511,12 +724,22 @@ def render_sidebar(identity: UserIdentity, context: IdentityContext) -> str:
             st.session_state.pop("project_selector", None)
             st.session_state.pop("dataset_selector", None)
         selected_summary = workspace_map[selected_workspace]
+        st.session_state.active_workspace_role = selected_summary.role
         workspace_kind = "Personal workspace" if selected_summary.is_personal else "Team workspace"
         st.caption(f"{selected_summary.role.title()} · {workspace_kind}")
 
+        render_workspace_manager(
+            identity,
+            context,
+            selected_summary,
+        )
+
         st.markdown('<div class="dq-divider"></div>', unsafe_allow_html=True)
         try:
-            render_project_picker(context)
+            render_project_picker(
+                context,
+                can_write=workspace_can_edit(),
+            )
         except Exception as error:
             LOGGER.exception("AutoDQ Studio project navigation failed")
             st.error(f"Saved projects could not be loaded: {error}")
@@ -527,11 +750,15 @@ def render_sidebar(identity: UserIdentity, context: IdentityContext) -> str:
             type=("csv", "xlsx", "xls"),
             key=f"dataset_upload_{st.session_state.upload_token}",
             help="The original file is saved privately in the selected workspace.",
+            disabled=not workspace_can_edit(),
         )
         if uploaded is not None:
             load_upload(uploaded)
 
-        sample_disabled = not (REPOSITORY_ROOT / "datasets" / "sample" / "sales.csv").exists()
+        sample_disabled = (
+            not workspace_can_edit()
+            or not (REPOSITORY_ROOT / "datasets" / "sample" / "sales.csv").exists()
+        )
         if st.button(
             "Use sample sales data",
             width="stretch",
@@ -556,6 +783,7 @@ def render_sidebar(identity: UserIdentity, context: IdentityContext) -> str:
                 options,
                 index=options.index(active_target),
                 help="Optional. Needed for readiness, modeling, and SHAP workflows.",
+                disabled=not workspace_can_edit(),
             )
             target = None if selected == "No target" else selected
             if target != current.target:
@@ -781,11 +1009,17 @@ def prepare_review() -> None:
 
 def render_cleaning() -> None:
     current = project()
+    editable = workspace_can_edit()
     page_title(
         "Governed cleaning",
         "Cleaning lab",
         "Approve automatic actions, handle missing values and duplicates manually, then validate every change.",
     )
+    if not editable:
+        st.info(
+            "This workspace is read-only for your role. You can inspect and "
+            "download results, but only owners and editors can change data."
+        )
     if current.state.cleaning_review is None:
         if current.state.cleaned_data is not None:
             st.success("The latest cleaned dataset was restored from this saved project.")
@@ -795,11 +1029,18 @@ def render_cleaning() -> None:
                 hide_index=True,
             )
             download_exports(current.state.cleaned_data, prefix="autodq-cleaned")
-            if st.button("Prepare a new cleaning review"):
+            if st.button(
+                "Prepare a new cleaning review",
+                disabled=not editable,
+            ):
                 prepare_review()
         else:
             st.info("Prepare a review to inspect every proposed cleaning action before data is changed.")
-            if st.button("Prepare cleaning review", type="primary"):
+            if st.button(
+                "Prepare cleaning review",
+                type="primary",
+                disabled=not editable,
+            ):
                 prepare_review()
         return
 
@@ -823,15 +1064,28 @@ def render_cleaning() -> None:
         )
         approve, reject, apply_all = st.columns([1, 1, 1.35])
         with approve:
-            if st.button("Approve selected", disabled=not selected, width="stretch"):
+            if st.button(
+                "Approve selected",
+                disabled=not selected or not editable,
+                width="stretch",
+            ):
                 current.approve(selected)
                 st.rerun()
         with reject:
-            if st.button("Reject selected", disabled=not selected, width="stretch"):
+            if st.button(
+                "Reject selected",
+                disabled=not selected or not editable,
+                width="stretch",
+            ):
                 current.reject(selected, reason="Rejected in AutoDQ Studio")
                 st.rerun()
         with apply_all:
-            if st.button("Approve all and clean", type="primary", width="stretch"):
+            if st.button(
+                "Approve all and clean",
+                type="primary",
+                width="stretch",
+                disabled=not editable,
+            ):
                 with st.spinner("Applying approved actions and validating the result…"):
                     current.approve_all()
                     current.clean()
@@ -859,7 +1113,10 @@ def render_cleaning() -> None:
                 ("auto", "median", "mean", "mode", "zero", "ffill", "bfill", "interpolate", "constant"),
             )
             constant = st.text_input("Constant value", disabled=strategy != "constant")
-            if st.button("Stage missing-value treatment", disabled=not selected_columns):
+            if st.button(
+                "Stage missing-value treatment",
+                disabled=not selected_columns or not editable,
+            ):
                 value = constant if strategy == "constant" else None
                 current.fill_missing(selected_columns, strategy=strategy, value=value, reason="Staged in AutoDQ Studio")
                 st.toast("Missing-value treatment staged", icon="✅")
@@ -872,7 +1129,11 @@ def render_cleaning() -> None:
             st.success("No exact duplicate rows remain.")
         else:
             st.dataframe(duplicates.head(100), width="stretch", hide_index=True)
-            if st.button("Stage duplicate removal", key="drop_duplicates"):
+            if st.button(
+                "Stage duplicate removal",
+                key="drop_duplicates",
+                disabled=not editable,
+            ):
                 current.drop_duplicates(keep="first", reason="Staged in AutoDQ Studio")
                 st.toast("Duplicate removal staged", icon="✅")
                 st.rerun()
@@ -1016,11 +1277,17 @@ def render_adql_result(run) -> None:
 
 def render_adql() -> None:
     current = project()
+    editable = workspace_can_edit()
     page_title(
         "Native analytics language",
         "ADQL studio",
         "Run ADQL directly against the same in-memory project. Commands can inspect, clean, analyze, and register reusable datasets.",
     )
+    if not editable:
+        st.info(
+            "ADQL execution is disabled for read-only workspace roles because "
+            "a notebook can contain data-changing commands."
+        )
     template, action = st.columns([2, 1])
     with template:
         selected_template = st.selectbox("Starter", tuple(ADQL_TEMPLATES))
@@ -1038,7 +1305,12 @@ def render_adql() -> None:
     )
     run_column, clear_column, help_column = st.columns([1, 1, 2])
     with run_column:
-        run_clicked = st.button("Run ADQL", type="primary", width="stretch")
+        run_clicked = st.button(
+            "Run ADQL",
+            type="primary",
+            width="stretch",
+            disabled=not editable,
+        )
     with clear_column:
         if st.button("Clear output", width="stretch"):
             st.session_state.adql_result = None

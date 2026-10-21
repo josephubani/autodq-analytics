@@ -33,6 +33,7 @@ class StreamlitAuthenticationTests(unittest.TestCase):
         self.assertTrue(identity.is_development)
         self.assertEqual(identity.identity_key, "autodq-development|joseph-local")
         self.assertEqual(identity.display_name, "Joseph")
+        self.assertTrue(identity.email_verified)
 
     def test_oidc_claims_become_a_non_secret_identity(self):
         identity = identity_from_claims(
@@ -41,6 +42,7 @@ class StreamlitAuthenticationTests(unittest.TestCase):
                 "sub": "auth0|123",
                 "name": "Ada Analyst",
                 "email": "ada@example.test",
+                "email_verified": True,
                 "picture": "https://example.test/ada.png",
                 "exp": 2_000,
             },
@@ -51,6 +53,7 @@ class StreamlitAuthenticationTests(unittest.TestCase):
             "https://identity.example/|auth0|123",
         )
         self.assertEqual(identity.email, "ada@example.test")
+        self.assertTrue(identity.email_verified)
         self.assertFalse(identity.is_development)
 
     def test_expired_and_incomplete_claims_are_rejected(self):

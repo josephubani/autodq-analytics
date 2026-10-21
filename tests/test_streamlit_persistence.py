@@ -26,12 +26,20 @@ class StreamlitPersistenceTests(unittest.TestCase):
         repository_for_url.cache_clear()
         self.temporary_directory.cleanup()
 
-    def identity(self, *, subject="user-1", name="Ada Analyst", email="ada@example.test"):
+    def identity(
+        self,
+        *,
+        subject="user-1",
+        name="Ada Analyst",
+        email="ada@example.test",
+        email_verified=False,
+    ):
         return UserIdentity(
             issuer="https://identity.example/",
             subject=subject,
             display_name=name,
             email=email,
+            email_verified=email_verified,
         )
 
     def test_local_database_url_is_inside_the_studio_home(self):
@@ -91,6 +99,112 @@ class StreamlitPersistenceTests(unittest.TestCase):
             self.repository.identity_context(self.identity(subject="user-1")).workspaces,
             first.workspaces,
         )
+
+    def test_verified_invitation_adds_user_to_team_workspace(self):
+        owner = self.repository.synchronize_identity(self.identity())
+        team = self.repository.create_team_workspace(
+            user_id=owner.user_id,
+            name="Revenue operations",
+        )
+        invitation = self.repository.invite_workspace_member(
+            user_id=owner.user_id,
+            workspace_id=team.id,
+            email="grace@example.test",
+            role="reviewer",
+        )
+        self.assertEqual(invitation.status, "pending")
+
+        unverified = self.repository.synchronize_identity(
+            self.identity(
+                subject="user-2",
+                name="Grace Analyst",
+                email="grace@example.test",
+            )
+        )
+        self.assertEqual(len(unverified.workspaces), 1)
+
+        verified = self.repository.synchronize_identity(
+            self.identity(
+                subject="user-2",
+                name="Grace Analyst",
+                email="GRACE@example.test",
+                email_verified=True,
+            )
+        )
+        team_access = next(item for item in verified.workspaces if item.id == team.id)
+        self.assertEqual(team_access.role, "reviewer")
+        self.assertFalse(team_access.is_personal)
+        members = self.repository.list_workspace_members(
+            user_id=owner.user_id,
+            workspace_id=team.id,
+        )
+        self.assertEqual({member.display_name for member in members}, {"Ada Analyst", "Grace Analyst"})
+        self.assertEqual(
+            self.repository.list_workspace_invitations(
+                user_id=owner.user_id,
+                workspace_id=team.id,
+            ),
+            (),
+        )
+
+    def test_owner_controls_roles_and_write_access(self):
+        owner = self.repository.synchronize_identity(self.identity())
+        team = self.repository.create_team_workspace(
+            user_id=owner.user_id,
+            name="Shared quality",
+        )
+        self.repository.invite_workspace_member(
+            user_id=owner.user_id,
+            workspace_id=team.id,
+            email="grace@example.test",
+            role="viewer",
+        )
+        member = self.repository.synchronize_identity(
+            self.identity(
+                subject="user-2",
+                name="Grace Analyst",
+                email="grace@example.test",
+                email_verified=True,
+            )
+        )
+
+        with self.assertRaises(PermissionError):
+            self.repository.create_project(
+                user_id=member.user_id,
+                workspace_id=team.id,
+                name="Blocked project",
+            )
+
+        self.repository.update_workspace_member_role(
+            user_id=owner.user_id,
+            workspace_id=team.id,
+            member_user_id=member.user_id,
+            role="editor",
+        )
+        created = self.repository.create_project(
+            user_id=member.user_id,
+            workspace_id=team.id,
+            name="Shared project",
+        )
+        self.assertEqual(created.name, "Shared project")
+
+        with self.assertRaises(PermissionError):
+            self.repository.invite_workspace_member(
+                user_id=member.user_id,
+                workspace_id=team.id,
+                email="third@example.test",
+                role="viewer",
+            )
+
+        self.repository.remove_workspace_member(
+            user_id=owner.user_id,
+            workspace_id=team.id,
+            member_user_id=member.user_id,
+        )
+        refreshed = self.repository.identity_context(
+            self.identity(subject="user-2", name="Grace Analyst", email="grace@example.test")
+        )
+        self.assertNotIn(team.id, {workspace.id for workspace in refreshed.workspaces})
 
 
 if __name__ == "__main__":

@@ -292,11 +292,16 @@ class StudioProjectService:
             raise RuntimeError("The saved dataset does not have a raw version.")
 
         if dataset_id is not None:
-            self.repository.activate_dataset(
-                user_id=user_id,
-                project_id=project_id,
-                dataset_id=metadata.dataset_id,
-            )
+            try:
+                self.repository.activate_dataset(
+                    user_id=user_id,
+                    project_id=project_id,
+                    dataset_id=metadata.dataset_id,
+                )
+            except PermissionError:
+                # Read-only members can select a dataset for their session
+                # without changing the project's shared active dataset.
+                pass
 
         def read_stage(stage: str) -> pd.DataFrame | None:
             version = versions.get(stage)

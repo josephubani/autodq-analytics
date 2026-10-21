@@ -104,7 +104,8 @@ Studio automatically registers authenticated users and gives each account a
 durable personal workspace. It uses local SQLite by default and supports
 PostgreSQL through `AUTODQ_DATABASE_URL` for hosted deployments. Named projects
 preserve original uploads plus versioned current, cleaned, and engineered
-datasets in a private local object store.
+datasets in a private local object store. Owners can also create team
+workspaces, invite verified users, and assign editor, reviewer, or viewer roles.
 
 New users can follow the [quickstart](docs/QUICKSTART.md) for a safe review
 workflow in Python and ADQL.
